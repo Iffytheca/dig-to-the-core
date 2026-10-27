@@ -19907,10 +19907,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   K.flood = {name:'Flood', dur:[40,55], start(S){ S.x = P.x; S.z = P.z; S.base = gY(P.x, P.z); S.lv = S.base - .6; S.top = S.base + 1.9;
       S.m = new THREE.Mesh(new THREE.CircleGeometry(48, 40), mat(0x3a7ad8, {transparent:true, opacity:.6, side:THREE.DoubleSide}));
       S.m.rotation.x = -Math.PI/2; S.m.position.set(S.x, S.lv, S.z); sAdd(S.m); S.told = false;
-      S.t = addTarget({objs:[S.m], range:9, hold:.6, name:'flood', mine(){ reward('Flood Water', 1, 30, 'You mined some flood water. The water went down a bit!'); S.top -= .35; S.lv -= .35; if(S.lv > S.base - .6) addTarget(S.t); }});
+      S.t = addTarget({objs:[S.m], range:9, hold:.6, name:'flood', mine(){ reward('Water', 1, 30, 'You mined water from the flood (pour it from a carry slot). The flood went down a bit!'); try{ hotAuto('i:Water'); }catch(e){} S.top -= .35; S.lv -= .35; if(S.lv > S.base - .6) addTarget(S.t); }});
       toast('FLOOD! The water is rising! Swim with Space, or mine the flood water to make it go down.'); },
     tick(S, dt, k){ const fill = k < .35 ? k/.35 : k > .8 ? (1 - k)/.2 : 1; S.lv = Math.min(S.lv + dt*.4, S.base - .6 + (S.top - S.base + .6)*fill); S.lv = Math.max(S.base - .6, S.lv); S.m.position.y = S.lv;
       if(Math.hypot(P.x - S.x, P.z - S.z) < 48 && P.y < S.lv - .9){ P.vy = Math.max(P.vy, keys.Space ? 3 : -.5); if(!S.told){ S.told = true; toast('You are in the flood water! Swim!'); } }
+      // you can drown in a flood: head under the water uses up your air
+      const DR = window.__drown;
+      if(DR && Math.hypot(P.x - S.x, P.z - S.z) < 48 && camera.position.y < S.lv - .05){
+        DR.setAir(Math.max(0, DR.getAir() - dt*5));                    // the air bar refills by itself, this beats it
+        if(DR.getAir() <= 0){ S.dh = (S.dh || 0) - dt; if(S.dh <= 0){ S.dh = 1; hurtPlayer(4); if(!S.dw){ S.dw = true; toast('You are drowning in the flood! Hold Space to swim up for air!'); } } }
+      }
       for(const a of animals){ if(a.pos && Math.hypot(a.pos.x - S.x, a.pos.z - S.z) < 48 && a.pos.y < S.lv - .3) a.pos.y = S.lv - .3; } },
     end(S){ scene.remove(S.m); dropTarget(S.t); toast('The flood is gone. Everything is a bit soggy.'); }};
   K.tornado = {name:'Tornado', dur:[40,55], start(S){ const a = rnd(0, 6.28); S.x = P.x + Math.cos(a)*30; S.z = P.z + Math.sin(a)*30; S.g = new THREE.Group(); S.hurt = 0;
@@ -19974,7 +19980,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       for(let i=S.bombs.length-1;i>=0;i--){ const q = S.bombs[i]; q.vy -= 30*dt; q.m.position.x += q.vx*dt; q.m.position.y += q.vy*dt; q.m.position.z += q.vz*dt;
         const gy = gY(q.m.position.x, q.m.position.z);
         if(q.vy < 0 && q.m.position.y <= gy + .3){ scene.remove(q.m); dropTarget(q.t); S.bombs.splice(i, 1); burst(q.m.position.x, gy + .5, q.m.position.z, 0, 8); blip(70, .25, .1, 'sawtooth');
-          if(Math.hypot(P.x - q.m.position.x, P.z - q.m.position.z) < 1.8){ hurtPlayer(4); toast('A lava bomb hit you! Hot hot hot!'); }
+          if(Math.hypot(P.x - q.m.position.x, P.z - q.m.position.z) < 1.8){ hurtPlayer(4); if(window.__burn) window.__burn.set(5); toast('A lava bomb hit you! Hot hot hot!'); }
           try{ if(window.__elements && Math.random() < .4) window.__elements.addFire(Math.floor(q.m.position.x), -Math.floor(gy) - 1, Math.floor(q.m.position.z), 25); }catch(e){}
           magma(q.m.position.x, q.m.position.z, rnd(16, 26));
           if(Math.random() < .3) leave(q.m.position.x, q.m.position.z, new THREE.Mesh(new THREE.BoxGeometry(.5, .4, .5), mat(0x2a2020, {emissive:0x601808})), 'lava rock', 'Lava Rock', 25, 'You mined a cooled lava rock.'); } }
@@ -20007,7 +20013,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     burnT -= dt;
     for(let i=pools.length-1;i>=0;i--){ const L = pools[i]; L.life -= dt; L.m.material.color.setHex(Math.sin(performance.now()*.006 + i) > 0 ? 0xff5010 : 0xff7a20);
       if(L.life <= 0){ scene.remove(L.m); dropTarget(L.t); pools.splice(i, 1); continue; }
-      if(burnT <= 0 && Math.hypot(P.x - L.x, P.z - L.z) < L.r && P.y < gY(L.x, L.z) + .8){ burnT = .5; hurtPlayer(3); if(Math.random() < .35) toast(pick(['OUCH! You are standing in magma!','Hot hot HOT! Get out of the magma!','The magma is burning your feet!'])); } }
+      if(burnT <= 0 && Math.hypot(P.x - L.x, P.z - L.z) < L.r && P.y < gY(L.x, L.z) + .8){ burnT = .5; hurtPlayer(3); if(window.__burn) window.__burn.set(5); if(Math.random() < .35) toast(pick(['OUCH! You are standing in magma!','Hot hot HOT! Get out of the magma!','The magma is burning your feet!'])); } }
   }
   K.acidrain = {name:'Acid Rain', dur:[35,55], start(S){ S.drops = makeDrops(600, 0x8aff30, .06, .8); S.sm = skyMine('acid rain', 'Acid Rain Jar', 90, 'You caught some acid rain in a jar! Do not drink it.'); S.ht = 1.5; tint.style.opacity = .3;
       tint.style.background = '#1a3010'; toast('ACID RAIN! It burns! Get under a roof, quick!'); },
@@ -20064,6 +20070,101 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__disaster = {K, start, stop, get cur(){ return cur; }, targets, mountainNear, setNext:v=>{ nextT = v; }, T:{aimTick, md:v=>{ mouseDown = v; }, cam:()=>camera, loot}};
 })();
 /* LN-disasters end */
+/* LN-burn start (run): water puts fire out everywhere, and fire sets you on fire for a while (a lasting burn) until it wears off or you get wet (Irfan 2026-10-27) */
+(function(){
+  const DR = window.__drown, B = window.__biome;
+  const EE = ()=>window.__elements || {FIRES:[], killFire(){}};      // the fire code is further down the page
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const NOT_WET = {lava:1, oil:1, tar:1, methane:1, frozen:1};
+  function wetAt(x, y, z){                         // is there water (any liquid that is not lava or oil) at this point?
+    try{
+      const c = B.col(Math.floor(x), Math.floor(z));
+      if(c && c.liq && NOT_WET[c.b.liq]) return false;
+      return DR && DR.waterTopAt(x, y, z) != null;
+    }catch(e){ return false; }
+  }
+  // ---------- the burn
+  let burnT = 0, tickT = 0, toldT = 0;
+  const glowEl = document.createElement('div');
+  glowEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .3s;box-shadow:inset 0 0 120px 40px rgba(255,90,10,.75)';
+  document.body.appendChild(glowEl);
+  const tag = document.createElement('div');
+  tag.style.cssText = 'position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:21;background:rgba(120,30,0,.9);color:#ffd9a0;padding:6px 14px;border-radius:8px;font:800 15px system-ui,sans-serif;display:none;pointer-events:none';
+  document.body.appendChild(tag);
+  function setBurn(sec){
+    if(burnT <= 0 && toldT <= 0){ toldT = 3; toast(pick(['You are ON FIRE! Jump in water to put it out!','Your clothes caught fire! Find some water!','Hot hot HOT! You are burning! Water puts it out.'])); }
+    burnT = Math.max(burnT, sec);
+  }
+  function putOut(why){ if(burnT <= 0) return; burnT = 0; burst(P.x, P.y + 1, P.z, 0, 8); blip(1400, .25, .05, 'sawtooth'); toast(why); }
+  // ---------- cold puts fire out too: snow and ice next to it, cold biomes, the Ice Age
+  const COLD_BLOCK = /snow|ice|frost|glacier|permafrost|frozen/i, COLD_BIOME = /snow|ice|tundra|glacier|frozen|frost|steppe|vanilla/i;
+  function coldAt(x, d, z){
+    if(typeof ICEAGE !== 'undefined' && ICEAGE && -d - 1 > -6) return true;
+    try{ const c = B.col(x, z); if(c && c.b && (c.b.base === 'snow' || COLD_BIOME.test(c.b.name)) && -d - 1 > -8) return true; }catch(e){}
+    for(const o of [[0,1,0],[1,0,0],[-1,0,0],[0,0,1],[0,0,-1],[0,-1,0]]){ const id = get(x+o[0], d+o[1], z+o[2]); if(id && COLD_BLOCK.test((BLOCKS[id-1] || {}).name || '') && !/ice cream|dice|rice|spice|slice|juice|price|nice/i.test((BLOCKS[id-1] || {}).name || '')) return true; }
+    return false;
+  }
+  // ---------- fires go out in water, rain, floods and the cold
+  function fireWater(){
+    const D = window.__disaster, cur = D && D.cur, rainy = cur && /^(rain|storm|acidrain|hail)$/.test(cur.kind);
+    const E = EE(); for(const f of E.FIRES.slice()){
+      const fx = f.x + .5, fy = -f.d - 1 + .2, fz = f.z + .5;
+      if(wetAt(fx, fy, fz)){ E.killFire(f, true); continue; }
+      if(Math.random() < .5 && coldAt(f.x, f.d, f.z)){ E.killFire(f, true); continue; }
+      if(cur && cur.kind === 'flood' && Math.hypot(fx - cur.x, fz - cur.z) < 48 && fy < cur.lv){ E.killFire(f, true); continue; }
+      if(rainy && Math.random() < .25 && Math.abs(fx - P.x) < 30 && Math.abs(fz - P.z) < 30){
+        let roof = false; for(let k = 1; k <= 12; k++) if(get(f.x, f.d - k, f.z)){ roof = true; break; }
+        if(!roof) E.killFire(f, true);
+      }
+    }
+  }
+  let last = performance.now(), slow = 0;
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.5, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      if(toldT > 0) toldT -= dt;
+      slow -= dt; if(slow <= 0){ slow = .5; fireWater(); }
+      // touching fire (or lava) sets you on fire
+      if(realm === 0){
+        for(const f of EE().FIRES){ const fx = f.x + .5, fz = f.z + .5, fy = -f.d - 1;
+          if(Math.abs(fx - P.x) < .8 && Math.abs(fz - P.z) < .8 && P.y > fy - .3 && P.y < fy + .9){ setBurn(6); break; } }
+        try{ const L = window.__lava; if(L && L.at(Math.floor(P.x), Math.ceil(-(P.y + .2)) - 1, Math.floor(P.z)) >= 0) setBurn(8); }catch(e){}
+      }
+      if(burnT > 0){
+        const D = window.__disaster, cur = D && D.cur;
+        if(wetAt(P.x, P.y + .3, P.z) || (cur && cur.kind === 'flood' && P.y < cur.lv - .3)) putOut('Psssst! The water put the fire out. Phew!');
+        else if(cur && /^(rain|storm)$/.test(cur.kind) && Math.random() < dt*.5) putOut('The rain put out your fire. Phew!');
+        else if(realm === 0 && Math.random() < dt*.6 && coldAt(Math.floor(P.x), Math.ceil(-(P.y + .2)) - 1, Math.floor(P.z))) putOut('Brrr! The cold put out the fire on you.');
+        else {
+          burnT -= dt; tickT -= dt;
+          if(tickT <= 0){ tickT = .8; hurtPlayer(1); }
+          if(Math.random() < dt*12) burst(P.x + (Math.random() - .5)*.6, P.y + .5 + Math.random()*1.2, P.z + (Math.random() - .5)*.6, 0, 1);
+          if(burnT <= 0) toast('The fire on you went out by itself.');
+        }
+      }
+      glowEl.style.opacity = burnT > 0 ? .6 + .3*Math.sin(now/90) : 0;
+      if(burnT > 0){ tag.textContent = 'ON FIRE! '+Math.ceil(burnT)+'s  (get in water!)'; tag.style.display = 'block'; } else tag.style.display = 'none';
+    }catch(err){ console.warn(err); }
+  })(performance.now());
+  // ---------- a one-time gift: a Divine material (Irfan 2026-10-27)
+  setTimeout(()=>{
+    try{
+      if(save.divineGift) return;
+      const key = '6|Heavenly Starlight Crystal (Gift)';
+      save.mats = save.mats || {}; if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1;
+      save.mats[key] = (save.mats[key] || 0) + 1; save.divines = (save.divines || 0) + 1; persist();
+      save.divineGift = 1; persist();
+      pushFeed('Heavenly Starlight Crystal (Gift)  [Divine]', 1, '#40fff0'); shake = Math.max(shake, .06);
+      toast('DIVINE FIND!!! Heavenly Starlight Crystal! Only 1 in 5,000 finds are this rare! (It is in your discoveries: press I.)');
+      blip(1568, .4, .15, 'triangle'); setTimeout(()=>blip(2093, .5, .12, 'sine'), 200);
+    }catch(e){}
+  }, 4000);
+  window.__burn = {coldAt, set:setBurn, putOut, get t(){ return burnT; }, wetAt};
+})();
+/* LN-burn end */
+
 
 
 
