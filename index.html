@@ -20164,6 +20164,275 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__burn = {coldAt, set:setBurn, putOut, get t(){ return burnT; }, wetAt};
 })();
 /* LN-burn end */
+/* LN-bobciv start (run): Bobs start their own civilization, animal and Bob cities get futuristic stuff as they grow, and animals show hunger and sprint bars (Irfan 2026-10-27) */
+(function(){
+  const NA = window.__nations, BB = window.__bobs, BI = window.__biome;
+  if(!NA || !BB || !BI) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const news = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const surf = (x, z)=>BI.surfH(Math.floor(x), Math.floor(z));
+  const NOMINE = o=>{ o.traverse(m=>{ m.userData.gone = true; m.userData.noMine = true; }); return o; };
+  const Lam = (c, em)=>new THREE.MeshLambertMaterial(em ? {color:c, emissive:c, emissiveIntensity:em} : {color:c});
+  const Bas = (c, op)=>new THREE.MeshBasicMaterial(op ? {color:c, transparent:true, opacity:op, depthWrite:false} : {color:c});
+  const box = (w,h,d,mat,x,y,z,par)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); par.add(m); return m; };
+  function nameTag(top, sub, col){
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
+    x.font = 'bold 36px system-ui,sans-serif'; x.strokeText(top, 320, 40); x.fillStyle = col; x.fillText(top, 320, 40);
+    x.font = 'bold 24px system-ui,sans-serif'; x.strokeText(sub, 320, 90); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 90);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    sp.scale.set(16, 3.2, 1); return sp;
+  }
+
+  // ================= BOB CIVILIZATION: the good Bobs settle down and build a town of their own
+  save.bobCities = save.bobCities || [];
+  const BOB_PRE = ['Bobtown','New Bobbington','Bobville','Bobsburg','Port Bob','Bobopolis','Saint Bob','Bobford'];
+  const BOB_LAWS = ['Every Bob must say hello to every other Bob.','Soup on Tuesdays. And on all the other days.','No Bob may be called anything except Bob.','Bedtime is whenever a Bob feels sleepy.','Hats are optional. Smiles are not.'];
+  const JOBS = [
+    {j:'Mayor', shirt:0x6a3ab8, says:['Welcome to our town! We are the GOOD Bobs.','I was elected by every Bob. Every Bob voted for me. I am also every Bob.','Our town is the best town. It is also the only Bob town.']},
+    {j:'Builder', shirt:0xffb020, says:['I build houses. Then I build more houses.','Hand me a plank, please!','This wall is a bit wonky. It is called style.']},
+    {j:'Chef', shirt:0xffffff, says:['Soup is ready! It is always soup.','Bob soup has no Bobs in it, I promise.','Mmm, carrot soup.']},
+    {j:'Farmer', shirt:0x3a9a3a, says:['My carrots are growing nicely.','I grow food for the whole town.','Do you want a potato? I have nine.']},
+    {j:'Guard', shirt:0x404c66, says:['I keep the night Bobs away from our town.','Halt! Oh, it is you. Hello!','The night Bobs are not like us. We are nice.']},
+    {j:'Scientist', shirt:0xd8f0ff, says:['I am inventing robots. Mostly they fall over.','Science! It is like cooking, but with sparks.','My hover car only crashed twice today.']},
+    {j:'Teacher', shirt:0xc04040, says:['Today we are learning to count to Bob.','One Bob, two Bob, three Bob...','Please put your hand up before you shout BOB.']}
+  ];
+  function freeSpot(cx, cz, rMin, rMax, r){
+    for(let t=0;t<30;t++){
+      const a = Math.random()*6.283, d = rMin + Math.random()*(rMax - rMin), x = Math.floor(cx + Math.cos(a)*d), z = Math.floor(cz + Math.sin(a)*d);
+      const G = NA.siteOk(x, z, r); if(G !== null) return {x, z, G};
+    }
+    return null;
+  }
+  function foundBobCity(){
+    if(realm !== 0 || P.y < -6) return null;
+    const site = NA.findSite(6, 26); if(!site) return null;
+    const c = {id:'bob'+Date.now(), name:pick(BOB_PRE.filter(n=>!save.bobCities.some(q=>q.name === n))) || 'Bob City', x:site.x, z:site.z, G:site.G, law:pick(BOB_LAWS), born:Date.now(), houses:0, bob:1};
+    save.bobCities.push(c); if(save.bobCities.length > 4) save.bobCities.shift();
+    NA.startBuild('house', site, 'Bob', {nation:c.id, animalName:'Bob'}); c.houses = 1;
+    const fx = site.x + 5, fz = site.z, ID = NA.ID;
+    if(surf(fx, fz) === site.G){ for(let y=0;y<7;y++) setBlock(fx, -(site.G+y+1), fz, ID.plank); for(let y=5;y<7;y++) for(let k=1;k<=3;k++) setBlock(fx+k, -(site.G+y+1), fz, ID[y === 6 ? 'blue' : 'hat']); }
+    c.fx = fx; c.fz = fz;
+    news('BREAKING: The nice Bobs have stopped running about at night and started their own town called "'+c.name+'". First law: '+c.law, true);
+    toast('The Bobs started a civilization! Welcome to "'+c.name+'". These are the good Bobs, they will not hurt you.');
+    persist(); return c;
+  }
+  const cityTags = {}, people = [];
+  function spawnCitizen(c){
+    const jobs = JOBS.filter(J=>J.j !== 'Scientist' || (c.fut || 0) >= 1), have = people.filter(p=>p.c === c).map(p=>p.job.j);
+    const J = jobs.find(J=>have.indexOf(J.j) < 0) || pick(jobs);
+    const v = Object.assign({}, BB.VARS.bob, {shirt:J.shirt});
+    const b = BB.mk(v, c.x + (Math.random()-.5)*8, c.z + (Math.random()-.5)*8);
+    const i = BB.bobs.indexOf(b); if(i >= 0) BB.bobs.splice(i, 1);           // not a night Bob: the night Bob code leaves it alone
+    if(b.prop) b.prop.visible = false;
+    if(b.nt){ b.g.remove(b.nt); }
+    const tg = nameTag(J.j+' Bob', 'citizen of '+c.name, '#9ad8ff'); tg.scale.set(3.2, .64, 1); tg.position.y = 2.3; b.g.add(tg);
+    NOMINE(b.g);
+    const p = {b, c, job:J, x:b.x, z:b.z, wx:b.x, wz:b.z, wait:Math.random()*3, t:0, sayT:0};
+    people.push(p); return p;
+  }
+  function removeCitizen(p){ scene.remove(p.b.g); const i = people.indexOf(p); if(i >= 0) people.splice(i, 1); }
+  let cT = 0, foundT = BOBMODE ? 40 : 150, sayCool = 0;
+  function bobCityTick(dt){
+    sayCool -= dt;
+    // walking about (every frame)
+    for(const p of people){
+      const b = p.b;
+      const dx = p.wx - p.x, dz = p.wz - p.z, dd = Math.hypot(dx, dz);
+      if(dd > .3 && p.wait <= 0){
+        const s = 1.6*dt; p.x += dx/dd*s; p.z += dz/dd*s; p.t += dt*8;
+        b.g.rotation.y = Math.atan2(dx, dz);
+        b.legL.rotation.x = Math.sin(p.t)*.6; b.legR.rotation.x = -Math.sin(p.t)*.6; b.armL.rotation.x = -Math.sin(p.t)*.5; b.armR.rotation.x = Math.sin(p.t)*.5;
+      } else {
+        b.legL.rotation.x = b.legR.rotation.x = b.armL.rotation.x = 0; b.armR.rotation.x = p.job.j === 'Builder' ? -1.2 + Math.sin(performance.now()/120)*.5 : 0;
+        p.wait -= dt;
+        if(p.wait <= 0 && dd <= .3){ p.wait = 2 + Math.random()*5; const a = Math.random()*6.283, r = 3 + Math.random()*(8 + (p.c.houses||1)*2); p.wx = p.c.x + Math.cos(a)*r; p.wz = p.c.z + Math.sin(a)*r; }
+      }
+      b.x = p.x; b.z = p.z; b.g.position.set(p.x, surf(p.x, p.z), p.z);
+      // say hello when you walk up
+      const pd = Math.hypot(P.x - p.x, P.z - p.z);
+      p.sayT -= dt;
+      if(pd < 3.2 && p.sayT <= 0 && sayCool <= 0){ p.sayT = 12; sayCool = 4; b.g.rotation.y = Math.atan2(P.x - p.x, P.z - p.z); toast(p.job.j+' Bob: "'+pick(p.job.says)+'"'); }
+    }
+    cT -= dt; if(cT > 0) return; cT = 1;
+    if(realm === 0 && !won){
+      foundT -= 1;
+      const want = BOBMODE ? 2 : 1;
+      if(foundT <= 0 && save.bobCities.length < want){ if(!foundBobCity()) foundT = 10; else foundT = 400; }
+    }
+    for(const c of save.bobCities){
+      const d = Math.hypot(c.x - P.x, c.z - P.z), near = realm === 0 && d < 70 && P.y > -10;
+      const tg = cityTags[c.id] || (cityTags[c.id] = (()=>{ const s = nameTag(c.name, 'A town built by the good Bobs', '#ffd84a'); s.position.set((c.fx||c.x)+2, c.G + 10.5, c.fz||c.z); scene.add(s); return s; })());
+      tg.visible = realm === 0 && d < 140;
+      const mine = people.filter(p=>p.c === c);
+      if(!near){ mine.forEach(removeCitizen); continue; }
+      const cap = Math.min(8, 3 + (c.houses||1));
+      if(mine.length < cap) spawnCitizen(c);
+      // the town grows: a new house every so often, up to 8
+      c.grow = (c.grow || 0) + 1;
+      if(c.grow > 35 && (c.houses||1) < 8){
+        c.grow = 0; const s = freeSpot(c.x, c.z, 9, 16 + c.houses*2, 3);
+        if(s){ NA.startBuild(c.houses === 4 ? 'tower' : 'house', s, 'Bob', {nation:c.id, animalName:'Bob'}); c.houses = (c.houses||1) + 1;
+          if(Math.random() < .5) news('NEWS: '+c.name+' is growing. The Bobs are building house number '+c.houses+'. They named it "Bob".'); persist(); }
+      }
+    }
+  }
+
+  // ================= FUTURISTIC CITIES: as a city gets older it invents robots, domes, laser towers, hover cars and teleporters
+  const FUT_AT = [60, 150, 240];                        // seconds of age for level 1, 2, 3
+  const FUT_NEWS = [
+    ['solar panels and a robot helper', 'They built solar panels and a robot helper. The robot is called "Beep".'],
+    ['a glass dome and a laser tower', 'They built a glass dome and a laser tower that shines into the sky.'],
+    ['hover cars and a teleporter', 'They invented hover cars and a teleporter pad. Nobody knows where the teleporter goes.']
+  ];
+  const futG = {};
+  function futBuild(c){
+    const g = new THREE.Group(), lv = c.fut || 0, R = c.bob ? 11 : 13, A = {cars:[], robots:[], spin:[], blink:[]};
+    g.userData.lv = lv; g.userData.A = A;
+    const at = (ang, r)=>{ const x = c.x + Math.cos(ang)*r, z = c.z + Math.sin(ang)*r; return [x, surf(x, z), z]; };
+    if(lv >= 1){
+      for(let i=0;i<3;i++){ const [x,y,z] = at(.6 + i*.35, R + 1); const s = new THREE.Group(); s.position.set(x, y, z);
+        box(.12, 1.1, .12, Lam(0x888888), 0, .55, 0, s); const pnl = box(1.6, .08, 1.1, Lam(0x1a3a8a, .25), 0, 1.15, 0, s); pnl.rotation.x = -.5;
+        box(1.62, .02, .04, Lam(0xc0c8d0), 0, 1.2, 0, s).rotation.x = -.5; s.rotation.y = Math.random()*.6; g.add(s); }
+      for(let i=0;i<2;i++){ const r = new THREE.Group(), [x,y,z] = at(2 + i*2.5, R - 3);
+        box(.6, .7, .45, Lam(0xb8c4d0), 0, .75, 0, r); const hd = box(.45, .38, .4, Lam(0xd0d8e0), 0, 1.32, 0, r);
+        box(.1, .08, .02, Bas(0x40f0ff), -.1, 1.35, .21, r); box(.1, .08, .02, Bas(0x40f0ff), .1, 1.35, .21, r);
+        box(.03, .3, .03, Lam(0x888888), 0, 1.65, 0, r); const bl = box(.09, .09, .09, Bas(0xff3030), 0, 1.82, 0, r); A.blink.push(bl);
+        box(.16, .4, .16, Lam(0x6a7480), -.15, .2, 0, r); box(.16, .4, .16, Lam(0x6a7480), .15, .2, 0, r);
+        r.position.set(x, y, z); r.userData.a = Math.random()*6.283; r.userData.r = R - 3 - i*2; A.robots.push(r); g.add(r); }
+    }
+    if(lv >= 2){
+      const [x,y,z] = at(3.6, R + 4);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(3.4, 20, 12, 0, 6.283, 0, Math.PI/2), Bas(0x80e8ff, .28)); dome.position.set(x, y, z); g.add(dome);
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(3.4, .12, 6, 32), Lam(0xc0d0e0)); rim.rotation.x = Math.PI/2; rim.position.set(x, y + .1, z); g.add(rim);
+      const core = new THREE.Mesh(new THREE.OctahedronGeometry(.7), Bas(0x60ffd0)); core.position.set(x, y + 1.6, z); g.add(core); A.spin.push(core);
+      for(let k=0;k<3;k++){ const pl = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, .5, 10), Lam(0x3aa040)); pl.position.set(x + Math.cos(k*2.1)*1.9, y + .25, z + Math.sin(k*2.1)*1.9); g.add(pl); }
+      const [tx,ty,tz] = at(5.2, R + 2);
+      const tw = new THREE.Mesh(new THREE.CylinderGeometry(.35, .7, 12, 8), Lam(0xd8dee6)); tw.position.set(tx, ty + 6, tz); g.add(tw);
+      for(let k=0;k<3;k++){ const ring = new THREE.Mesh(new THREE.TorusGeometry(.75 - k*.1, .07, 6, 18), Bas(0x40f0ff)); ring.rotation.x = Math.PI/2; ring.position.set(tx, ty + 3 + k*3, tz); g.add(ring); }
+      const top = new THREE.Mesh(new THREE.SphereGeometry(.55, 10, 8), Bas(0xff4060)); top.position.set(tx, ty + 12.4, tz); g.add(top); A.blink.push(top);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(.12, .12, 60, 6), Bas(0xff4080, .35)); beam.position.set(tx, ty + 42, tz); g.add(beam); A.beam = beam;
+    }
+    if(lv >= 3){
+      const cols = [0xff4040, 0x40a0ff, 0xffd030];
+      for(let i=0;i<3;i++){ const car = new THREE.Group();
+        box(1.8, .45, .9, Lam(cols[i]), 0, 0, 0, car); box(.9, .35, .8, Bas(0x9fe8ff, .6), -.1, .38, 0, car);
+        box(1.6, .06, .7, Bas(0x40f0ff), 0, -.26, 0, car); box(.1, .14, .2, Bas(0xffffaa), .92, .02, .28, car); box(.1, .14, .2, Bas(0xffffaa), .92, .02, -.28, car);
+        car.userData.a = i*2.1; car.userData.r = R - 1 + i*2; car.userData.h = 6 + i*1.5; car.userData.sp = .35 + i*.12; A.cars.push(car); g.add(car); }
+      const [px,py,pz] = at(1.2, R - 6);
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.5, .25, 20), Lam(0x5a6070)); pad.position.set(px, py + .12, pz); g.add(pad);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(1.2, .1, 6, 24), Bas(0xc060ff)); ring.rotation.x = Math.PI/2; ring.position.set(px, py + .5, pz); g.add(ring); A.spin.push(ring);
+      const glow = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 3, 16, 1, true), Bas(0xc060ff, .2)); glow.position.set(px, py + 1.75, pz); g.add(glow); A.pad = {x:px, y:py, z:pz, glow};
+    }
+    NOMINE(g); scene.add(g); return g;
+  }
+  function futLevel(c){ const age = (Date.now() - (c.born || Date.now()))/1000; let lv = 0; FUT_AT.forEach((s, i)=>{ if(age >= s) lv = i + 1; }); return lv; }
+  function allCities(){ return (save.nations || []).concat(save.bobCities || []); }
+  let fT = 0, padCool = 0;
+  function futTick(dt){
+    const now = performance.now()/1000;
+    for(const id in futG){
+      const g = futG[id]; if(!g.visible) continue; const A = g.userData.A, c = g.userData.c;
+      A.cars.forEach(car=>{ const u = car.userData; u.a += u.sp*dt; const x = c.x + Math.cos(u.a)*u.r, z = c.z + Math.sin(u.a)*u.r;
+        car.position.set(x, c.G + u.h + Math.sin(now*2 + u.a)*.4, z); car.rotation.y = -u.a; });
+      A.robots.forEach(r=>{ const u = r.userData; u.a += .25*dt; const x = c.x + Math.cos(u.a)*u.r, z = c.z + Math.sin(u.a)*u.r; r.position.set(x, surf(x, z), z); r.rotation.y = -u.a; });
+      A.spin.forEach(m=>{ m.rotation.y += dt*1.5; m.rotation.z += dt*.6; });
+      A.blink.forEach(m=>{ m.visible = Math.sin(now*4) > -.3; });
+      if(A.beam) A.beam.material.opacity = .22 + Math.sin(now*3)*.12;
+      // the teleporter: step on it and it sends you to the top of the laser tower... or somewhere silly
+      if(A.pad){ A.pad.glow.material.opacity = .15 + Math.sin(now*5)*.08;
+        if(padCool <= 0 && Math.hypot(P.x - A.pad.x, P.z - A.pad.z) < 1.2 && Math.abs(P.y - A.pad.y) < 2){
+          padCool = 3; burst(P.x, P.y + 1, P.z, 0, 20); blip(1600, .3, .08, 'sine');
+          const a = Math.random()*6.283; P.x = c.x + Math.cos(a)*22; P.z = c.z + Math.sin(a)*22; P.y = surf(P.x, P.z) + 14; P.vy = 0;
+          toast(pick(['ZAP! The teleporter worked! Sort of. You are in the sky.','Teleported! It sends you near the city... from very high up.','Whoosh! The teleporter is still being tested.'])); } }
+    }
+    if(padCool > 0) padCool -= dt;
+    fT -= dt; if(fT > 0) return; fT = 1;
+    for(const c of allCities()){
+      const d = Math.hypot(c.x - P.x, c.z - P.z), lv = futLevel(c);
+      if(lv > (c.fut || 0)){
+        c.fut = lv; persist();
+        const who = c.bob ? 'The Bobs of '+c.name : 'The '+(c.animal ? plural(c.animal) : 'animals')+' of '+c.name.replace(/^The /, 'the ');
+        news('BREAKING: '+who+' have invented '+FUT_NEWS[lv-1][0]+'! The future is here.', true);
+        if(d < 120 && realm === 0) toast(who+' went futuristic! '+FUT_NEWS[lv-1][1]);
+      }
+      let g = futG[c.id];
+      const show = realm === 0 && d < 150 && (c.fut || 0) > 0;
+      if(g && g.userData.lv !== (c.fut || 0)){ scene.remove(g); delete futG[c.id]; g = null; }
+      if(show && !g){ g = futG[c.id] = futBuild(c); g.userData.c = c; }
+      if(g) g.visible = show;
+    }
+    for(const id in futG) if(!allCities().some(c=>c.id === id)){ scene.remove(futG[id]); delete futG[id]; }
+  }
+  function plural(n){ return /s$/.test(n) ? n : (/sheep|fish|deer|moose/i.test(n) ? n : n+'s'); }
+
+  // ================= HUNGER and SPRINT bars over animals (they were hidden before)
+  const bars = new Map(), MAX_BARS = 16;
+  function barSprite(){
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 40;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    sp.scale.set(1.3, .41, 1); sp.renderOrder = 5; NOMINE(sp); scene.add(sp); return {sp, cv, h:-1, s:-1, top:0, topT:0};
+  }
+  function drawBar(B, h, s){
+    const x = B.cv.getContext('2d'); x.clearRect(0, 0, 128, 40);
+    x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(0, 0, 128, 40);
+    x.font = 'bold 13px system-ui,sans-serif'; x.textBaseline = 'middle'; x.fillStyle = '#fff';
+    x.fillText('Food', 4, 11); x.fillText('Run', 4, 29);
+    x.fillStyle = '#333'; x.fillRect(40, 5, 84, 12); x.fillRect(40, 23, 84, 12);
+    x.fillStyle = h > 50 ? '#5ad04a' : h > 25 ? '#ffb020' : '#ff4040'; x.fillRect(40, 5, 84*h/100, 12);
+    x.fillStyle = s > 30 ? '#40b8ff' : '#8a7aff'; x.fillRect(40, 23, 84*s/100, 12);
+    B.sp.material.map.needsUpdate = true; B.h = h; B.s = s;
+  }
+  const tmpBox = new THREE.Box3();
+  function topOf(a){
+    let top = -1e9;
+    a.g.traverse(o=>{ if(o.isMesh && o.visible){ tmpBox.setFromObject(o); if(tmpBox.max.y > top) top = tmpBox.max.y; } else if(o.isSprite && o.visible){ const wp = o.getWorldPosition(new THREE.Vector3()); top = Math.max(top, wp.y + o.scale.y/2); } });
+    return top > -1e8 ? top - a.g.position.y : 1.2;
+  }
+  let bT = 0;
+  function barTick(dt){
+    // wild animals get hunger and stamina too: running away tires them out, and they nibble grass when hungry
+    for(const a of animals){
+      const q = a.popRef;
+      if(q && q.hunger != null) continue;                 // residents: the society code runs theirs
+      if(a.hng == null){ a.hng = 50 + Math.random()*50; a.stam = a.stam == null ? 100 : a.stam; }
+      a.hng = Math.max(0, a.hng - dt*.25);
+      const running = a.fleeT > 0 || a.sprint;
+      if(running) a.stam = Math.max(0, (a.stam||0) - 18*dt); else a.stam = Math.min(100, (a.stam||0) + 10*dt);
+      if(a.hng < 25 && !running && Math.random() < dt*.15){ a.hng = 100; }
+    }
+    bT -= dt;
+    const near = [];
+    if(realm === 0 && !invOpen){
+      for(const a of animals){ if(!a.g || !a.g.visible || !a.pos) continue; const d = Math.hypot(a.pos.x - P.x, a.pos.z - P.z); if(d < 15 && Math.abs(a.pos.y - P.y) < 8) near.push([d, a]); }
+      near.sort((u, v)=>u[0] - v[0]); near.length = Math.min(near.length, MAX_BARS);
+    }
+    const keep = new Set(near.map(n=>n[1]));
+    for(const [a, B] of bars) if(!keep.has(a)){ scene.remove(B.sp); B.sp.material.map.dispose(); B.sp.material.dispose(); bars.delete(a); }
+    for(const [, a] of near){
+      let B = bars.get(a); if(!B){ B = barSprite(); bars.set(a, B); }
+      const q = a.popRef, h = Math.round(q && q.hunger != null ? q.hunger : a.hng), s = Math.round(a.stam == null ? 100 : a.stam);
+      if(Math.abs(h - B.h) >= 2 || Math.abs(s - B.s) >= 2 || B.h < 0) drawBar(B, Math.max(0, Math.min(100, h)), Math.max(0, Math.min(100, s)));
+      B.topT -= dt; if(B.topT <= 0){ B.topT = 2; B.top = topOf(a); }
+      B.sp.position.set(a.pos.x, a.g.position.y + B.top + .3, a.pos.z);
+    }
+  }
+  function clearAll(){ for(const [, B] of bars){ scene.remove(B.sp); } bars.clear(); people.slice().forEach(removeCitizen); }
+
+  let last = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.5, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      if(realm !== 0){ if(bars.size || people.length) clearAll(); }
+      bobCityTick(dt); futTick(dt); barTick(dt);
+    }catch(e){ console.error(e); }
+  })(performance.now());
+  window.__bobciv = {foundBobCity, people, futG, futLevel, bars, FUT_AT, spawnCitizen, allCities, setFound:s=>{ foundT = s; }, JOBS};
+})();
+/* LN-bobciv end */
+
 
 
 
