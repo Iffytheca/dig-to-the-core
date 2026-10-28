@@ -8002,7 +8002,7 @@ const FLW = (function(){
     return -1;
   }
   function mine(j){
-    const x = X[j], d = Y[j], z = Z[j], y = cellTop(j), nm = K[j] === 1 ? 'Swamp Water' : 'Water';
+    const x = X[j], d = Y[j], z = Z[j], y = cellTop(j), bc = window.__biome && window.__biome.col(Math.floor(x), Math.floor(z)), bl = bc && bc.liq && window.__liqItems && window.__liqItems[bc.b.liq], nm = bl && bl !== 'Water' ? bl : K[j] === 1 ? 'Swamp Water' : 'Water';
     del(j);
     addItem(nm, 1); hotAuto('i:'+nm); updateHotbar();
     toast(cp('waterMined', 'You mined the water. It did not resist.'));
@@ -15980,9 +15980,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         else { if(P.vy > 0) P.vy -= P.vy*Math.min(1, 5*dt); if(P.vy < (thick ? -1 : -1.5)) P.vy = thick ? -1 : -1.5; }
         if(!swimIn){ swimIn = true; if(typeof lnwSplash === 'function'){ lnwSplash(P.x, -.29, P.z, 8); lnwRipple(P.x, P.z); } blip(240+Math.random()*80,.18,.1,'sine'); }
         swimRT -= dt; if(swimRT <= 0 && sp > .6 && typeof lnwRipple === 'function'){ swimRT = .42; lnwRipple(P.x, P.z); }
-        const q = BIOME.LIQ[inL];
+        const q = BIOME.LIQ[inL] || [0x9fd8ff, 0, 0, 0];
         if(q[3] && !(window.__buffs && window.__buffs.liqSafe > 0)){ hurtT -= dt; if(hurtT <= 0){ hurtT = .5; hurtPlayer(q[3]); } }
-        if(!liqTold[inL]){ liqTold[inL] = 1; toast(q[3] ? 'Ouch! This '+LIQ_NAME[inL]+' hurts. Get out!' : 'Splash! You are swimming in '+LIQ_NAME[inL]+'. Hold Space to swim up.'); }
+        if(!liqTold[inL]){ liqTold[inL] = 1; toast(q[3] ? 'Ouch! This '+LIQ_NAME[inL]+' hurts. Get out!' : 'Splash! You are swimming in '+(LIQ_NAME[inL] || 'icy water')+'. Hold Space to swim up.'); }
       }
     }
     if(!inL) swimIn = false;
@@ -16888,9 +16888,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _v = new THREE.Vector3();
   function aimLiq(){
     if(realm !== 0 || P.x >= UPPER_EDGE) return null;
-    const o = camera.position; if(liqAt(o.x, o.y, o.z)) return null;   // under water you dig blocks, not water
-    camera.getWorldDirection(_v);
-    for(let t=.2, reach = mineAny ? 10 : 5.5; t<=reach; t+=.05){
+    const o = camera.position; camera.getWorldDirection(_v);
+    const inL = liqAt(o.x, o.y, o.z);
+    if(inL){                                                   // in the liquid: dig a block if you aim at one, otherwise scoop up the liquid you are in
+      for(let t=.2, reach = mineAny ? 10 : 5.5; t<=reach; t+=.05){ const wy = o.y+_v.y*t, d = Math.floor(-wy); if(d >= -48 && d < D && get(Math.floor(o.x+_v.x*t), d, Math.floor(o.z+_v.z*t))) return null; }
+      return WATERY[inL.b.liq] ? {c:inL, x:Math.floor(o.x), z:Math.floor(o.z), dist:1, item:WATERY[inL.b.liq]} : null;
+    }
+    for(let t=.2, reach = mineAny ? 10 : 7; t<=reach; t+=.05){
       const wx = o.x+_v.x*t, wy = o.y+_v.y*t, wz = o.z+_v.z*t, d = Math.floor(-wy);
       if(d >= -48 && d < D && get(Math.floor(wx), d, Math.floor(wz))) return null;
       const c = liqAt(wx, wy, wz); if(c) return WATERY[c.b.liq] ? {c, x:Math.floor(wx), z:Math.floor(wz), dist:t, item:WATERY[c.b.liq]} : null;
@@ -20370,19 +20374,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ================= HUNGER and SPRINT bars over animals (they were hidden before)
   const bars = new Map(), MAX_BARS = 16;
   function barSprite(){
-    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 40;
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 58;
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
-    sp.scale.set(1.3, .41, 1); sp.renderOrder = 5; NOMINE(sp); scene.add(sp); return {sp, cv, h:-1, s:-1, top:0, topT:0};
+    sp.scale.set(1.3, .59, 1); sp.renderOrder = 5; NOMINE(sp); scene.add(sp); return {sp, cv, h:-1, s:-1, hp:-1, top:0, topT:0};
   }
-  function drawBar(B, h, s){
-    const x = B.cv.getContext('2d'); x.clearRect(0, 0, 128, 40);
-    x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(0, 0, 128, 40);
+  function drawBar(B, h, s, hp){
+    const x = B.cv.getContext('2d'); x.clearRect(0, 0, 128, 58);
+    x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(0, 0, 128, 58);
     x.font = 'bold 13px system-ui,sans-serif'; x.textBaseline = 'middle'; x.fillStyle = '#fff';
-    x.fillText('Food', 4, 11); x.fillText('Run', 4, 29);
-    x.fillStyle = '#333'; x.fillRect(40, 5, 84, 12); x.fillRect(40, 23, 84, 12);
-    x.fillStyle = h > 50 ? '#5ad04a' : h > 25 ? '#ffb020' : '#ff4040'; x.fillRect(40, 5, 84*h/100, 12);
-    x.fillStyle = s > 30 ? '#40b8ff' : '#8a7aff'; x.fillRect(40, 23, 84*s/100, 12);
-    B.sp.material.map.needsUpdate = true; B.h = h; B.s = s;
+    x.fillText('HP', 4, 11); x.fillText('Food', 4, 29); x.fillText('Run', 4, 47);
+    x.fillStyle = '#333'; x.fillRect(40, 5, 84, 12); x.fillRect(40, 23, 84, 12); x.fillRect(40, 41, 84, 12);
+    x.fillStyle = hp > 50 ? '#ff4a5a' : hp > 25 ? '#ff8a20' : '#a01020'; x.fillRect(40, 5, 84*hp/100, 12);
+    x.fillStyle = h > 50 ? '#5ad04a' : h > 25 ? '#ffb020' : '#ff4040'; x.fillRect(40, 23, 84*h/100, 12);
+    x.fillStyle = s > 30 ? '#40b8ff' : '#8a7aff'; x.fillRect(40, 41, 84*s/100, 12);
+    B.sp.material.map.needsUpdate = true; B.h = h; B.s = s; B.hp = hp;
   }
   const tmpBox = new THREE.Box3();
   function topOf(a){
@@ -20413,7 +20418,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     for(const [, a] of near){
       let B = bars.get(a); if(!B){ B = barSprite(); bars.set(a, B); }
       const q = a.popRef, h = Math.round(q && q.hunger != null ? q.hunger : a.hng), s = Math.round(a.stam == null ? 100 : a.stam);
-      if(Math.abs(h - B.h) >= 2 || Math.abs(s - B.s) >= 2 || B.h < 0) drawBar(B, Math.max(0, Math.min(100, h)), Math.max(0, Math.min(100, s)));
+      const hp = Math.round(100*Math.max(0, a.hp == null ? 1 : a.hp)/Math.max(1, a.max || (a.d && a.d.hp) || 1));
+      if(Math.abs(h - B.h) >= 2 || Math.abs(s - B.s) >= 2 || hp !== B.hp || B.h < 0) drawBar(B, Math.max(0, Math.min(100, h)), Math.max(0, Math.min(100, s)), Math.max(0, Math.min(100, hp)));
       B.topT -= dt; if(B.topT <= 0){ B.topT = 2; B.top = topOf(a); }
       B.sp.position.set(a.pos.x, a.g.position.y + B.top + .3, a.pos.z);
     }
@@ -20530,6 +20536,82 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__animals = {AD, build:t=>buildAnimal(t), EYES, enemy:t=>buildEnemy(t)};
 })();
 /* LN-divine end */
+/* LN-fierce start (run): fierce animals (Polar Bear and more) chase and bite you up close, and Bobs are tougher so one hit rarely bonks them (Irfan 2026-10-28) */
+(function(){
+  const pick = q=>q[Math.floor(Math.random()*q.length)];
+  // ---------- fierce animals: [bite damage, HP boost]
+  const FIERCE = {
+    polarbear:[6, 2.5], mammoth:[8, 2.5], woollyrhino:[7, 2.5], sabertooth:[6, 2], sabercat:[6, 2], triceratops:[7, 2.5], dino:[7, 2.5],
+    raptor:[4, 1.5], emberboar:[5, 2], robobull:[6, 2], stonksbull:[5, 2], spider:[4, 1.5], scorpion:[3, 1.5], crab:[2, 1.3], oc_crab:[2, 1.3],
+    bonedog:[3, 1.5], crystalcrab:[3, 1.5], walrus:[4, 2], acidtoad:[3, 1.5]
+  };
+  const SEE = 8, GIVE_UP = 18;
+  function friendly(a){ return a.popRef || a.cityN || a.nation || a.pet || a.worker || a.king || a.police || a.bandit || a.petOf || a.zoo; }
+  function angryTag(){
+    const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(120,0,0,.8)'; g.fillRect(28, 8, 200, 48); g.fillStyle = '#ffdddd'; g.font = '900 34px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('ANGRY', 128, 33);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false})); sp.scale.set(1.2, .3, 1);
+    sp.traverse(o=>{ o.userData.gone = true; o.userData.noMine = true; }); return sp;
+  }
+  function heightOf(a){
+    if(a._fh) return a._fh;
+    const b = new THREE.Box3(); let top = 1.2;
+    a.g.traverse(o=>{ if(o.isMesh){ b.setFromObject(o); top = Math.max(top, b.max.y - a.g.position.y); } });
+    return (a._fh = top);
+  }
+  let told = 0;
+  function fierceTick(dt){
+    if(realm !== 0 || won || shopOpen) return;
+    for(const a of animals){
+      const F = FIERCE[a.type]; if(!F || !a.pos || friendly(a)) continue;
+      if(!a._fierce){ a._fierce = 1; a.hp = a.max = Math.round((a.max || a.d.hp)*F[1]); }
+      const dx = P.x - a.pos.x, dz = P.z - a.pos.z, dd = Math.hypot(dx, dz), dy = Math.abs(P.y - a.pos.y);
+      if(a.calmT > 0) a.calmT -= dt;
+      // it gets angry when you come close, or when you hit it
+      if(!a.angry && (a.calmT || 0) <= 0 && ((dd < SEE && dy < 3) || (a.fleeT > 0 && a.hp < a.max))){
+        a.angry = 1; a.biteT = .8;
+        if(told <= 0){ told = 12; toast(pick(['The '+a.d.name+' is ANGRY! It is coming to bite you. Bonk it or run!','Uh oh, the '+a.d.name+' does not like you. Run!','The '+a.d.name+' charges at you!'])); }
+        blip(110, .25, .14, 'sawtooth');
+      }
+      if(a.angry){
+        if(dd > GIVE_UP || dy > 6 || P.y < -4){ a.angry = 0; a.calmT = 8; a.spdMul = 1; if(a._tag) a._tag.visible = false; continue; }
+        a.fleeT = 0; a.wanderT = 1; a.dir = dd > (a.d.r || .6) + .9 ? Math.atan2(dx, dz) : null; a.ang = Math.atan2(dx, dz);
+        a.spdMul = 1.6;
+        if(!a._tag){ a._tag = angryTag(); a._tag.position.y = heightOf(a) + .55; a.g.add(a._tag); }
+        a._tag.visible = true;
+        a.biteT -= dt;
+        if(a.biteT <= 0 && dd < (a.d.r || .6) + 1.5 && dy < 2.2){
+          a.biteT = 1.4; hurtPlayer(F[0]);
+          const k = 6/(dd || 1); P.vx = (P.vx || 0) + dx*k; P.vz = (P.vz || 0) + dz*k; P.vy = Math.max(P.vy || 0, 3.5); P.ground = false;
+          shake = Math.max(shake, .05); blip(160, .12, .12, 'square');
+        }
+      } else if(a._tag) a._tag.visible = false;
+    }
+    if(told > 0) told -= dt;
+  }
+
+  // ---------- tougher Bobs: more HP, and one hit can only take part of it (a lucky hit still bonks them in one, rarely)
+  const BB = window.__bobs;
+  if(BB){
+    for(const k in BB.VARS){ const v = BB.VARS[k]; if(v && v.hp && !v._tough){ v._tough = 1; v.hp = Math.round(v.hp*2.5); } }
+    const _hit = BB.hit;
+    BB.hit = function(b, dmg){
+      if(b && b.hpMax && dmg > 0 && Math.random() > .08) dmg = Math.min(dmg, b.hpMax*.45 + .5);
+      return _hit.call(this, b, dmg);
+    };
+  }
+
+  let last = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.5, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex') return;
+    try{ fierceTick(dt); }catch(e){ console.error(e); }
+  })(performance.now());
+  window.__fierce = {FIERCE, tick:fierceTick};
+})();
+/* LN-fierce end */
+
 
 
 
