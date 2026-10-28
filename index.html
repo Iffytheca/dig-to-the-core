@@ -23205,7 +23205,6 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     {id:'leeroy',  name:'Leeroy Jenkins',           hint:'Run straight at a group of angry animals.', said:'LEEEEEEROY JENKINS!'},
     {id:'cake',    name:'The Cake Is a Lie',        hint:'Reach the very bottom of the world.', said:'You reached the Core! As promised, there will be cake. ... The cake is a lie.'},
     {id:'roll',    name:'Do a Barrel Roll',         hint:'Jump, jump, jump, jump... lots of times, fast.', said:'DO A BARREL ROLL!'},
-    {id:'nyan',    name:'Nyan Cat',                 hint:'Stand still on the surface on a quiet night and watch the sky.', said:'Nyan nyan nyan nyan nyan!'},
     {id:'stonks',  name:'Stonks',                   hint:'Earn a lot of coins very quickly.', said:'STONKS!'},
     {id:'scream',  name:'The Classic Movie Scream', hint:'Fall from very, very high up.', said:'AAAAAAAAAAH! (the classic movie scream)'},
     {id:'internet',name:'End of the Internet',      hint:'Go as far as you possibly can.', said:'Congratulations! You have reached the end of the internet. Please go back now.'},
@@ -23277,7 +23276,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       document.body.appendChild(d); setTimeout(()=>{ d.style.opacity = 0; d.style.transform = 'translateY(-60px)'; }, 400 + i*250); setTimeout(()=>d.remove(), 3500 + i*250);
     });
   }
-  // Nyan Cat flying across the night sky
+  try{ if(save.easter && save.easter.nyan){ delete save.easter.nyan; persist(); } }catch(e){}   /* LN-marsdeep: the Nyan Cat sky easter egg was removed */
+  // Nyan Cat flying across the night sky (not used any more)
   let nyan = null;
   function sendNyan(){
     const g = new THREE.Group(), M = c=>new THREE.MeshBasicMaterial({color:c, fog:false});
@@ -23329,7 +23329,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(playing && now - window.__lastInput > 90000 && !save.easter.still){ found('still'); window.__lastInput = now; }
     // standing still on a quiet night: Nyan Cat
     const mv = Math.hypot(P.x - lastPos.x, P.z - lastPos.z); lastPos = {x:P.x, z:P.z};
-    if(playing && tod > .55 && tod < .95 && P.y > -1 && mv < .01 && !nyan){ stillT += dt; if(stillT > 8){ stillT = -40; sendNyan(); found('nyan'); } } else if(stillT > 0) stillT = 0; else stillT = Math.min(0, stillT + dt);
+    if(false){   /* LN-marsdeep: no more Nyan Cat in the night sky */ stillT += dt; if(stillT > 8){ stillT = -40; sendNyan(); found('nyan'); } } else if(stillT > 0) stillT = 0; else stillT = Math.min(0, stillT + dt);
   }
   let last = performance.now();
   (function tick(now){
@@ -24850,6 +24850,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(j < 0 && BLOCKS.length < 254){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length-1)); j = BLOCKS.length-1; }
     return j >= 0 ? j + 1 : 0;
   }
+  { const want = Math.max(40, D - 4), have = ML.reduce((s, l)=>s + l.th, 0); let left = want;   /* LN-marsdeep: stretch the layers as deep as the world goes */
+    ML.forEach(l=>{ l.th = Math.max(3, Math.floor(l.th*want/have)); left -= l.th; });
+    for(let i=ML.length-1; left > 0; i = i > 0 ? i - 1 : ML.length - 1){ ML[i].th++; left--; }
+    for(let i=ML.length-1; left < 0 && i >= 0; i--){ if(ML[i].th > 3){ ML[i].th--; left++; } } }
   const mIds = [], mAt = [], mStart = []; let MARS_D = 0;
   ML.forEach(l=>{ mStart.push(MARS_D); for(let k=0;k<l.th;k++) mAt.push(mIds.length); mIds.push(addB(Object.assign({upper:true, ore:false, mars:true}, l))); MARS_D += l.th; });
   const oIds = MO.map(o=>{ const H = ML[o[3][0]];
