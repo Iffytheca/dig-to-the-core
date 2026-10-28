@@ -8245,7 +8245,7 @@ function frame(){
   $('mined').textContent = save.mined;
   if(inUp){
     if(!panelUp){ panelUp = true; renderLayerPanel(UPPER_LAYERS); lastUpName = ''; }
-    const ul = P.y >= -.1 ? -1 : upperLayerAt[Math.min(UPPER_D-1, d)], nm = ul < 0 ? (PLANET_NAME+' surface') : UPPER_LAYERS[ul].name;
+    const ul = P.y >= -.1 ? -1 : upperLayerAt[Math.min(UPPER_D-1, d)], nm = ul < 0 ? (((window.__marsName && window.__marsName()) || PLANET_NAME)+' surface') : UPPER_LAYERS[ul].name;
     if(nm !== lastUpName){ lastUpName = nm; $('layername').textContent = nm; layerDivs.forEach((el,i)=>el.classList.toggle('cur', i === ul)); lastLayer = -2; }
   } else {
     lastUpName = '';
@@ -24809,6 +24809,368 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__rich = {RICH, richIds, R, found, tick, counts, openP, closeP, setBlock, get, P, brk:h=>breakBlock(h)};
 })();
 /* LN-rich end */
+/* LN-mars start: MARS, a new world you can pick in the rocket once you have dug to the core of the rocket planet (Irfan 2026-10-28 14:25) */
+(function(){
+  const MARS_EDGE = 65000, MARS = {x:80000, z:50000};
+  const rnd = a=>a[Math.floor(Math.random()*a.length)];
+  const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
+  const onMars = ()=>realm === 0 && P.x >= MARS_EDGE;
+
+  /* ------------------------------------------------ layers and ores */
+  const ML = [
+    {name:'Red Dust',        th:3, h:110,  v:500,  base:[196,84,44],   amp:16, sp:[[232,122,72],[150,60,30]],   p:.25, glow:0},
+    {name:'Rusty Sand',      th:4, h:180,  v:800,  base:[214,112,62],  amp:18, sp:[[240,152,92],[170,80,40]],   p:.25, glow:0},
+    {name:'Iron Oxide Rock', th:5, h:300,  v:1300, base:[150,62,40],   amp:20, sp:[[190,92,60],[100,40,26]],    p:.25, glow:0},
+    {name:'Olympus Basalt',  th:6, h:480,  v:2000, base:[72,42,40],    amp:18, sp:[[112,62,52],[40,24,24]],     p:.2,  glow:0},
+    {name:'Polar Frost',     th:5, h:620,  v:2800, base:[222,228,238], amp:14, sp:[[255,255,255],[180,190,212]], p:.25, glow:.1},
+    {name:'Deep Red Stone',  th:7, h:850,  v:4000, base:[122,30,26],   amp:22, sp:[[172,52,40],[80,18,16]],     p:.25, glow:.05},
+    {name:'Hematite Rock',   th:7, h:1150, v:6000, base:[62,52,58],    amp:20, sp:[[142,42,42],[30,26,30]],     p:.3,  glow:.08},
+    {name:'Mars Core',       th:6, h:1500, v:9000, base:[255,112,42],  amp:20, sp:[[255,202,82],[202,42,20]],   p:.35, glow:.85}
+  ];
+  // name, value, colour, layers it hides in, how common, glow
+  const MO = [
+    ['Hematite Ore',        400,  [170,170,182], [0,1,2,3], .05,  .05],
+    ['Martian Opal',        2500, [120,255,222], [3,4,5],   .03,  .4],
+    ['Red Planet Diamond',  9000, [255,60,90],   [5,6,7],   .014, .6]
+  ];
+  function addB(o){
+    let j = BLOCKS.findIndex(b=>b.name === o.name);
+    if(j < 0 && BLOCKS.length < 254){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length-1)); j = BLOCKS.length-1; }
+    return j >= 0 ? j + 1 : 0;
+  }
+  const mIds = [], mAt = [], mStart = []; let MARS_D = 0;
+  ML.forEach(l=>{ mStart.push(MARS_D); for(let k=0;k<l.th;k++) mAt.push(mIds.length); mIds.push(addB(Object.assign({upper:true, ore:false, mars:true}, l))); MARS_D += l.th; });
+  const oIds = MO.map(o=>{ const H = ML[o[3][0]];
+    return addB({name:o[0], ore:true, mars:true, cat:o[0].indexOf('Ore') >= 0 ? 'ore' : 'crystal', oreName:o[0], hostName:'Mars', host:0, th:0, max:1500, h:Math.round(H.h*1.15), v:o[1],
+      base:H.base, amp:H.amp, sp:[o[2]], p:.38, glow:o[5], oreCol:o[2]}); });
+  const fallback = upperIds[0] || 1;
+  for(let i=0;i<mIds.length;i++) if(!mIds[i]) mIds[i] = fallback;
+
+  /* ------------------------------------------------ biomes: plains, the giant volcano, the big canyon, craters, the polar cap and dunes */
+  const MB = [
+    {k:'plains',  name:'Red Plains'},
+    {k:'olympus', name:'Olympus Mons'},
+    {k:'valles',  name:'Valles Canyon'},
+    {k:'craters', name:'Crater Field'},
+    {k:'polar',   name:'Polar Cap', top:4},
+    {k:'dunes',   name:'Dust Dunes', top:1}
+  ];
+  const S = 110, cache = new Map();
+  function vn(x, z, sd){
+    const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, ux = fx*fx*(3-2*fx), uz = fz*fz*(3-2*fz);
+    const a = hash3(ix,0,iz,sd), b = hash3(ix+1,0,iz,sd), c = hash3(ix,0,iz+1,sd), d = hash3(ix+1,0,iz+1,sd);
+    return a + (b-a)*ux + (c-a)*uz + (a-b-c+d)*ux*uz;
+  }
+  function mcol(x, z){
+    const key = (x - MARS_EDGE)*65536 + (z + 32768);
+    let c = cache.get(key); if(c) return c;
+    if(cache.size > 200000) cache.clear();
+    const hd = Math.hypot(x - MARS.x, z - MARS.z);
+    if(hd < 34){ c = {b:MB[0], h:0}; cache.set(key, c); return c; }               // the flat landing site
+    const gx = Math.floor(x/S), gz = Math.floor(z/S);
+    let d1 = 1e9, d2 = 1e9, bx = 0, bz = 0, cx = 0, cz = 0;
+    for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
+      const px = (gx+i + .2 + .6*hash3(gx+i,7,gz+j,911))*S, pz = (gz+j + .2 + .6*hash3(gx+i,9,gz+j,913))*S, d = Math.hypot(x-px, z-pz);
+      if(d < d1){ d2 = d1; d1 = d; bx = gx+i; bz = gz+j; cx = px; cz = pz; } else if(d < d2) d2 = d;
+    }
+    const b = MB[Math.floor(hash3(bx,11,bz,917)*MB.length)];
+    const e = Math.min(1, (d2 - d1)/26) * Math.min(1, (hd - 34)/24);
+    let h = 0;
+    if(b.k === 'olympus'){ const t = 1 - d1/(S*.46); if(t > 0){ h = 15*Math.pow(t, 1.1); if(t > .86) h -= 30*(t - .86); h = Math.round(e*h); } }
+    else if(b.k === 'valles'){
+      const an = hash3(bx,13,bz,919)*Math.PI, ca = Math.cos(an), sa = Math.sin(an), lx = (x-cx)*ca + (z-cz)*sa, lz = -(x-cx)*sa + (z-cz)*ca;
+      const w = 6 + 2*Math.sin(lx/17), dist = Math.abs(lz - 10*Math.sin(lx/22 + hash3(bx,15,bz,921)*6));
+      if(dist < w + 2) h = -Math.round(e*5*Math.min(1, (w + 2 - dist)/4));
+      else h = Math.round(e*2*vn(x*.08, z*.08, 923));
+    }
+    else if(b.k === 'craters'){
+      for(let i=0;i<4;i++){ const ox = cx + (hash3(bx,20+i,bz,925) - .5)*70, oz = cz + (hash3(bx,30+i,bz,927) - .5)*70, r = 6 + hash3(bx,40+i,bz,929)*9, dd = Math.hypot(x-ox, z-oz);
+        if(dd < r){ h = Math.min(h, -Math.round(e*4*(1 - (dd/r)*(dd/r)))); } else if(dd < r + 2.5 && h === 0) h = Math.round(e*1.4); }
+    }
+    else if(b.k === 'polar') h = Math.round(e*2.2*vn(x*.07, z*.07, 931));
+    else if(b.k === 'dunes') h = Math.round(e*1.8*(.5 + .5*Math.sin(x*.16 + 3*vn(x*.05, z*.05, 933))));
+    c = {b, h}; cache.set(key, c); return c;
+  }
+  function topId(c){ return c.b.top != null ? mIds[c.b.top] : mIds[0]; }
+  function skyM(c, d){                                        // the natural block at d < 0 of a raised column
+    const j = -d; if(j > c.h) return 0;
+    if(j === c.h) return topId(c);
+    return j >= c.h - 2 ? mIds[1] : mIds[2];
+  }
+  function marsBase(x, d, z){
+    if(d < 0 || d >= MARS_D) return 0;
+    const c = mcol(x, z);
+    if(c.h < 0 && d < -c.h) return 0;                          // the canyon and the craters are open air
+    if(c.h > 0 && d < 2) return mIds[2];
+    if(d === Math.max(0, -c.h)) return topId(c);
+    const li = mAt[d];
+    if(hash3(x>>1, d>>1, z>>1, 941) < .3){
+      for(let i=MO.length-1;i>=0;i--){ const o = MO[i]; if(oIds[i] && o[3].indexOf(li) >= 0 && hash3(x, d, z, 943 + i) < o[4]*3.2) return oIds[i]; }
+    }
+    return mIds[li];
+  }
+  const _ub = upperBase;
+  upperBase = function(x, d, z){ return x >= MARS_EDGE ? marsBase(x, d, z) : _ub(x, d, z); };
+  // raised land (Olympus Mons, crater rims, dunes): served by get, drawn by rebuild, minable like the biome hills
+  const _gM = get;
+  get = function(x, d, z){
+    if(d < 0 && d > -40 && x >= MARS_EDGE){
+      const c = mcol(x, z);
+      if(c.h > 0 && -d <= c.h){ if(edits.size){ const k = ek(x,d,z); if(edits.has(k)) return edits.get(k); } return skyM(c, d); }
+    }
+    return _gM(x, d, z);
+  };
+  const _sbM = setBlock;
+  setBlock = function(x, d, z, t){
+    _sbM(x, d, z, t);
+    if(d < 0 && !t && x >= MARS_EDGE){ const c = mcol(x, z); if(c.h > 0 && -d <= c.h){ edits.set(ek(x,d,z), 0); editsDirty = true; } }
+  };
+  const _m4 = new THREE.Matrix4(), _cM = new THREE.Color();
+  const hAt = (x, z)=>mcol(x, z).h;
+  function nearE(x, d, z){ return edits.has(ek(x-1,d,z)) || edits.has(ek(x+1,d,z)) || edits.has(ek(x,d,z-1)) || edits.has(ek(x,d,z+1)) || edits.has(ek(x,d-1,z)) || edits.has(ek(x,d+1,z)); }
+  const _rbM = rebuild;
+  rebuild = function(){
+    _rbM();
+    if(wox + WIN < MARS_EDGE) return;
+    let any = false;
+    for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
+      const x = wox+lx, z = woz+lz; if(x < MARS_EDGE) continue;
+      const c = mcol(x, z); if(c.h <= 0) continue;
+      const h = c.h, hn = Math.min(hAt(x-1,z), hAt(x+1,z), hAt(x,z-1), hAt(x,z+1));
+      for(let j=1; j<=h; j++){
+        const d = -j, k = ek(x,d,z);
+        if(edits.size && edits.has(k)) continue;
+        if(j < h && j <= hn && !(edits.size && nearE(x, d, z))) continue;
+        const t = skyM(c, d), m = meshes[t-1]; if(!m || m.count >= m.userData.max) continue;
+        _m4.makeTranslation(x+.5, j-.5, z+.5); m.setMatrixAt(m.count, _m4);
+        const jj = .82 + hash3(x,d,z,7)*.3; _cM.setRGB(jj,jj,jj); m.setColorAt(m.count, _cM); m.count++; any = true;
+      }
+    }
+    if(any) meshes.forEach(m=>{ m.instanceMatrix.needsUpdate = true; if(m.instanceColor) m.instanceColor.needsUpdate = true; });
+  };
+
+  /* ------------------------------------------------ the layer list, layer names and depth darkness use the Mars layers while you are there */
+  const ORIG = {L:UPPER_LAYERS.slice(), at:upperLayerAt.slice(), ids:upperIds.slice(), st:upperStart.slice(), D:UPPER_D};
+  const MS = {L:ML, at:mAt, ids:mIds, st:mStart, D:MARS_D};
+  let swapped = false;
+  function load(Sx){
+    UPPER_LAYERS.length = 0; Sx.L.forEach(l=>UPPER_LAYERS.push(l));
+    upperLayerAt.length = 0; Sx.at.forEach(v=>upperLayerAt.push(v));
+    upperIds.length = 0; Sx.ids.forEach(v=>upperIds.push(v));
+    upperStart.length = 0; Sx.st.forEach(v=>upperStart.push(v));
+    UPPER_D = Sx.D;
+    try{ if(panelUp){ renderLayerPanel(UPPER_LAYERS); lastUpName = ''; } }catch(e){}
+  }
+  // Mars has its own name on the layer readout (see the patch), and low gravity
+  window.__marsName = ()=>swapped ? 'Mars' : null;
+  const _stM = step;
+  step = function(dt){
+    if(!onMars() || GRAV.float || !(GRAV.scale > 0)) return _stM.apply(this, arguments);
+    const g0 = GRAV.scale; GRAV.scale = g0*.42;
+    try{ return _stM.apply(this, arguments); } finally { GRAV.scale = g0; }
+  };
+  const _psM = planetsSky;
+  const _mT = new THREE.Color(), _mB = new THREE.Color();
+  planetsSky = function(s){
+    if(!onMars() || s <= 0 || typeof skyMat === 'undefined') return _psM(s);
+    const t = performance.now()*.001, w = .5 + .5*Math.sin(t*.2);
+    _mT.setRGB(.42 + .05*w, .2, .12); _mB.setRGB(.86, .6 + .04*w, .4);                // butterscotch Mars sky
+    skyMat.uniforms.top.value.copy(dark).lerp(_mT, s); skyMat.uniforms.bot.value.copy(dark).lerp(_mB, s); skyMat.uniforms.night.value = 0;
+    scene.background.copy(skyMat.uniforms.top.value);
+    try{ clouds[0].children[0].material.color.setRGB(.9, .7, .55); }catch(e){}
+    if(lightOn){ scene.fog.color.copy(skyMat.uniforms.bot.value); ambient.intensity = Math.max(ambient.intensity, .3 + .4*s); }
+  };
+
+  /* ------------------------------------------------ the rocket: pick your planet, Mars unlocks at the rocket planet's core */
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  panel.innerHTML = '<div style="position:relative;background:#22140e;color:#f6e6d6;border:2px solid #ff8a4a;border-radius:10px;padding:18px 20px;width:min(460px,92vw);font:15px system-ui,sans-serif">' +
+    '<button id="mrsX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 22px system-ui;color:#ffb07a;margin-bottom:10px">Where should the rocket go?</div>' +
+    '<button id="mrsA" class="btn" style="display:block;width:100%;margin:6px 0;padding:12px;font-size:16px"></button>' +
+    '<button id="mrsB" class="btn" style="display:block;width:100%;margin:6px 0;padding:12px;font-size:16px"></button>' +
+    '<div id="mrsHint" style="opacity:.8;font-size:13px;margin-top:6px"></div></div>';
+  document.body.appendChild(panel);
+  const pA = panel.querySelector('#mrsA'), pB = panel.querySelector('#mrsB'), pH = panel.querySelector('#mrsHint');
+  let goMars = false, picked = false;
+  function openPick(){
+    pA.textContent = '1   ' + PLANET_NAME;
+    if(save.marsUnlocked){ pB.textContent = '2   MARS'; pB.disabled = false; pB.style.opacity = 1; pB.style.background = '#c0502a'; pH.textContent = 'Mars: red dust, low gravity, Olympus Mons, Valles Canyon and Martian animals.'; }
+    else { pB.textContent = '2   MARS (locked)'; pB.disabled = true; pB.style.opacity = .5; pB.style.background = '#5a3a2a'; pH.textContent = 'To unlock Mars, dig all the way to the core of ' + PLANET_NAME + ' once.'; }
+    panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+  }
+  function closePick(){ panel.style.display = 'none'; }
+  function go(m){
+    if(m && !save.marsUnlocked) return;
+    closePick(); goMars = m; picked = true; launchRocket(true);
+    try{ renderer.domElement.requestPointerLock(); }catch(e){}
+  }
+  pA.onclick = e=>{ e.stopPropagation(); go(false); };
+  pB.onclick = e=>{ e.stopPropagation(); go(true); };
+  panel.addEventListener('click', e=>{ if(e.target === panel || e.target.id === 'mrsX') closePick(); });
+  addEventListener('keydown', e=>{
+    if(panel.style.display !== 'flex') return;
+    if(e.code === 'Escape') closePick(); else if(e.code === 'Digit1') go(false); else if(e.code === 'Digit2') go(true);
+  });
+  const _lrM = launchRocket;
+  launchRocket = function(up){
+    if(up && !picked && !launch){ openPick(); return; }
+    picked = false; return _lrM.apply(this, arguments);
+  };
+  const _trM = tickRocket;
+  tickRocket = function(dt){
+    const L = launch; _trM(dt);
+    if(L && !launch && L.up && goMars){
+      goMars = false; P.x = MARS.x + .5; P.z = MARS.z + .5; P.y = 30; P.vx = P.vy = P.vz = 0;
+      save.marsVisits = (save.marsVisits || 0) + 1; persist();
+      setTimeout(()=>toast('Welcome to MARS! Low gravity, red dust and Martian animals. The rocket home is right next to you.'), 300);
+      if(save.marsVisits === 1) news('BREAKING: A miner has landed on MARS! Scientists say it is very red.');
+    }
+  };
+  // the rocket on the planet moves to Mars while you are there
+  const solR = solids.find(s=>Math.abs(s[0] - (ROCKET_UP.x - 1.3)) < .01 && Math.abs(s[4] - (ROCKET_UP.z - 1.3)) < .01);
+  const UPR = {x:ROCKET_UP.x, z:ROCKET_UP.z};
+  let rocketOnMars = false;
+  function placeRocket(m){
+    rocketOnMars = m;
+    ROCKET_UP.x = m ? MARS.x + 7.5 : UPR.x; ROCKET_UP.z = m ? MARS.z + .5 : UPR.z;
+    if(!launch) rocketUp.position.set(ROCKET_UP.x, 0, ROCKET_UP.z);
+    if(solR){ solR[0] = ROCKET_UP.x - 1.3; solR[1] = ROCKET_UP.x + 1.3; solR[4] = ROCKET_UP.z - 1.3; solR[5] = ROCKET_UP.z + 1.3; }
+  }
+
+  /* ------------------------------------------------ the landing site: a base dome, a rover, solar panels and a flag */
+  const base = new THREE.Group(); base.position.set(MARS.x, 0, MARS.z); base.visible = false; scene.add(base);
+  { const dome = new THREE.Mesh(new THREE.SphereGeometry(5, 24, 12, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshLambertMaterial({color:0xf2f2f6, transparent:true, opacity:.88}));
+    dome.position.set(-12, 0, -10); dome.castShadow = true; base.add(dome);
+    sbox(2.2, 2.4, .3, 0x9aa0aa, -12, 1.2, -5.1, base); sbox(1.2, 1.9, .32, 0x30343c, -12, .95, -5.0, base);
+    sbox(6, 2.6, 4, 0xd8dce4, 8, 1.3, -14, base); sbox(6.2, .3, 4.2, 0xb8bcc4, 8, 2.75, -14, base);
+    for(let i=0;i<3;i++){ const p = sbox(3, .12, 1.8, 0x1a2a6a, -2 + i*3.4, 1.4, -18, base); p.rotation.x = -.5; sbox(.15, 1.4, .15, 0x8a8a90, -2 + i*3.4, .7, -18, base); }
+    sbox(.12, 6, .12, 0xcfcfd4, 3, 3, -6, base);
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.4, .06), new THREE.MeshLambertMaterial({map:textTex('MARS BASE', 256, 150, '#c0502a', '#ffffff', 'bold 44px Arial')}));
+    fl.position.set(4.25, 5.2, -6); base.add(fl);
+    const rv = new THREE.Group(); rv.position.set(-4, 0, 6); base.add(rv);
+    sbox(3, .7, 2, 0xe8e8ec, 0, 1.05, 0, rv); sbox(.9, .7, .9, 0xc8c8cc, .8, 1.75, 0, rv); sbox(.1, 1.2, .1, 0x8a8a90, -1, 2, .6, rv); sbox(2.2, .08, 1.6, 0x1a2a6a, -.4, 1.45, 0, rv);
+    [-1.1, 0, 1.1].forEach(x=>[-1.1, 1.1].forEach(z=>{ const w = new THREE.Mesh(new THREE.CylinderGeometry(.38, .38, .3, 12), new THREE.MeshLambertMaterial({color:0x2a2a2e})); w.rotation.x = Math.PI/2; w.position.set(x, .38, z); rv.add(w); }));
+    solids.push([MARS.x + 5, MARS.x + 11, 0, 2.9, MARS.z - 16, MARS.z - 12]);
+  }
+  // two little moons, Phobos and Deimos, and dust devils that spin you around
+  const moonMat = c=>new THREE.MeshBasicMaterial({color:c, fog:false});
+  const phobos = new THREE.Mesh(new THREE.SphereGeometry(5, 14, 10), moonMat(0x8a7a6a)), deimos = new THREE.Mesh(new THREE.SphereGeometry(3, 12, 8), moonMat(0xb0a090));
+  phobos.visible = deimos.visible = false; scene.add(phobos, deimos);
+  const devils = [];
+  for(let i=0;i<3;i++){
+    const g = new THREE.Group(); g.visible = false; scene.add(g);
+    for(let k=0;k<16;k++){ const m = new THREE.Mesh(new THREE.BoxGeometry(.5, .5, .5), new THREE.MeshLambertMaterial({color:0xc88a5a, transparent:true, opacity:.55})); g.add(m); }
+    devils.push({g, x:0, z:0, a:Math.random()*6.283, t:0, life:0});
+  }
+
+  /* ------------------------------------------------ Martian animals */
+  Object.assign(AD, {
+    marsbunny: {name:'Dust Bunny',     hp:30, r:.6, yo:.7, speed:2.0, hop:true, reward:40,  mars:true, quips:['Poof! Just a cloud of red dust.','The Dust Bunny hops off to another crater.']},
+    cratercrab:{name:'Crater Crab',    hp:55, r:.8, yo:.5, speed:1.6, reward:60,  mars:true, quips:['Snip snap... it scuttles away.','The Crater Crab hides in a crater.']},
+    roverpup:  {name:'Rover Pup',      hp:70, r:.8, yo:.8, speed:2.2, reward:80,  mars:true, quips:['Beep boop... woof.','The Rover Pup rolls home.']},
+    marsgoat:  {name:'Olympus Goat',   hp:80, r:1,  yo:1.1,speed:1.7, reward:90,  mars:true, quips:['Baaa! It bounces up the volcano.','The goat leaps over a crater.']},
+    martian:   {name:'Little Martian', hp:45, r:.6, yo:1,  speed:1.8, reward:120, mars:true, quips:['Take me to your leader... later.','The Little Martian waves bye.']}
+  });
+  Object.assign(ANIMAL_DROP, {marsbunny:'Red Fluff', cratercrab:'Crab Claw', roverpup:'Rover Bolt', marsgoat:'Goat Horn', martian:'Martian Antenna'});
+  const MARS_ANIMALS = ['marsbunny', 'marsbunny', 'cratercrab', 'roverpup', 'marsgoat', 'martian'];
+  const _bAM = buildAnimal;
+  buildAnimal = function(type){
+    if(!AD[type] || !AD[type].mars) return _bAM(type);
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const leg = (x, z, h, col)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); sbox(.16, h, .16, col, 0, -h/2, 0, lg); g.userData.legs.push(lg); };
+    const eyes = (y, z, dx, s)=>{ [-dx, dx].forEach(x=>{ sbox(s, s, .05, 0xffffff, x, y, z, g); sbox(s*.5, s*.5, .05, 0x111111, x, y, z + .03, g); }); };
+    if(type === 'marsbunny'){
+      const C = 0xd06a3a; [-.15, .15].forEach(x=>{ leg(x, .2, .25, C); leg(x, -.2, .25, C); });
+      sbox(.5, .42, .7, C, 0, .45, 0, g); sbox(.42, .38, .38, C, 0, .78, .34, g); eyes(.84, .54, .1, .1); sbox(.08, .06, .04, 0xff9aa0, 0, .72, .54, g);
+      [-.1, .1].forEach(x=>{ sbox(.08, .5, .06, C, x, 1.18, .3, g); sbox(.04, .4, .02, 0xffb0a0, x, 1.18, .34, g); });
+      sbox(.2, .2, .2, 0xffd0b0, 0, .55, -.4, g);
+    } else if(type === 'cratercrab'){
+      const C = 0xb83a2a;
+      [-1, 1].forEach(sd=>{ for(let i=0;i<3;i++){ const l = new THREE.Group(); l.position.set(sd*.42, .25, -.2 + i*.2); l.rotation.z = sd*.7; g.add(l); sbox(.06, .3, .06, C, 0, -.12, 0, l); g.userData.legs.push(l); } });
+      sbox(.9, .22, .65, C, 0, .32, 0, g);
+      [-1, 1].forEach(sd=>{ sbox(.22, .16, .3, C, sd*.5, .34, .45, g); sbox(.1, .14, .2, 0xe86a50, sd*.56, .38, .62, g); });
+      [-.15, .15].forEach(x=>{ sbox(.05, .25, .05, C, x, .55, .25, g); sbox(.1, .1, .1, 0xffffff, x, .7, .25, g); sbox(.05, .05, .05, 0x111111, x, .7, .3, g); });
+    } else if(type === 'roverpup'){
+      const C = 0xb8bcc4, D = 0x6a6e76; [-.2, .2].forEach(x=>{ leg(x, .3, .35, D); leg(x, -.3, .35, D); });
+      sbox(.55, .4, .9, C, 0, .55, 0, g); sbox(.45, .4, .4, C, 0, .85, .5, g); sbox(.5, .05, .7, 0x1a2a6a, 0, .78, -.05, g);
+      sbox(.36, .12, .05, 0x40e0ff, 0, .9, .71, g); sbox(.05, .4, .05, D, .15, 1.2, .45, g);
+      const lt = sbox(.1, .1, .1, 0xff3030, .15, 1.42, .45, g); lt.material.emissive = new THREE.Color(0xff2020);
+      sbox(.08, .3, .08, D, 0, .7, -.5, g).rotation.x = -.7;
+    } else if(type === 'marsgoat'){
+      const C = 0xa8603a, H = 0xe8d8c0; [-.22, .22].forEach(x=>{ leg(x, .4, .55, 0x7a4026); leg(x, -.4, .55, 0x7a4026); });
+      sbox(.6, .55, 1.1, C, 0, .82, 0, g); sbox(.38, .4, .45, C, 0, 1.25, .6, g); eyes(1.32, .84, .11, .09); sbox(.2, .2, .14, 0xc8805a, 0, 1.12, .84, g);
+      [-1, 1].forEach(sd=>{ const h = new THREE.Group(); h.position.set(sd*.14, 1.5, .55); g.add(h); sbox(.1, .3, .1, H, 0, .12, 0, h).rotation.z = -sd*.4; sbox(.1, .1, .25, H, sd*.1, .26, -.12, h); });
+      sbox(.12, .2, .1, 0xf0e8e0, 0, 1.02, .7, g);
+    } else if(type === 'martian'){
+      const C = 0x6adc5a; [-.1, .1].forEach(x=>{ leg(x, 0, .4, C); });
+      sbox(.45, .55, .35, C, 0, .7, 0, g); sbox(.6, .5, .5, C, 0, 1.25, 0, g);
+      [-.17, 0, .17].forEach(x=>{ sbox(.13, .13, .05, 0xffffff, x, 1.32, .26, g); sbox(.06, .06, .05, 0x111111, x, 1.32, .29, g); });
+      sbox(.18, .04, .04, 0x2a6a2a, 0, 1.12, .26, g);
+      sbox(.04, .3, .04, 0x3a8a3a, 0, 1.64, 0, g); const bl = sbox(.12, .12, .12, 0xffe040, 0, 1.82, 0, g); bl.material.emissive = new THREE.Color(0x806000);
+      [-1, 1].forEach(sd=>sbox(.1, .4, .1, C, sd*.3, .8, 0, g).rotation.z = sd*.5);
+    }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  };
+  let marsAuto = false;
+  const _sAM = spawnAnimal;
+  spawnAnimal = function(type, x, z){
+    if(!(marsAuto && onMars())) return _sAM.apply(this, arguments);
+    type = rnd(MARS_ANIMALS);                                 // on Mars only Martian animals show up
+    const d = AD[type], g = buildAnimal(type), gy = groundTop(Math.floor(x), 3, Math.floor(z));
+    const a = {type, d, g, pos:new THREE.Vector3(x, gy, z), vy:0, hp:d.hp, max:d.hp, t:Math.random()*10, dir:Math.random()*6.283, wanderT:Math.random()*3, fleeT:0, moving:false, ang:0};
+    g.position.copy(a.pos); scene.add(g); animals.push(a); return a;
+  };
+  const _uAM = updateAnimals;
+  updateAnimals = function(dt){
+    marsAuto = true; try{ _uAM(dt); } finally { marsAuto = false; }
+    if(onMars()){ for(const a of animals.slice()) if(a.d && !a.d.mars && !a.pet) removeAnimal(a); }     // no Earth animals on Mars
+  };
+
+  /* ------------------------------------------------ every frame: unlock, layers, rocket, sky things, biome name */
+  const bioEl = ()=>document.getElementById('biomename');
+  let curB = null, bT = 0, lastF = performance.now();
+  function frame(){
+    requestAnimationFrame(frame);
+    const now = performance.now(), dt = Math.min(.05, (now - lastF)/1000); lastF = now;
+    try{
+      // unlock: reach the core of the rocket planet once
+      if(!save.marsUnlocked && realm === 0 && P.x >= UPPER_EDGE && P.x < MARS_EDGE && -P.y >= ORIG.D - 3){
+        save.marsUnlocked = 1; persist();
+        toast('MARS UNLOCKED! You reached the core of ' + PLANET_NAME + '. Fly the rocket and pick Mars.');
+        news('BREAKING: A miner dug to the core of ' + PLANET_NAME + '. The rocket can now fly to MARS!');
+        blip(523, .2, .1, 'triangle'); setTimeout(()=>blip(784, .3, .1, 'triangle'), 150);
+      }
+      const m = onMars();
+      if(m !== swapped){ swapped = m; load(m ? MS : ORIG); }
+      if((P.x >= MARS_EDGE) !== rocketOnMars) placeRocket(P.x >= MARS_EDGE);
+      base.visible = m;
+      phobos.visible = deimos.visible = m && P.y > -3;
+      if(m){
+        const t = now*.00003;
+        phobos.position.set(P.x + Math.cos(t)*160, 70 + Math.sin(t*1.3)*10, P.z + Math.sin(t)*160);
+        deimos.position.set(P.x - 120, 95, P.z + 60);
+        // the biome name on screen
+        const c = mcol(Math.floor(P.x), Math.floor(P.z)), el = bioEl(); if(el && el.textContent !== c.b.name) el.textContent = c.b.name;
+        if(c.b !== curB){ if(curB && P.y > -4) toast('You entered: ' + c.b.name); curB = c.b; }
+        // dust devils
+        for(const v of devils){
+          v.life -= dt;
+          if(v.life <= 0){ const a = Math.random()*6.283, r = 18 + Math.random()*25; v.x = P.x + Math.cos(a)*r; v.z = P.z + Math.sin(a)*r; v.a = Math.random()*6.283; v.life = 10 + Math.random()*8; }
+          v.t += dt; v.x += Math.cos(v.a)*2.2*dt; v.z += Math.sin(v.a)*2.2*dt;
+          const gy = hAt(Math.floor(v.x), Math.floor(v.z)); v.g.position.set(v.x, Math.max(0, gy), v.z); v.g.visible = P.y > -4;
+          v.g.children.forEach((b, k)=>{ const an = v.t*6 + k*.9, rr = .3 + k*.12; b.position.set(Math.cos(an)*rr, k*.35, Math.sin(an)*rr); b.rotation.y = an; });
+          if(locked && Math.hypot(P.x - v.x, P.z - v.z) < 1.6 && P.y < Math.max(0, gy) + 3 && !v.hit){ v.hit = 1; P.vy = Math.max(P.vy, 9); P.yaw += 2.5; toast('Whoosh! A dust devil spun you around!'); }
+          if(Math.hypot(P.x - v.x, P.z - v.z) > 3) v.hit = 0;
+        }
+      } else { devils.forEach(v=>{ v.g.visible = false; v.life = 0; }); curB = null; }
+    }catch(e){}
+  }
+  frame();
+  window.__mars = {tr:dt=>tickRocket(dt), dbg:()=>({launch:launch ? {t:launch.t, up:launch.up} : null, picked, goMars, x:P.x}), MARS, MARS_EDGE, mcol, marsBase, ML, MO, mIds, oIds, MB, openPick, go, unlock:()=>{ save.marsUnlocked = 1; persist(); }, MARS_D};
+})();
+/* LN-mars end */
 
 
 
