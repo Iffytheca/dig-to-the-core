@@ -4537,7 +4537,7 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyT' && locked && curGun){ startReload(curGun); return; }
   if(shopOpen) return;
   keys[e.code] = true;
-  if(e.code==='KeyR' && locked){ toSurface(); toast('Back on the surface'); }
+  if(e.code==='KeyR' && locked){ if(window.__planetR && window.__planetR()) return; toSurface(); toast('Back on the surface'); }   /* LN-planetR */
   if(e.code==='Space') e.preventDefault();
 });
 addEventListener('keyup',e=>{ keys[e.code] = false; });
@@ -26039,6 +26039,22 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__toi = {TOI, TOI_Z, TL, TO, TB, tIds, oIds, sIds, tcol, toiBase, TOI_D, onTOI, go:goT, unlock:()=>{ save.toiUnlocked = 1; persist(); }, openShop, closeShop, renderTS, nearSt, pC, refreshC, get goTOI(){ return goTOI; }};
 })();
 /* LN-toi end */
+/* LN-planetR start: R on Mars, TOI-1853b or the rocket planet = back to that planet's landing spot (Irfan 2026-10-28 16:39) */
+(function(){
+  const M = window.__mars, T = window.__toi;
+  window.__planetR = function(){
+    if(realm !== 0 || !(P.x >= UPPER_EDGE)) return false;
+    let to = UPPER, nm = PLANET_NAME, where = 'the rocket';
+    if(T && T.onTOI()){ to = T.TOI; nm = 'TOI-1853b'; where = 'the TOI-1853b Station'; }
+    else if(M && P.x >= M.MARS_EDGE){ to = M.MARS; nm = 'Mars'; where = 'the Mars Base'; }
+    P.x = to.x + .5; P.z = to.z + 4.5; P.vx = P.vy = P.vz = 0;
+    try{ P.y = Math.max(0, groundTop(Math.floor(P.x), 20, Math.floor(P.z))) + .05; }catch(e){ P.y = 1; }
+    dirty = true;
+    toast('Back on the surface of ' + nm + ', next to ' + where + '.');
+    return true;
+  };
+})();
+/* LN-planetR end */
 
 
 
