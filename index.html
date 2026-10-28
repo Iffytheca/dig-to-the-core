@@ -4845,7 +4845,7 @@ const ED = {
 const BOSS_FOR = {'Rubber Ducks':'megaduck', 'Hot Sauce':'saucedragon', 'Nacho Lava':'cheesegolem'};
 /* LN-sonnet start */ Object.keys(LN_RENAME).forEach(k=>{ if(BOSS_FOR[k]) BOSS_FOR[LN_RENAME[k]] = BOSS_FOR[k]; }); /* LN-sonnet end */
 function googly(par, y, z, sep, sz){
-  [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep+(Math.random()-.5)*sz*.2,y+(Math.random()-.5)*sz*.2,z+sz*.22,par); });
+  [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep,y,z+sz*.22,par); });
 }
 function buildEnemy(type){
   const g = new THREE.Group();
@@ -5446,7 +5446,7 @@ function sillyMesh(geo, col, x, y, z, parent, emis){
   const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({color:col, emissive:emis||0}));
   m.position.set(x,y,z); m.castShadow = true; parent.add(m); return m;
 }
-function googly(parent, x, y, z, r){                      // a wobbly googly eye
+function googlyS(parent, x, y, z, r){                      // a wobbly googly eye
   sillyMesh(new THREE.SphereGeometry(r,14,10), 0xffffff, x, y, z, parent);
   const pu = sillyMesh(new THREE.SphereGeometry(r*.5,10,8), 0x111111, x, y-r*.2, z+r*.6, parent);
   pu.userData.base = {x, y:y-r*.2}; pu.userData.r = r; (parent.userData.eyes = parent.userData.eyes || []).push(pu);
@@ -5464,14 +5464,14 @@ if(HILARIOUS && !CHAOS && !EXTRA){
   sillyMesh(new THREE.SphereGeometry(1.6,16,12), 0xffd61f, 0,5.2,1.2, duck);
   sillyMesh(new THREE.BoxGeometry(1.4,.45,1.3), 0xff8a1f, 0,4.9,2.7, duck);
   sillyMesh(new THREE.ConeGeometry(.9,1.6,10), 0xffd61f, 0,3.2,-3.2, duck).rotation.x = -1.2;
-  googly(duck, -.6,5.7,2.5,.42); googly(duck, .6,5.7,2.5,.42);
+  googlyS(duck, -.6,5.7,2.5,.42); googlyS(duck, .6,5.7,2.5,.42);
   solids.push([UPPER.x-16.5, UPPER.x-9.5, 0, 6.5, UPPER.z-17, UPPER.z-11]);
   // a giant pickle with googly eyes, doing a little dance
   const pk = new THREE.Group(); pk.position.set(14,0,-6); sillyG.add(pk); silly.pickle = pk;
   const pb = sillyMesh(new THREE.CylinderGeometry(1.2,1.2,5,14), 0x5f9a2e, 0,3.2,0, pk);
   sillyMesh(new THREE.SphereGeometry(1.2,14,10), 0x5f9a2e, 0,5.7,0, pk); sillyMesh(new THREE.SphereGeometry(1.2,14,10), 0x5f9a2e, 0,.7,0, pk);
   for(let i=0;i<14;i++){ const a = i*2.4, yy = 1+(i%5)*1.1; sillyMesh(new THREE.SphereGeometry(.18,6,5), 0x8fc25a, Math.cos(a)*1.2, yy, Math.sin(a)*1.2, pk); }
-  googly(pk, -.45,4.6,1.05,.35); googly(pk, .45,4.6,1.05,.35);
+  googlyS(pk, -.45,4.6,1.05,.35); googlyS(pk, .45,4.6,1.05,.35);
   sillyMesh(new THREE.TorusGeometry(.4,.09,6,12,Math.PI), 0x2a1a10, 0,3.8,1.15, pk).rotation.z = Math.PI;
   solids.push([UPPER.x+12.6, UPPER.x+15.4, 0, 6.5, UPPER.z-7.4, UPPER.z-4.6]);
   // a rainbow you can walk under
@@ -5487,7 +5487,7 @@ if(HILARIOUS && !CHAOS && !EXTRA){
   [[-6,8,0x4fe7f0],[9,10,0xff5a8a],[-18,2,0x9aff4f],[20,14,0xffb03b]].forEach((q,i)=>{
     const b = sillyMesh(new THREE.SphereGeometry(1.3,16,12), q[2], q[0],1.3,q[1], sillyG, q[2]); b.material.emissive.multiplyScalar(.25);
     b.material.transparent = true; b.material.opacity = .85;
-    const e = new THREE.Group(); b.add(e); googly(e, -.4,.35,1.05,.28); googly(e, .4,.35,1.05,.28);
+    const e = new THREE.Group(); b.add(e); googlyS(e, -.4,.35,1.05,.28); googlyS(e, .4,.35,1.05,.28);
     b.userData.ph = i*1.7; silly.blobs.push(b);
   });
   // a cheese moon with a big face, hanging in the sky
@@ -6369,7 +6369,8 @@ function matVariant(base, a, b, c){
   let t = TIERS.length-1, acc = 0;
   for(let i=0;i<TIERS.length;i++){ acc += TIERS[i].w; if(h3 <= acc){ t = i; break; } }
   let name = MAT_ADJ[Math.floor(h1*MAT_ADJ.length)]+' '+base+' '+MAT_FORM[Math.floor(h2*MAT_FORM.length)];
-  if(t >= 2) name += ' (Sector '+Math.floor(a/16)+'.'+Math.floor(c/16)+')';        // rarer finds carry where they came from: an endless supply of unique names
+  if(t >= 2) name += ' (Sector '+Math.floor(a/16)+'.'+Math.floor(c/16)+')';
+  if(t === 6 && window.__DIVINE_NAMES) name = window.__DIVINE_NAMES[Math.floor(h1*window.__DIVINE_NAMES.length)];        // rarer finds carry where they came from: an endless supply of unique names
   return {key:t+'|'+name, name, tier:t};
 }
 function rollMaterial(base, x, y, z, chance, silent){
@@ -6445,7 +6446,7 @@ function renderInv(){
     const totalM = ml.reduce((x,y)=>x+y.n,0);
     html += '<div class="invcat">Discoveries ('+ml.length.toLocaleString()+' unique \u00b7 '+totalM.toLocaleString()+' total)</div>';
     html += '<div style="margin:4px 0 8px"><button class="btn" id="sellMats" style="margin:0;padding:6px 14px;font-size:13px">Sell all discoveries ($'+ml.reduce((x,y)=>x+y.n*TIERS[y.t].v*4,0).toLocaleString()+')</button></div>';
-    html += '<div class="invgrid">'+ml.slice(0,150).map(it=>'<div class="invitem'+(selRef === 'm:'+it.key ? ' sel' : '')+'" data-ref="m:'+it.key.replace(/"/g,'&quot;')+'" style="border-color:'+TIERS[it.t].col+'"><span style="color:'+TIERS[it.t].col+'">'+it.name+' <b style="font-size:10px;letter-spacing:1px;opacity:.95">'+TIERS[it.t].n.toUpperCase()+'</b></span><span class="ct">'+it.n.toLocaleString()+'</span></div>').join('')+'</div>';
+    html += '<div class="invgrid">'+ml.slice(0,150).map(it=>'<div class="invitem'+(selRef === 'm:'+it.key ? ' sel' : '')+'" data-ref="m:'+it.key.replace(/"/g,'&quot;')+'" style="border-color:'+TIERS[it.t].col+'">'+(window.__divArt && window.__divArt(it.name) ? '<img src="'+window.__divArt(it.name)+'" style="width:34px;height:34px;image-rendering:pixelated;flex:none;margin-right:6px">' : '')+'<span style="color:'+TIERS[it.t].col+'">'+it.name+' <b style="font-size:10px;letter-spacing:1px;opacity:.95">'+TIERS[it.t].n.toUpperCase()+'</b></span><span class="ct">'+it.n.toLocaleString()+'</span></div>').join('')+'</div>';
     if(ml.length > 150) html += '<div style="opacity:.6;margin-top:6px">... and '+(ml.length-150).toLocaleString()+' more kinds (the rarest are listed first)</div>';
   }
   $('invbody').innerHTML = html;
@@ -7244,7 +7245,7 @@ googly = function(par,y,z,sep,sz){
   if(!gfxCur) return gfxGoogly0(par,y,z,sep,sz);
   [-1,1].forEach(sd=>{
     const wh = sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par);
-    const pu = sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep+(Math.random()-.5)*sz*.2,y+(Math.random()-.5)*sz*.2,z+sz*.22,par);
+    const pu = sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep,y,z+sz*.22,par);
     dbox(sz*.14,sz*.14,sz*.1,0xffffff, sz*.08, sz*.1, sz*.2, pu);
     gfxCur.bl.push({a:wh, b:pu, k:0});
     const o = {o:pu, ax:'x', amp:sz*.12, sp:1.7, ph:Math.random()*6.283, k:3, b:pu.position.x}; gfxCur.an.push(o);
@@ -10109,7 +10110,7 @@ function planetsSky(s){
   function mk(type, g){
     const legs = g.userData.legs;
     const leg = (x,z,h,col,foot,fw,fd)=>{ const lg = new THREE.Group(); lg.position.set(x,h,z); g.add(lg); sbox(fw ? fw-.06 : .22,h,fd ? fd*.6 : .22,col,0,-h/2,0,lg); if(foot) sbox(fw||.26,.12,fd||.34,foot,0,-h+.06,(fd||.34)*.2,lg); legs.push(lg); return lg; };
-    const googly = (par,y,z,sep,sz)=>{ [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep+(Math.random()-.5)*sz*.2,y+(Math.random()-.5)*sz*.2,z+sz*.22,par); }); };   // googly eyes (the global googly() is the Planet Silly one once the build is over)
+    const googly = (par,y,z,sep,sz)=>{ [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep,y,z+sz*.22,par); }); };   // googly eyes (the global googly() is the Planet Silly one once the build is over)
     const grp = (x,y,z)=>{ const t = new THREE.Group(); t.position.set(x,y,z); g.add(t); return t; };
     if(type === 'dino'){
       const c = 0x4caf50, c2 = 0x2e7d32;
@@ -10263,7 +10264,7 @@ function planetsSky(s){
   const KIND = {dino:1, donkey:1, dog:1, cat:1, monkey:1, fish:1};
   function mk2(type, g){
     const legs = g.userData.legs;
-    const eyes = (par,y,z,sep,sz)=>{ [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep+(Math.random()-.5)*sz*.2,y+(Math.random()-.5)*sz*.2,z+sz*.22,par); }); };
+    const eyes = (par,y,z,sep,sz)=>{ [-1,1].forEach(sd=>{ sbox(sz,sz,sz*.4,0xffffff,sd*sep,y,z,par); sbox(sz*.45,sz*.45,sz*.45,0x111111,sd*sep,y,z+sz*.22,par); }); };
     const grp = (par,x,y,z)=>{ const t = new THREE.Group(); t.position.set(x,y,z); par.add(t); return t; };
     // a leg is a plain column hanging from the hip (hip height = leg length, so the foot rests on y = 0); the foot is only a little wider, same colour family
     const leg = (x,z,h,w,d,col,foot)=>{ const lg = grp(g,x,h,z); sbox(w,h-.08,d,col,0,-(h-.08)/2,0,lg); sbox(w+.04,.1,d+.04,foot,0,-h+.05,0,lg); legs.push(lg); return lg; };
@@ -15185,7 +15186,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     const name = inf.name, mf = window.__mf, lines = [];
     const e = mf && mf.MF[name];
     const fact = oneFact(name, e, inf);
-    if(inf.kind === 'mat'){ lines.push('Discovery &middot; '+TIER_F[inf.tier]); }
+    if(inf.kind === 'mat'){ const art = window.__divArt && window.__divArt(name); if(art) lines.push('<img src="'+art+'" style="width:96px;height:96px;image-rendering:pixelated;display:block;margin:4px 0">'); lines.push('Discovery &middot; '+TIER_F[inf.tier]); if(window.__divDesc && window.__divDesc(name)) lines.push(window.__divDesc(name)); }
     else if(inf.kind === 'gear'){ lines.push('Crafted gear for your '+inf.gear.slot+' slot &middot; '+statText(inf.gear.stats)); }
     else if(inf.kind === 'gun'){ lines.push('A gun from the shop. Press G to switch guns and T to reload.'); }
     else {
@@ -20432,6 +20433,104 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__bobciv = {foundBobCity, people, futG, futLevel, bars, FUT_AT, spawnCitizen, allCities, setFound:s=>{ foundT = s; }, JOBS};
 })();
 /* LN-bobciv end */
+/* LN-divine start (run): new Divine items with pictures (Snoop Shirt, Shrek Costume, Fossilized Nokia, Fossilized Nintendo), and two proper eyes on every creature (Irfan 2026-10-28) */
+(function(){
+  // ---------- pictures of the Divine items (drawn once, shown in the inventory and the item info)
+  const ART = {}, PX = 32;
+  function draw(name, f){ const c = document.createElement('canvas'); c.width = c.height = PX; const x = c.getContext('2d'); const R = (col, a, b, w, h)=>{ x.fillStyle = col; x.fillRect(a, b, w, h); }; f(R, x); ART[name] = c.toDataURL(); }
+  draw('Snoop Shirt', R=>{
+    R('#1c2a6a', 6, 6, 20, 22); R('#1c2a6a', 1, 6, 6, 9); R('#1c2a6a', 25, 6, 6, 9);            // shirt and sleeves
+    R('#121c4a', 12, 5, 8, 3); R('#0a1030', 13, 6, 6, 2);                                         // collar
+    R('#ffd030', 10, 8, 2, 1); R('#ffd030', 20, 8, 2, 1); R('#ffd030', 11, 9, 10, 1); R('#ffd030', 15, 10, 2, 3);   // gold chain and medal
+    R('#ffffff', 9, 15, 14, 7); R('#111111', 10, 16, 5, 2); R('#111111', 17, 16, 5, 2); R('#111111', 15, 16, 2, 1);   // white patch with cool sunglasses
+    R('#ff4fd8', 11, 20, 10, 1); R('#40fff0', 6, 26, 20, 2);
+  });
+  draw('Shrek Costume', R=>{
+    R('#6cbf3a', 8, 4, 16, 14); R('#6cbf3a', 4, 6, 4, 3); R('#6cbf3a', 24, 6, 4, 3); R('#4f9a28', 3, 5, 2, 2); R('#4f9a28', 27, 5, 2, 2);  // head and trumpet ears
+    R('#ffffff', 11, 8, 4, 3); R('#ffffff', 17, 8, 4, 3); R('#3a2a10', 13, 9, 2, 2); R('#3a2a10', 17, 9, 2, 2);                          // eyes
+    R('#4f9a28', 15, 11, 2, 2); R('#3a2a10', 12, 15, 8, 1);                                                                            // nose and smile
+    R('#efe2c0', 6, 18, 20, 12); R('#6a4a22', 6, 18, 6, 12); R('#6a4a22', 20, 18, 6, 12); R('#3a2a10', 6, 27, 20, 2);                 // shirt, brown vest, belt
+  });
+  draw('Fossilized Nokia', R=>{
+    R('#9a9080', 9, 2, 14, 28); R('#7a7060', 9, 2, 1, 28); R('#b8ae9a', 22, 2, 1, 28);              // stone brick phone
+    R('#5a6a4a', 11, 5, 10, 8); R('#7a8a5a', 12, 6, 8, 6); R('#3a4a2a', 13, 8, 3, 1);                  // old green screen with a tiny snake
+    R('#5a5244', 12, 15, 8, 2);
+    for(let r = 0; r < 4; r++) for(let k = 0; k < 3; k++) R('#6a6254', 11 + k*4, 19 + r*3, 2, 2);       // keypad
+    R('#5a5244', 15, 3, 6, 1); R('#5a5244', 18, 14, 1, 4); R('#5a5244', 10, 24, 3, 1);                  // cracks
+  });
+  draw('Fossilized Nintendo', R=>{
+    R('#a89c86', 6, 2, 20, 28); R('#887c66', 6, 2, 1, 28); R('#c4b89e', 25, 2, 1, 28);
+    R('#6a6050', 9, 5, 14, 11); R('#8a9a6a', 10, 6, 12, 9);                                            // stone screen
+    R('#5a5244', 9, 19, 6, 2); R('#5a5244', 11, 17, 2, 6);                                             // D-pad
+    R('#7a3a3a', 19, 18, 3, 3); R('#7a3a3a', 22, 16, 3, 3);                                            // A and B
+    R('#5a5244', 12, 26, 3, 1); R('#5a5244', 17, 26, 3, 1); R('#5a5244', 20, 3, 1, 5); R('#5a5244', 8, 22, 4, 1);   // start, select, cracks
+  });
+  draw('Heavenly Starlight Crystal (Gift)', R=>{
+    R('#40fff0', 13, 3, 6, 26); R('#40fff0', 9, 8, 14, 16); R('#a0fffa', 14, 5, 2, 20); R('#ffffff', 15, 7, 1, 6); R('#20c0b8', 20, 9, 2, 14);
+    R('#ffffff', 4, 4, 2, 2); R('#ffffff', 26, 6, 2, 2); R('#ffffff', 25, 26, 2, 2);
+  });
+  const DESC = {
+    'Snoop Shirt':'The coolest shirt ever dug up. It comes with a gold chain and sunglasses printed on the front.',
+    'Shrek Costume':'A full green ogre costume with trumpet ears. Somebody buried it in a swamp a very long time ago.',
+    'Fossilized Nokia':'An ancient phone turned to stone. Scientists say it still has full battery.',
+    'Fossilized Nintendo':'An ancient game console turned to stone. The high score is still saved.',
+    'Heavenly Starlight Crystal (Gift)':'A crystal full of starlight, a gift from the sky.'
+  };
+  window.__divArt = name=>ART[name] || null;
+  window.__divDesc = name=>DESC[name] || null;
+  window.__DIVINE_NAMES = ['Snoop Shirt','Shrek Costume','Fossilized Nokia','Fossilized Nintendo'];
+
+  // ---------- one of each new Divine item, given once so you can see them
+  setTimeout(()=>{
+    try{
+      if(save.divineGift2) return;
+      save.mats = save.mats || {};
+      window.__DIVINE_NAMES.forEach(n=>{ const key = '6|'+n; if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1; save.mats[key] = (save.mats[key] || 0) + 1; save.divines = (save.divines || 0) + 1; pushFeed(n+'  [Divine]', 1, '#40fff0'); });
+      save.divineGift2 = 1; persist(); shake = Math.max(shake, .06);
+      toast('DIVINE FINDS!!! Snoop Shirt, Shrek Costume, Fossilized Nokia and Fossilized Nintendo! Press I to see them.');
+      blip(1568, .4, .15, 'triangle'); setTimeout(()=>blip(2093, .5, .12, 'sine'), 200);
+    }catch(e){}
+  }, 9000);
+
+  // ---------- eyes: creatures that had no eyes, or eyes hidden inside the head, get two proper eyes
+  // each eye: [x, y, z, size, facing]  facing 'x' = on the side of the head, 'z' = on the front, 'y' = on top
+  const EYES = {
+    swan:{hide:[[-.07,1.4,.62],[.07,1.4,.62]], add:[[.105,1.4,.56,.1,'x']]},
+    seagull:{add:[[.128,1.25,.43,.09,'x']]},
+    eagle:{add:[[.153,1.5,.56,.1,'x']]},
+    deer:{add:[[.178,1.97,.86,.12,'x']]},
+    scorpion:{add:[[.12,.37,.455,.1,'z']]},
+    pterodactyl:{add:[[.128,1.4,.56,.09,'x']]},
+    starfish:{hide:[[-.06,.17,.08],[.06,.17,.08]], add:[[.07,.16,.12,.09,'y']]},
+    balloondog:{add:[[.153,1.57,.76,.11,'x']]},
+    parrot:{add:[[.1,1.52,.235,.08,'z']]}
+  };
+  function eye(g, x, y, z, s, f){
+    const W = new THREE.MeshLambertMaterial({color:0xffffff}), K = new THREE.MeshLambertMaterial({color:0x111111});
+    const sd = x < 0 ? -1 : 1, t = .02;
+    const wh = new THREE.Mesh(new THREE.BoxGeometry(f === 'x' ? t : s, f === 'y' ? t : s, f === 'z' ? t : s), W);
+    const pu = new THREE.Mesh(new THREE.BoxGeometry(f === 'x' ? t : s*.5, f === 'y' ? t : s*.5, f === 'z' ? t : s*.5), K);
+    wh.position.set(x, y, z);
+    if(f === 'x') pu.position.set(x + sd*.012, y, z + s*.12); else if(f === 'z') pu.position.set(x, y, z + .012); else pu.position.set(x, y + .012, z + s*.12);
+    g.add(wh); g.add(pu); wh.userData.eye = pu.userData.eye = 1;
+  }
+  const near = (p, q)=>Math.abs(p.x - q[0]) < .011 && Math.abs(p.y - q[1]) < .011 && Math.abs(p.z - q[2]) < .011;
+  const _ba = buildAnimal;
+  buildAnimal = function(type){
+    const g = _ba(type), E = EYES[type];
+    if(E && g && !g.userData.eyeFix && !g.userData.bhDone){
+      try{
+        g.userData.eyeFix = 1;
+        (E.hide || []).forEach(q=>g.children.forEach(m=>{ if(m.isMesh && near(m.position, q)) m.visible = false; }));
+        E.add.forEach(q=>{ const [x, y, z, s, f] = q; eye(g, -x, y, z, s, f); eye(g, x, y, z, s, f); });
+      }catch(e){}
+    }
+    return g;
+  };
+  window.__animals = {AD, build:t=>buildAnimal(t), EYES, enemy:t=>buildEnemy(t)};
+})();
+/* LN-divine end */
+
 
 
 
