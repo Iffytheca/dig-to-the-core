@@ -2619,6 +2619,7 @@ const BIOME = (function(){
   const cache = new Map();
   function col(x, z){                                           // {b biome, h surface height, liq, cr crater}
     if(x >= UPPER_EDGE - 400) return null;
+    if(x > 29879 || x < -29879 || z > 29879 || z < -29879) return null;   /* LN-edge */
     const key = (x + 32768)*65536 + (z + 32768);
     let c = cache.get(key); if(c !== undefined) return c;
     if(cache.size > 300000) cache.clear();
@@ -20611,6 +20612,786 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__fierce = {FIERCE, tick:fierceTick};
 })();
 /* LN-fierce end */
+/* LN-edge start (run): World Edge at the end of the map, 200+ meme Divine items with pictures, and animal mega cities that grow while you hide underground (Irfan 2026-10-28) */
+(function(){
+  // [name, picture template, colour 1, colour 2, what it is]
+  const ITEMS = [
+    ['Golden Doge Statue','dog',0xffc830,0xb8860b,'A solid gold statue of a very proud dog. Much shine. Very gold. Wow.'],
+    ['Nyan Cat Poptart','cat',0xff8ad8,0xc0c0c0,'A cat made of a breakfast pastry. It leaves a tiny rainbow when you shake it.'],
+    ['Trollface Mask','face',0xffffff,0x111111,'A grinning mask. Whoever wears it cannot stop smiling. Problem?'],
+    ['Grumpy Cat Frown','cat',0xe8dcc8,0x6a4a30,'The grumpiest frown ever found. It was not impressed by you either.'],
+    ['Stonks Arrow','arrow',0x30d050,0x1a7a2a,'A green arrow that only points up. It has never gone down. Not once.'],
+    ['Never Gonna Give You Up Vinyl','disc',0x111111,0xff4040,'A record that plays one song forever. It will never let you down.'],
+    ['Keyboard Cat Piano','keys',0xffffff,0x111111,'A tiny piano that a cat once played. Play him off, Keyboard Cat.'],
+    ['Dramatic Chipmunk Photo','frame',0xc89050,0x6a3a10,'A photo of a chipmunk turning around very, very dramatically.'],
+    ['Distracted Boyfriend Postcard','frame',0x80c0ff,0xff6080,'A postcard of someone looking the wrong way. Classic.'],
+    ['This Is Fine Mug','cup',0xffa020,0xff3010,'A mug with a dog sitting in a burning room on it. Everything is fine.'],
+    ['Surprised Face Fossil','face',0xb8ae9a,0x6a6050,'A fossil of a face that is VERY surprised about something.'],
+    ['Harambe Memorial Banana','banana',0xffe040,0x8a6a10,'A golden banana that someone left for a gorilla. Respect.'],
+    ['Pepe Frog Plush','frog',0x50b040,0x2a6a20,'A soft green frog toy. It feels good, man.'],
+    ['Big Chungus Carrot','carrot',0xff8020,0x30a030,'A huge carrot for a huge bunny. It is very, very chunky.'],
+    ['Philosoraptor Thinking Cap','hat',0x50a050,0xffffff,'A thinking cap from a dinosaur who asks big questions.'],
+    ['Success Kid Sand Fist','fist',0xf0c8a0,0xe0c070,'A small fist full of beach sand. Pure victory.'],
+    ['Bad Luck Brian Sweater','shirt',0xc04040,0x40a0c0,'A sweater that makes everything go a little bit wrong.'],
+    ['Ermahgerd Gersberms Book','book',0x60a0e0,0xffffff,'A book about goosebumps. Ermahgerd!'],
+    ['Leeroy Jenkins Chicken','chicken',0xffffff,0xff4020,'A chicken that charges in without a plan. At least it has chicken.'],
+    ['Ancient Dial-Up Modem','box',0xd8d0c0,0x40ff40,'It makes a beeping screech. It takes 9 minutes to load one picture.'],
+    ['Fossilized Floppy Disk','disk',0x8a8070,0x5a5244,'A save button you can hold. Nobody knows what is on it.'],
+    ['Fossilized Cassette Tape','tape',0x9a9080,0x5a5244,'A music tape turned to stone. Rewind it with a pencil.'],
+    ['Fossilized VHS Tape','tape',0x6a6458,0x3a3428,'A movie from the stone age. Be kind, rewind.'],
+    ['Fossilized Walkman','box',0xa89c86,0x5a5244,'Music to go, from before music could go anywhere.'],
+    ['Fossilized Pager','phone',0x9a9080,0x6a7a5a,'Beep beep. Somebody wants you to call them in 1997.'],
+    ['Fossilized Tamagotchi','egg',0xb8ae9a,0x6a8a5a,'A stone egg with a tiny pet inside. It is still hungry.'],
+    ['Fossilized Game Cartridge','cart',0xa89c86,0x5a5244,'Blow on it to make it work. Everybody knows that.'],
+    ['Fossilized Joystick','stick',0x9a9080,0x7a3a3a,'The oldest controller in the world. Up, up, down, down.'],
+    ['Fossilized Computer Mouse','mouse',0xb0a690,0x5a5244,'A mouse made of stone. It only clicks once a century.'],
+    ['Fossilized Headphones','headphones',0x8a8070,0x5a5244,'Stone headphones. You can still hear a faint tune.'],
+    ['Fossilized Calculator','calc',0xa89c86,0x5a5244,'It can only do 1 + 1. The answer is always rock.'],
+    ['Fossilized TV Remote','remote',0x9a9080,0x7a3a3a,'Lost in the sofa for a million years. Finally found.'],
+    ['Fossilized Selfie Stick','stick',0xb0a690,0x5a5244,'Cave people took the first selfies with this.'],
+    ['Fossilized Fidget Spinner','spinner',0xa89c86,0x5a5244,'It still spins. It has been spinning since the dinosaurs.'],
+    ['Fossilized Rubik Cube','cube',0xb8ae9a,0x5a5244,'Nobody ever solved it. Now it is stone and never will be.'],
+    ['Fossilized Light-Up Shoe','shoe',0x9a9080,0xff4040,'A shoe that still blinks when you stomp. Fancy.'],
+    ['Fossilized Pizza Slice','pizza',0xc0a070,0x8a5030,'The oldest pizza in the world. Do not eat it. Seriously.'],
+    ['Fossilized Hamburger','burger',0xa8906a,0x6a5a3a,'A burger from the Jurassic. Well done. Very well done.'],
+    ['Fossilized Chicken Nugget','nugget',0xb89a6a,0x7a6040,'Shaped like a dinosaur. Because it IS a dinosaur.'],
+    ['Fossilized Rubber Duck','duck',0xb8ae9a,0x7a6a50,'A bath duck that turned into stone. It still floats. Somehow.'],
+    ['Shrek Onion','onion',0xc8a0e0,0x8a50a0,'Ogres are like onions. This onion has layers. Lots of layers.'],
+    ['Swamp Toilet Door','door',0x6a4a22,0x3a2a10,'A wooden outhouse door from a very famous swamp. Knock first.'],
+    ['Donkey Waffle','waffle',0xe0b060,0xa07020,'A fresh waffle. Somebody really, really wanted to make these.'],
+    ['Gingerbread Man Button','cookie',0xc07a3a,0xffffff,'Not my gumdrop buttons! A cookie with feelings.'],
+    ['Lord Farquaad Tiny Crown','crown',0xffd030,0xff3060,'A very small crown for a very small king.'],
+    ['Puss in Boots Hat','hat',0x6a3a1a,0xffe080,'A feathered hat. It makes huge sad eyes at you.'],
+    ['Snoop Shades','glasses',0x111111,0xffd030,'Super cool sunglasses with a gold rim. Instantly cool.'],
+    ['Snoop Gold Chain','chain',0xffd030,0xb8860b,'A heavy gold chain. It goes clink when you walk.'],
+    ['Snoop Hot Dog Costume','hotdog',0xe08040,0xffd030,'A full hot dog costume. Ketchup not included.'],
+    ['Sunglasses of Deal With It','glasses',0x111111,0x111111,'Pixel sunglasses that slide down from the sky. Deal with it.'],
+    ['MLG Mountain Dew Bottle','bottle',0x40e040,0xff2020,'A neon green drink bottle. It makes you 360 times more extreme.'],
+    ['Doritos Triangle Fossil','chip',0xff8020,0x8a3a10,'The first ever crunchy triangle. Very cheesy. Very old.'],
+    ['Air Horn of Victory','horn',0xff3030,0xffffff,'BWAAAAH! Use it only for very important wins.'],
+    ['Rickroll Trumpet','horn',0xffd030,0xb8860b,'Plays one tune. You know which one.'],
+    ['Lag Spike','spike',0xff40ff,0x40ffff,'A spike made of pure lag. Everything near it gets slooooow.'],
+    ['Missing Texture Cube','cube',0xff00ff,0x111111,'A block the game forgot to paint. Pink and black forever.'],
+    ['Error 404 Sign','sign',0xffffff,0xff2020,'A sign that says the thing you are looking for is not here.'],
+    ['Blue Screen Shard','screen',0x2050d0,0xffffff,'A shard of a sad computer screen. It has a frowny face.'],
+    ['Loading Bar Fragment','bar',0x40c0ff,0x222222,'Stuck at 99 percent. It will finish one day. Probably.'],
+    ['Captcha Stone','sign',0xe0e0e0,0x4060c0,'Select all the squares with traffic lights. You will never pass.'],
+    ['Infinite Spinning Wheel','spinner',0x40a0ff,0xffffff,'The rainbow wheel of waiting. It spins and spins and spins.'],
+    ['Glitched Grass Tuft','tuft',0x40ff40,0xff00ff,'Grass that is green and pink at the same time. Reality broke.'],
+    ['Pixel Sword of Edge','sword',0x40ffff,0x6a4a22,'A sword made of big square pixels from the end of the world.'],
+    ['Corrupted Save File','disk',0x6a6a7a,0xff00ff,'Your game from 10 years ago. All the levels are mixed up.'],
+    ['World Border Fragment','shard',0x8a40ff,0x40ffff,'A tiny piece of the edge of the world. It hums quietly.'],
+    ['Void Pebble','rock',0x1a1028,0x8a40ff,'A pebble from nowhere. If you look closely it looks back.'],
+    ['Edge Star','star',0xffffff,0x8a40ff,'A star that fell off the edge of the sky.'],
+    ['Floating Point Error','note',0xffffff,0xff2020,'0.1 plus 0.2 does not make 0.3. This note proves it.'],
+    ['Far Lands Brick','brick',0x8a6a40,0x40a030,'A brick from where the world gets wobbly and stretched.'],
+    ['Herobrine Eye','eye',0xffffff,0xffffff,'Two glowing white eyes. Nobody has ever seen who owns them.'],
+    ['Giant Spoon','spoon',0xc0c8d0,0x808890,'A spoon big enough to eat a whole lake of soup.'],
+    ['Inflatable Tyrannosaurus','dino',0x40a040,0xffffff,'A blow-up T-rex costume. It is somehow very fast.'],
+    ['Moon Cheese','cheese',0xf0e080,0xc0b040,'Proof that the moon is made of cheese. It smells a bit.'],
+    ['Pet Rock With Googly Eyes','rock',0x9a9080,0xffffff,'The best pet. Never needs food. Never runs away.'],
+    ['Left Sock of Destiny','sock',0xff4060,0xffffff,'Every washing machine eats one sock. This is where they go.'],
+    ['Right Sock of Destiny','sock',0x4080ff,0xffffff,'The other one. They are finally together again. Almost.'],
+    ['Bottle of Sneeze','bottle',0xe0f0ff,0x80c0ff,'Somebody bottled a really big sneeze. Do not open.'],
+    ['Jar of Thunder','jar',0xffff60,0x8080a0,'It rumbles when you shake it. The lid is very tight.'],
+    ['Square Watermelon','cube',0x30a040,0xff4060,'Grown in a box. Stacks perfectly. Tastes normal.'],
+    ['Wifi Signal in a Jar','jar',0x40c0ff,0xffffff,'Five full bars, forever. The most wanted thing in the world.'],
+    ['Cloud on a Leash','cloud',0xffffff,0xc0c8d0,'A small pet cloud. It rains when it is sad.'],
+    ['Haunted Rubber Chicken','chicken',0xfff080,0x8040c0,'It squeaks by itself at midnight. Spooky and squeaky.'],
+    ['Upside Down Rainbow','rainbow',0xff4040,0x4080ff,'A rainbow that smiles instead of frowns.'],
+    ['Box of Echoes','box',0x9a7a50,0x5a3a20,'Shout into it. It shouts back hours later.'],
+    ['Liquid Shadow','bottle',0x111122,0x3a3a5a,'A bottle of shadow. Pour it on the floor to make a hole.'],
+    ['Singing Toaster','toaster',0xc0c8d0,0xffa040,'It sings every time the toast pops up. Mostly opera.'],
+    ['Disco Ball Egg','egg',0xd0d8e0,0xff40ff,'An egg that hatches a dance party.'],
+    ['Melted Clock','clock',0xffd060,0x6a4a22,'A clock that drooped over a branch. Time is very bendy here.'],
+    ['Pocket Sun','sun',0xffd030,0xff8020,'A tiny sun that fits in your pocket. Keep away from snowmen.'],
+    ['Wobbly Jelly Crown','crown',0xff60a0,0xffa0d0,'The crown of the Jelly King. It never stops wobbling.'],
+    ['Spaghetti Code','noodle',0xf0d070,0xc04020,'Real spaghetti in the shape of computer code. Very tangled.'],
+    ['Bug in a Bottle','bottle',0xc0f0c0,0x40a040,'A real computer bug. It made the whole game crash once.'],
+    ['Cursed Spatula','spoon',0x6a6a7a,0x8a40ff,'Every pancake it flips lands on the ceiling.'],
+    ['Lucky Banana Peel','banana',0xffe040,0x6a5a10,'Everybody who walks near it slips. Everybody except you.'],
+    ['Bigfoot Footprint','foot',0x6a4a22,0x3a2a10,'A plaster cast of a very big foot. Size 99.'],
+    ['Loch Ness Postcard','frame',0x4080c0,0x40a040,'A blurry photo of a lake. There is definitely something there.'],
+    ['Alien Selfie','frame',0x60ff60,0x111111,'An alien took a selfie with a cow. Both look happy.'],
+    ['Haunted Mirror Shard','shard',0xc0d0e0,0x8a40ff,'Your reflection in it waves a second after you do.'],
+    ['Invisible Hat','hat',0xe8f0ff,0xe8f0ff,'Trust us, it is a great hat. You just cannot see it.'],
+    ['Square Bubble','cube',0xc0f0ff,0xffffff,'A bubble that came out square. It never pops.'],
+    ['Pickle Phone','phone',0x50a030,0x2a6a20,'A phone made out of a pickle. It only calls other pickles.'],
+    ['Potato Battery','potato',0xc8a060,0xffd030,'A potato that powers a light bulb. Science!'],
+    ['Cheese Wheel of Fortune','cheese',0xffd030,0xff8020,'Spin it and win cheese. Every prize is cheese.'],
+    ['Banana for Scale','banana',0xffe040,0x8a6a10,'The official way to measure everything. This rock is 2 bananas.'],
+    ['Cat Loaf','cat',0xff9a40,0xffffff,'A cat sitting in the shape of bread. Not for eating.'],
+    ['Bread Cat','toast',0xe0b070,0xff9a40,'Bread in the shape of a cat. Also not for eating. Fine, a bit.'],
+    ['Sleepy Lava Lamp','lamp',0xff4060,0x6040a0,'Bloop. Bloop. It makes everyone near it feel sleepy.'],
+    ['Robot Grandma Cookies','cookie',0xc0c8d0,0x6a4a22,'Cookies baked by a robot grandma. Crunchy and a bit metal.'],
+    ['Dinosaur Chicken Nugget','nugget',0xd8a050,0x8a5a20,'Shaped like a stegosaurus. The tastiest dinosaur.'],
+    ['Sock Puppet King','sock',0xffd030,0x111111,'A sock puppet with a tiny crown. It rules the laundry basket.'],
+    ['Haunted Doorknob','knob',0xd0a040,0x8a40ff,'It turns by itself and says hello. Politely.'],
+    ['Glass of Moon Milk','cup',0xe0e8ff,0xa0b0ff,'Milk from a moon cow. It glows a little in the dark.'],
+    ['Mega Burger Crown','burger',0xd08a40,0x40a040,'A crown made of a burger. Royal and delicious.'],
+    ['Pizza Shield','pizza',0xffc040,0xd02020,'A shield made of pizza. Blocks arrows. Gets eaten.'],
+    ['Sentient Sandwich','sandwich',0xe0c080,0x40a040,'A sandwich that talks. Mostly about mayonnaise.'],
+    ['Cereal Box Prize','box',0xff4040,0xffd030,'The toy from the bottom of a cereal box. Everyone wanted it.'],
+    ['Floppy Pizza Hat','hat',0xffc040,0xd02020,'A hat made of pizza. It droops. It smells great.'],
+    ['Paper Plane Fleet Admiral','plane',0xffffff,0x4080ff,'The best paper plane ever folded. It flew around the world.'],
+    ['Last Crayon','crayon',0xff40a0,0xffffff,'The last crayon in the box. Nobody knows its colour name.'],
+    ['Thousand Year Gum','gum',0xff80c0,0xffffff,'Chewed for a thousand years. Still has flavour. Gross.'],
+    ['Lost Homework','note',0xffffff,0x4060c0,'The homework the dog ate. It was here all along.'],
+    ['Dog Ate My Homework Dog','dog',0xc08040,0xffffff,'The dog who ate the homework. It looks very guilty.'],
+    ['Teacher Coffee Mug','cup',0xffffff,0x6a3a10,'A mug that says World Best Teacher. It is always empty.'],
+    ['Golden Pencil Sharpener','box',0xffd030,0xb8860b,'Sharpens pencils perfectly. Never breaks the tip.'],
+    ['Infinite Eraser','eraser',0xff80a0,0x4080ff,'It erases everything. Even yesterday.'],
+    ['Never Ending Juice Box','box',0x40c040,0xff8020,'The straw never makes the slurp sound. It never runs out.'],
+    ['Slime From the Couch','slime',0x60ff60,0x30a030,'Something sticky found under the couch. It waves.'],
+    ['Remote Control Snail','snail',0xc08040,0x40c0ff,'A snail with a tiny antenna. Top speed: slow.'],
+    ['Turbo Snail Shell','snail',0xff4040,0xffd030,'A snail shell with racing stripes. Still slow, but cooler.'],
+    ['Disco Pickle','pickle',0x50a030,0xff40ff,'A pickle that dances when music plays.'],
+    ['Pickle Rick Statue','pickle',0x50a030,0x80c0ff,'A pickle with a face. It is very pleased with itself.'],
+    ['Mustache Comb','comb',0x6a3a10,0xffd030,'For the fanciest mustaches only. Twirl twirl.'],
+    ['Fake Mustache','mustache',0x3a2a10,0x6a4a22,'Wear it and nobody will recognise you. Probably.'],
+    ['Clown Nose of Truth','ball',0xff2020,0xffffff,'Honk it and everybody has to tell the truth. Honk!'],
+    ['Whoopee Cushion Fossil','cushion',0xb8ae9a,0x6a6050,'The oldest joke in history. It still works.'],
+    ['Joy Buzzer','buzzer',0xc0c8d0,0xffd030,'Shake hands with it. BZZT! Ha ha.'],
+    ['Banana Phone','banana',0xffe040,0x111111,'Ring ring ring ring ring ring ring. Banana phone.'],
+    ['Cat in a Box','box',0xc0a070,0xff9a40,'Is the cat in the box? Open it and find out. Meow.'],
+    ['Fish With Legs Sneaker','shoe',0xff8020,0x4080ff,'A sneaker made for a fish with human feet. Very rare size.'],
+    ['Kiwi Bird Bullet Shell','shell',0xffd030,0x8a5a20,'Left behind by a kiwi bird with guns. Do not ask.'],
+    ['Udder Cow Milk Bottle','bottle',0xffffff,0x111111,'Milk from the cow that squirts. It squirts back.'],
+    ['Tutu Cow Ballet Shoe','shoe',0xff80c0,0xffffff,'A tiny ballet shoe for a very big cow.'],
+    ['Disco Sheep Wool','wool',0xff40ff,0x40ffff,'Wool that changes colour to the beat.'],
+    ['Bald Sheep Wig','wig',0xffffff,0xe0e0e0,'A wig for a sheep who lost all its wool. It is grateful.'],
+    ['Bob Propeller Crown','crown',0xffd030,0xff4040,'A crown with a propeller on top. The Bob King wants it back.'],
+    ['Baba Caka Red Nose','ball',0xd02020,0x8a1010,'The red nose of the night baboon. It glows in the dark.'],
+    ['Newton Second Apple','apple',0xff3030,0x30a030,'The apple that fell after the first one. Nobody remembers it.'],
+    ['Gravity Glove','glove',0x8a40ff,0xffffff,'Wear it and things fall up instead of down.'],
+    ['Uno Reverse Card','card',0xff3030,0xffffff,'Turns anything back on whoever sent it. No u.'],
+    ['Draw Four Card','card',0x111111,0xff3030,'The meanest card in the deck. Everybody gasps.'],
+    ['Golden Toilet Brush','brush',0xffd030,0xb8860b,'The fanciest way to clean the least fancy thing.'],
+    ['Royal Plunger','plunger',0xff3030,0xffd030,'A plunger with a gold handle. For royal emergencies.'],
+    ['Rubber Duck General','duck',0xffd030,0x30a030,'A rubber duck in an army hat. It leads the bath fleet.'],
+    ['Bathtub Pirate Ship','ship',0x8a5a20,0xffffff,'A toy pirate ship. It has sunk 900 times and always floats back.'],
+    ['Snow Globe of a Snow Globe','globe',0xc0e0ff,0xffffff,'A snow globe with a smaller snow globe inside. And another.'],
+    ['Pencil That Writes Upside Down','crayon',0xffd030,0xff80a0,'It only works when you hold the paper upside down.'],
+    ['Pen That Never Clicks','crayon',0x4080ff,0xc0c8d0,'You can click it forever. It never stops being fun.'],
+    ['Sticky Note of Doom','note',0xffff60,0x111111,'It says: Do not forget the thing. Nobody knows what thing.'],
+    ['Fortune Cookie of Nonsense','cookie',0xe0b060,0xffffff,'The fortune inside says: You will find a fortune cookie.'],
+    ['Map to Nowhere','map',0xe0c080,0xff2020,'X marks the spot. The spot is nowhere.'],
+    ['Compass That Points to Snacks','compass',0xc0a070,0xff4040,'Always points to the nearest snack. Very useful.'],
+    ['Pocket Volcano','volcano',0x6a4a3a,0xff4010,'A tiny volcano. It burps lava when it is hungry.'],
+    ['Bottled Tornado Baby','bottle',0xc0c8d0,0x8090a0,'A baby tornado. It spins in circles and makes little whooshes.'],
+    ['Thundercloud Pillow','cloud',0x6a6a8a,0xffff60,'A very soft pillow. It rumbles when you fall asleep.'],
+    ['Rainbow Slime','slime',0xff4040,0x4080ff,'Slime that is every colour. It squishes in rainbows.'],
+    ['Glow Worm Night Light','worm',0x80ff80,0x40a040,'A friendly worm that glows. It keeps the dark away.'],
+    ['Firefly Lantern','jar',0xffff60,0x40a040,'Fireflies in a jar. They blink in a secret code.'],
+    ['Moon Rock Candy','gem',0xe0e0ff,0xa0a0ff,'Candy made from moon rock. Very crunchy.'],
+    ['Comet Tail Scarf','scarf',0x80c0ff,0xffffff,'A scarf knitted from a comet tail. Always a little cold.'],
+    ['Saturn Ring Hula Hoop','ring',0xe0c080,0xa08040,'A hula hoop borrowed from Saturn. Please return it.'],
+    ['Astronaut Ice Cream','icecream',0xff80c0,0x80ff80,'Dry space ice cream. It never melts. Crunchy.'],
+    ['Alien Rubber Duck','duck',0x60ff60,0x111111,'A rubber duck from another planet. It has three eyes.'],
+    ['UFO Frisbee','ufo',0xc0c8d0,0x60ff60,'It flies by itself and always comes back. Beep boop.'],
+    ['Black Hole Marble','ball',0x111111,0x8a40ff,'A marble so heavy other marbles roll toward it.'],
+    ['Time Machine Battery','battery',0x8a40ff,0xffd030,'Powers a time machine for exactly 5 minutes. Use them wisely.'],
+    ['Yesterday in a Box','box',0xffd060,0x8a40ff,'Open it and it is yesterday again. Only for one second.'],
+    ['Tomorrow Newspaper','note',0xe0e0e0,0x111111,'Tomorrow news says: you found a newspaper.'],
+    ['Pause Button','button',0xff4040,0xffffff,'Press it and everything stops. Except you.'],
+    ['Undo Button','button',0x4080ff,0xffffff,'The one button everybody wishes they had in real life.'],
+    ['Skip Ad Button','button',0x111111,0xffffff,'The most pressed button in history. Finally yours.'],
+    ['Like Button','button',0x4080ff,0xffffff,'A thumbs up you can hold. Everybody likes it.'],
+    ['Subscribe Bell','bell',0xffd030,0xff3030,'Ring the bell. It rings back. Every single time.'],
+    ['Golden Play Button','trophy',0xffd030,0xff3030,'An award for having a million fans. You have one. Close enough.'],
+    ['Viral Video Tape','tape',0xff3030,0x111111,'A video everybody has watched. It is just a cat sneezing.'],
+    ['Meme Sauce','bottle',0xff40ff,0xffd030,'Pour a drop on anything and it becomes funny.'],
+    ['Emoji Fossil','face',0xb8ae9a,0x6a6050,'The very first smiley face, carved in stone.'],
+    ['Hashtag Rock','rock',0x8a8a9a,0x4080ff,'A rock with a hashtag on it. It is trending.'],
+    ['Dancing Baby Statue','baby',0xf0c8a0,0x80c0ff,'A statue of a baby that never stops dancing.'],
+    ['Hamster Dance Wheel','wheel',0xc0a070,0xff9a40,'A tiny wheel. Every hamster in the world dances on it.'],
+    ['Peanut Butter Jelly Time Jar','jar',0xc08040,0xa02060,'It is peanut butter jelly time. It always is.'],
+    ['Llama With Hat','llama',0xe8d8b0,0xff3030,'A llama in a fancy hat. Caaarl, that is a very nice hat.'],
+    ['Ultimate Chicken Horse','chicken',0xffffff,0xc08040,'Half chicken, half horse, all confusion.'],
+    ['Spinning Cat Disc','cat',0xc0c0c0,0xffffff,'A cat that spins forever like a record.'],
+    ['Crab Rave Shell','crab',0xff4020,0xffd030,'A crab shell that makes all the crabs dance.'],
+    ['Shell of Coconut Mall','coconut',0x6a4a22,0xffffff,'A coconut that plays shopping music when you shake it.'],
+    ['Goat Scream Recorder','goat',0xffffff,0x6a4a22,'Press play and a goat screams. AAAAAH!'],
+    ['Thanos Snap Glove','glove',0xffd030,0x8a40ff,'A golden glove. Snap and half of your socks vanish.'],
+    ['Infinity Sock','sock',0x8a40ff,0xffd030,'A sock with six shiny stones. It never gets lost.'],
+    ['Sad Violin','violin',0x8a4a20,0x3a2a10,'It plays the saddest song in the world. Very tiny.'],
+    ['Bonk Bat','bat',0xc08040,0x6a3a10,'A soft foam bat. One gentle bonk and everyone stops being silly.'],
+    ['Cheems Bone','bone',0xf0f0e0,0xffd030,'A bone from a very small dog who talks funny. Burger.'],
+    ['Wholesome Hug Pillow','pillow',0xffa0c0,0xffffff,'Hug it and you feel better. Works every time.'],
+    ['Long Cat Scarf','scarf',0xffffff,0xff9a40,'A scarf made of one very, very long cat. Loooong.'],
+    ['Ceiling Cat Window','frame',0xc0d0e0,0xff9a40,'A window in the ceiling. A cat is watching you.'],
+    ['Me Gusta Face Stamp','face',0xffffff,0xff9a9a,'A stamp of a face that likes everything. Me gusta.'],
+    ['Y U No Hat','hat',0xffffff,0x111111,'Y U NO wear it? Seriously. Wear it.'],
+    ['Forever Alone Balloon','balloon',0xff4060,0xffffff,'A single balloon. It is fine. It likes being alone.'],
+    ['Lemon Lemonade Lemon','lemon',0xffff40,0xc0c000,'A lemon made of lemonade made of lemons. Confusing.'],
+    ['Overly Attached Plushie','plush',0xffa0a0,0x111111,'A plushie that follows you everywhere. Everywhere.'],
+    ['One Does Not Simply Ring','ring',0xffd030,0xffd030,'One does not simply walk into the shop with this ring.']
+  ];
+
+  // ---------- a little pixel picture for every Divine item, drawn from a template in the item's own colours
+  const hx = c=>'#'+(c >>> 0).toString(16).padStart(6, '0').slice(-6);
+  const shade = (c, f)=>{ const r = Math.min(255, Math.round(((c>>16)&255)*f)), g = Math.min(255, Math.round(((c>>8)&255)*f)), b = Math.min(255, Math.round((c&255)*f)); return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6, '0'); };
+  function hstr(s){ let h = 2166136261; for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function painter(x){
+    const R = (c, a, b, w, h)=>{ if(c === 0){ x.clearRect(a, b, w, h); return; } x.fillStyle = c; x.fillRect(Math.round(a), Math.round(b), Math.round(w), Math.round(h)); };
+    const O = (c, cx, cy, rx, ry)=>{ ry = ry == null ? rx : ry; for(let y=Math.floor(cy-ry); y<=Math.ceil(cy+ry); y++) for(let xx=Math.floor(cx-rx); xx<=Math.ceil(cx+rx); xx++){ const u = (xx+.5-cx)/rx, v = (y+.5-cy)/ry; if(u*u + v*v <= 1) R(c, xx, y, 1, 1); } };
+    const L = (c, x0, y0, x1, y1, t)=>{ const n = Math.max(Math.abs(x1-x0), Math.abs(y1-y0)) || 1; for(let i=0;i<=n;i++){ const px = x0 + (x1-x0)*i/n, py = y0 + (y1-y0)*i/n; R(c, px - t/2, py - t/2, t, t); } };
+    const G = (c, pts)=>{ x.fillStyle = c; x.beginPath(); x.moveTo(pts[0], pts[1]); for(let i=2;i<pts.length;i+=2) x.lineTo(pts[i], pts[i+1]); x.closePath(); x.fill(); };
+    return {R, O, L, G};
+  }
+  const K = '#111111', W = '#ffffff';
+  const TPL = {
+    dog:(p, a, b)=>{ p.O(a,16,18,10,9); p.R(b,4,6,5,11); p.R(b,23,6,5,11); p.R(K,11,15,3,3); p.R(K,18,15,3,3); p.O(K,16,21,2,1.5); p.R(K,15,24,3,1); p.R('#ff7090',16,25,2,2); },
+    cat:(p, a, b)=>{ p.G(a,[5,16,8,3,15,10]); p.G(a,[27,16,24,3,17,10]); p.O(a,16,19,11,9); p.R('#7ad040',10,16,4,3); p.R('#7ad040',18,16,4,3); p.R(K,11,16,2,3); p.R(K,19,16,2,3); p.R('#ff8aa0',15,21,2,2); p.R(b,3,21,7,1); p.R(b,22,21,7,1); p.R(b,4,24,6,1); p.R(b,22,24,6,1); },
+    face:(p, a, b)=>{ p.O(a,16,16,13,13); p.R(b,9,10,5,5); p.R(b,18,10,5,5); p.R(W,10,11,2,2); p.R(W,19,11,2,2); p.R(b,8,21,16,2); p.R(b,7,19,2,2); p.R(b,23,19,2,2); },
+    arrow:(p, a, b)=>{ p.R(b,3,28,26,2); p.L(a,5,25,22,8,4); p.G(a,[28,3,15,6,25,16]); p.L(shade(a,1.4) ,6,23,20,9,1); },
+    disc:(p, a, b)=>{ p.O(a,16,16,14,14); p.O('#333333',16,16,11,11); p.O(a,16,16,9,9); p.O(b,16,16,5,5); p.O('#000000',16,16,1.2,1.2); p.R('#666666',7,9,3,1); },
+    keys:(p, a, b)=>{ p.R(a,2,9,28,15); for(let i=0;i<7;i++) p.R(K,2+i*4,9,1,15); [0,1,3,4,5].forEach(i=>p.R(b,5+i*4,9,2,9)); p.R(K,2,23,28,1); },
+    frame:(p, a, b)=>{ p.R(b,3,4,26,24); p.R(a,6,7,20,18); p.G(shade(a,.55),[6,25,13,13,20,25]); p.G(shade(a,.7),[12,25,19,15,26,25]); p.O(W,21,11,2.5,2.5); },
+    cup:(p, a, b)=>{ p.R(a,7,10,15,18); p.R(a,22,13,5,2); p.R(a,25,13,2,10); p.R(a,22,21,5,2); p.R(b,7,15,15,4); p.R('#dddddd',11,3,1,5); p.R('#dddddd',15,2,1,6); p.R('#dddddd',19,4,1,4); },
+    banana:(p, a, b)=>{ p.O(a,16,12,13,13); p.O(0,16,6,13,13); p.R(b,3,9,3,3); p.R(b,27,9,3,3); p.L(shade(a,.8),6,18,26,18,1); },
+    frog:(p, a, b)=>{ p.O(a,16,21,12,8); p.O(a,9,12,4.5,4.5); p.O(a,23,12,4.5,4.5); p.O(W,9,12,2.5,2.5); p.O(W,23,12,2.5,2.5); p.R(K,9,12,2,2); p.R(K,22,12,2,2); p.R(b,8,22,16,1); p.O(shade(a,1.3),16,25,6,3); },
+    carrot:(p, a, b)=>{ p.G(a,[9,9,23,9,16,31]); p.R(shade(a,.75),13,14,4,1); p.R(shade(a,.75),15,20,4,1); p.R(b,13,2,2,8); p.R(b,16,1,2,9); p.R(b,19,3,2,7); },
+    hat:(p, a, b)=>{ p.R(a,3,23,26,4); p.R(a,8,6,16,18); p.R(b,8,18,16,3); p.R(shade(a,1.3),10,8,2,9); },
+    fist:(p, a, b)=>{ p.R(a,8,9,16,15); for(let i=0;i<4;i++) p.R(shade(a,.8),8+i*4,9,1,7); p.R(a,4,14,6,5); p.R(b,10,24,12,7); },
+    shirt:(p, a, b)=>{ p.R(a,8,6,16,23); p.R(a,2,6,7,10); p.R(a,23,6,7,10); p.R(b,13,6,6,3); p.O(b,16,17,4,4); p.R(shade(a,.8),8,27,16,2); },
+    book:(p, a, b)=>{ p.R('#f4f0e0',8,5,19,24); p.R(a,6,4,19,25); p.R(b,6,4,3,25); p.R(b,12,9,10,3); p.R(b,12,14,7,2); },
+    chicken:(p, a, b)=>{ p.O(a,15,20,10,8); p.O(a,22,11,5,5); p.R('#e02020',20,3,5,3); p.G('#ffa020',[27,10,31,12,27,14]); p.R(K,23,9,2,2); p.R('#ffa020',12,27,2,4); p.R('#ffa020',18,27,2,4); p.O(b,12,20,5,3); },
+    box:(p, a, b)=>{ p.R(a,5,10,22,19); p.R(shade(a,1.2),4,7,24,5); p.R(b,14,7,4,22); p.O(b,12,5,3,2); p.O(b,20,5,3,2); },
+    disk:(p, a, b)=>{ p.R(a,5,4,22,24); p.R('#c0c0c0',10,4,12,8); p.R(a,17,5,3,6); p.R(b,9,16,14,10); p.R(shade(b,.7),10,18,12,1); p.R(shade(b,.7),10,21,12,1); },
+    tape:(p, a, b)=>{ p.R(a,3,8,26,17); p.R(b,7,11,18,7); p.O(W,11,14.5,2.5,2.5); p.O(W,21,14.5,2.5,2.5); p.R('#4a3020',13,14,6,1); p.R(shade(a,.7),9,20,14,5); },
+    phone:(p, a, b)=>{ p.R(a,9,3,14,26); p.R(b,11,6,10,13); for(let r=0;r<3;r++) for(let k=0;k<3;k++) p.R(shade(a,.6),11+k*4,21+r*2.5,2,1.5); },
+    egg:(p, a, b)=>{ p.O(a,16,17,9,12); p.O(b,12,20,2,2); p.O(b,19,14,2.5,2); p.O(b,18,24,2,1.5); p.R(W,11,9,2,4); },
+    cart:(p, a, b)=>{ p.R(a,4,8,22,12); for(let i=0;i<5;i++) p.R(shade(a,.7),7+i*4,8,1,12); p.R(b,24,4,6,2); p.R(a,6,20,18,2); p.O(K,9,26,2.5,2.5); p.O(K,21,26,2.5,2.5); },
+    stick:(p, a, b)=>{ p.L(a,6,27,26,5,3); p.R(b,15,15,3,3); p.O(b,22,11,3,1.5); },
+    mouse:(p, a, b)=>{ p.O(a,16,18,9,12); p.R(b,15,6,2,9); p.R(b,7,14,18,1); p.L('#888888',16,6,16,0,1); p.R(W,10,9,2,3); },
+    headphones:(p, a, b)=>{ p.O(a,16,15,13,12); p.O(0,16,15,10,9); p.R(0,0,15,32,17); p.R(b,2,14,7,12); p.R(b,23,14,7,12); p.R(shade(b,1.3),3,16,2,8); },
+    calc:(p, a, b)=>{ p.R(a,7,3,18,26); p.R('#9ab08a',9,5,14,6); for(let r=0;r<4;r++) for(let k=0;k<3;k++) p.R(b,9+k*5,13+r*4,4,3); },
+    remote:(p, a, b)=>{ p.R(a,10,2,12,28); p.O('#e02020',16,6,2,2); for(let r=0;r<5;r++) for(let k=0;k<2;k++) p.R(b,12+k*5,11+r*3.5,3,2); },
+    spinner:(p, a, b)=>{ p.L(a,16,16,16,6,4); p.L(a,16,16,7,22,4); p.L(a,16,16,25,22,4); p.O(b,16,6,5,5); p.O(b,7,22,5,5); p.O(b,25,22,5,5); p.O(a,16,6,2,2); p.O(a,7,22,2,2); p.O(a,25,22,2,2); p.O(a,16,16,3.5,3.5); },
+    cube:(p, a, b)=>{ p.G(shade(a,1.3),[16,3,29,10,16,17,3,10]); p.G(a,[3,10,16,17,16,30,3,23]); p.G(shade(a,.7),[29,10,16,17,16,30,29,23]); p.L(b,16,17,16,30,1); p.L(b,3,10,16,17,1); p.L(b,16,17,29,10,1); },
+    shoe:(p, a, b)=>{ p.R(a,4,16,22,8); p.O(a,25,20,5,4); p.R(a,5,9,11,8); p.R(b,3,24,28,3); for(let i=0;i<3;i++) p.R(W,7,11+i*2,7,1); },
+    pizza:(p, a, b)=>{ p.G(a,[4,5,28,5,16,30]); p.R(b,3,3,26,4); p.O('#c03020',12,10,2.5,2.5); p.O('#c03020',20,10,2.5,2.5); p.O('#c03020',16,18,2.5,2.5); p.R('#40a040',14,12,2,1); },
+    burger:(p, a, b)=>{ p.O(a,16,12,13,7); p.R(0,0,12,32,20); p.R('#50c040',3,12,26,2); p.R('#6a3a1a',4,14,24,4); p.R('#ffd030',4,18,24,2); p.R(b,4,20,24,1); p.R(a,5,21,22,5); [9,14,19,23].forEach(x=>p.R(W,x,8,1,2)); },
+    nugget:(p, a, b)=>{ p.O(a,16,17,12,9); p.O(a,9,12,5,4); p.O(shade(a,1.15),20,13,5,3); [8,13,19,23,11,17].forEach((x,i)=>p.R(b,x,14+(i%3)*4,2,1)); },
+    duck:(p, a, b)=>{ p.O(a,14,21,11,7); p.O(a,22,11,6,6); p.R('#ff9020',27,11,5,3); p.R(K,23,9,2,2); p.O(shade(a,.8),12,20,5,3); p.R(b,20,15,4,2); },
+    onion:(p, a, b)=>{ p.O(a,16,19,10,10); p.G(a,[11,12,21,12,16,2]); p.L(shade(a,.8),16,10,16,28,1); p.L(shade(a,.8),11,14,9,26,1); p.L(shade(a,.8),21,14,23,26,1); p.R(b,13,29,6,2); },
+    door:(p, a, b)=>{ p.R(a,8,2,16,28); p.R(shade(a,.8),10,4,12,10); p.R(shade(a,.8),10,17,12,10); p.O(b,21,17,1.5,1.5); },
+    waffle:(p, a, b)=>{ p.R(a,4,4,24,24); for(let i=0;i<5;i++){ p.R(shade(a,.7),4+i*6,4,2,24); p.R(shade(a,.7),4,4+i*6,24,2); } p.O(b,18,14,5,4); p.R(W,15,10,4,3); },
+    cookie:(p, a, b, h)=>{ p.O(a,16,16,13,13); for(let i=0;i<7;i++) p.R(b,8+((h>>(i*3))&15),8+((h>>(i*3+12))&15),3,2); },
+    crown:(p, a, b)=>{ p.R(a,4,16,24,10); p.G(a,[4,17,7,5,12,17]); p.G(a,[11,17,16,3,21,17]); p.G(a,[20,17,25,5,28,17]); p.O(b,10,21,2,2); p.O(b,16,21,2,2); p.O(b,22,21,2,2); p.R(shade(a,.7),4,24,24,2); },
+    glasses:(p, a, b)=>{ p.R(a,2,11,12,9); p.R(a,18,11,12,9); p.R(a,14,12,4,2); p.R(a,0,11,2,2); p.R(a,30,11,2,2); p.R(b,4,13,3,2); p.R(b,20,13,3,2); },
+    chain:(p, a, b)=>{ for(let i=0;i<5;i++){ p.O(a,5+i*5.5,9+Math.abs(2-i)*3,3,2.5); p.O(0,5+i*5.5,9+Math.abs(2-i)*3,1.5,1); } p.O(a,16,24,6,6); p.O(b,16,24,4,4); },
+    hotdog:(p, a, b)=>{ p.O(a,16,19,14,6); p.O(b,16,15,15,3); for(let i=0;i<6;i++) p.R('#ffe020',5+i*4,13+(i%2)*2,3,1); },
+    bottle:(p, a, b)=>{ p.R(a,13,3,6,8); p.R(a,9,10,14,20); p.R(b,9,16,14,7); p.R(b,13,1,6,3); p.R(W,11,12,1,12); },
+    chip:(p, a, b)=>{ p.O(a,16,16,13,10); p.L(shade(a,.8),6,12,26,12,1); p.L(shade(a,.8),5,17,27,17,1); p.L(shade(a,.8),7,22,25,22,1); [9,15,21,12,19].forEach((x,i)=>p.R(W,x,9+i*3,1,1)); p.R(b,20,9,2,2); },
+    horn:(p, a, b)=>{ p.G(a,[3,12,3,22,23,18,23,16]); p.R(b,22,15,8,4); for(let i=0;i<3;i++) p.R(b,7+i*5,12+i,2,10-i*2); },
+    spike:(p, a, b)=>{ p.G(a,[16,1,8,30,24,30]); p.G(shade(a,1.3),[16,1,12,30,16,30]); p.R(b,7,28,18,3); },
+    sign:(p, a, b)=>{ p.R('#8a6a3a',14,16,4,15); p.R(a,3,4,26,13); p.R(b,6,7,20,2); p.R(b,6,11,14,2); },
+    screen:(p, a, b)=>{ p.R(b,3,4,26,19); p.R(a,5,6,22,15); p.R(W,7,8,6,2); p.R(b,13,23,6,4); p.R(b,9,27,14,2); },
+    bar:(p, a, b)=>{ p.R(a,4,9,24,13); for(let i=1;i<4;i++) p.R(shade(a,.75),4+i*6,9,1,13); p.R(shade(a,.75),4,15,24,1); p.R(b,4,9,9,13); p.R(shade(b,1.3),6,11,2,9); },
+    tuft:(p, a, b)=>{ [[6,14],[10,6],[14,10],[17,2],[21,8],[25,12]].forEach(([x,t])=>{ p.L(a,x,30,x+2,t,2); p.R(b,x+1,t,2,2); }); },
+    sword:(p, a, b)=>{ p.R(a,15,4,3,18); p.G(a,[15,4,18,4,16.5,0]); p.R(W,16,5,1,14); p.R(b,9,21,15,3); p.R('#6a3a1a',15,24,3,6); p.O(b,16.5,30,2,1.5); },
+    shard:(p, a, b)=>{ p.G(a,[16,1,6,20,14,31]); p.G(shade(a,.7),[16,1,26,18,14,31]); p.L(W,15,5,11,17,1); p.R(b,20,10,2,2); },
+    rock:(p, a, b)=>{ p.O(a,16,19,13,9); p.O(shade(a,1.2),12,16,5,3); p.L(b,18,13,21,20,1); p.L(b,21,20,17,25,1); },
+    star:(p, a, b)=>{ const pts = []; for(let i=0;i<10;i++){ const r = i%2 ? 6 : 14, an = -Math.PI/2 + i*Math.PI/5; pts.push(16 + Math.cos(an)*r, 17 + Math.sin(an)*r); } p.G(b,pts.map((v,i)=>v + (i%2 ? 1 : 0))); p.G(a,pts); p.R(K,13,15,2,3); p.R(K,18,15,2,3); },
+    note:(p, a, b)=>{ p.O(a,10,24,5,4); p.R(a,14,5,2,19); p.R(a,14,5,10,3); p.R(a,21,7,3,7); p.O(b,9,23,2,1.5); },
+    brick:(p, a, b)=>{ p.R(a,3,9,26,14); p.R(b,3,15,26,1); p.R(b,12,9,1,6); p.R(b,21,9,1,6); p.R(b,8,16,1,7); p.R(b,17,16,1,7); },
+    eye:(p, a, b)=>{ p.O(W,16,16,14,9); p.O(a,16,16,6.5,6.5); p.O(K,16,16,3,3); p.R(W,17,13,2,2); p.L(b,3,13,7,15,1); p.L(b,29,13,25,15,1); },
+    spoon:(p, a, b)=>{ p.O(a,16,9,6,7); p.R(a,15,15,3,15); p.R(W,13,6,2,4); p.R(b,15,27,3,3); },
+    dino:(p, a, b)=>{ p.O(a,13,21,9,6); p.R(a,18,7,6,12); p.R(a,18,4,11,7); p.R(K,25,6,2,2); p.R(W,26,9,1,1); p.R(a,8,25,3,6); p.R(a,15,25,3,6); p.G(a,[6,18,0,26,9,24]); for(let i=0;i<4;i++) p.G(b,[7+i*4,15,9+i*4,11,11+i*4,15]); },
+    cheese:(p, a, b)=>{ p.G(a,[3,25,29,25,29,8]); p.R(shade(a,.8),3,25,26,4); p.O(b,21,19,2,2); p.O(b,25,14,1.5,1.5); p.O(b,14,22,1.5,1.5); },
+    sock:(p, a, b)=>{ p.R(a,11,2,9,19); p.R(a,11,18,15,8); p.O(a,25,22,4,4); p.R(b,11,5,9,2); p.R(b,11,9,9,2); p.R(b,22,22,5,4); p.R(b,11,2,9,2); },
+    jar:(p, a, b)=>{ p.R(a,7,9,18,20); p.R(b,6,4,20,6); p.R(shade(a,1.3),9,11,2,15); p.R(W,12,16,10,6); p.R(b,13,18,8,2); },
+    cloud:(p, a, b)=>{ p.O(a,10,18,7,6); p.O(a,19,14,9,8); p.O(a,24,19,6,5); p.R(a,8,18,20,6); [9,15,21].forEach(x=>p.R(b,x,26,2,4)); },
+    rainbow:(p)=>{ ['#ff3030','#ff9020','#ffe030','#40d040','#3080ff','#8040e0'].forEach((c,i)=>p.O(c,16,24,15-i*2,15-i*2)); p.O(0,16,24,3,3); p.R(0,0,24,32,8); p.O(W,6,24,4,3); p.O(W,26,24,4,3); },
+    toaster:(p, a, b)=>{ p.R(a,4,12,24,16); p.R(K,9,12,5,2); p.R(K,18,12,5,2); p.R('#d0a050',9,5,5,7); p.R('#d0a050',18,7,5,5); p.R(b,28,16,3,3); p.R(shade(a,1.3),6,15,2,10); },
+    clock:(p, a, b)=>{ p.O(b,16,16,14,14); p.O(a,16,16,11.5,11.5); p.R(K,15,7,2,10); p.R(K,16,15,7,2); [[16,5],[16,27],[5,16],[27,16]].forEach(([x,y])=>p.R(K,x-1,y-1,2,2)); },
+    sun:(p, a, b)=>{ for(let i=0;i<8;i++){ const an = i*Math.PI/4; p.L(b,16+Math.cos(an)*10,16+Math.sin(an)*10,16+Math.cos(an)*15,16+Math.sin(an)*15,2); } p.O(a,16,16,8.5,8.5); p.R(K,12,13,2,2); p.R(K,18,13,2,2); p.R(K,13,19,6,1); },
+    noodle:(p, a, b)=>{ p.O(a,16,19,13,9); p.R(0,0,0,32,19); p.R(shade(a,.8),3,18,26,2); for(let i=0;i<5;i++) p.L(b,7+i*4,18,9+i*4,10,1); p.L('#a06030',19,1,25,18,1.5); p.L('#a06030',23,1,27,18,1.5); },
+    foot:(p, a, b)=>{ p.O(a,15,20,8,10); p.O(a,10,8,2.5,2.5); p.O(a,15,6,2.2,2.2); p.O(a,19,7,2,2); p.O(a,22,9,1.8,1.8); p.O(a,24,12,1.6,1.6); p.R(b,9,7,2,1); p.R(b,14,5,2,1); },
+    potato:(p, a, b)=>{ p.O(a,16,17,13,9); p.O(shade(a,1.15),12,13,5,3); [[10,18],[18,15],[21,21],[14,23]].forEach(([x,y])=>p.R(b,x,y,2,1)); },
+    toast:(p, a, b)=>{ p.O(b,11,9,6,5); p.O(b,21,9,6,5); p.R(b,5,9,22,20); p.O(a,11,10,4.5,3.5); p.O(a,21,10,4.5,3.5); p.R(a,7,10,18,17); p.R(K,12,15,2,2); p.R(K,18,15,2,2); p.R(K,14,20,4,1); },
+    lamp:(p, a, b)=>{ p.G(a,[10,4,22,4,27,15,5,15]); p.R(b,14,15,4,11); p.R(b,9,26,14,3); p.O('#fff6a0',16,17,3,1.5); },
+    knob:(p, a, b)=>{ p.O(shade(a,.6),16,16,13,13); p.O(a,16,16,10,10); p.R(b,15,6,2,8); for(let i=0;i<8;i++){ const an = i*Math.PI/4; p.R(b,15+Math.cos(an)*14,15+Math.sin(an)*14,2,2); } },
+    sandwich:(p, a, b)=>{ p.R(a,4,8,24,5); p.R('#50c040',3,13,26,2); p.R(b,4,15,24,3); p.R('#ffd030',4,18,24,2); p.R('#e04030',5,20,22,2); p.R(a,4,22,24,5); },
+    plane:(p, a, b)=>{ p.R(a,3,14,25,5); p.O(a,28,16.5,3,2.5); p.G(b,[11,15,19,15,13,3]); p.G(b,[11,18,19,18,13,30]); p.R(b,3,9,3,6); p.R('#80d0ff',24,14,3,2); },
+    crayon:(p, a, b)=>{ p.R(a,12,9,8,21); p.G(a,[12,9,20,9,16,1]); p.R(b,12,13,8,11); p.R(shade(b,.7),12,15,8,1); p.R(shade(b,.7),12,21,8,1); },
+    gum:(p, a, b)=>{ p.O(shade(a,1.15),16,11,9,9); p.O(a,16,24,10,6); p.R(W,12,7,3,3); p.R(b,13,23,6,2); },
+    eraser:(p, a, b)=>{ p.G(a,[4,14,22,8,28,16,10,22]); p.G(b,[4,14,11,12,16,20,10,22]); p.G(shade(a,.7),[10,22,28,16,28,20,10,26]); p.G(shade(b,.7),[4,14,10,22,10,26,4,18]); },
+    slime:(p, a, b)=>{ p.O(a,16,22,14,8); p.O(a,16,14,9,8); p.R(K,11,15,3,4); p.R(K,19,15,3,4); p.R(b,8,11,3,3); p.R(b,13,24,6,1); },
+    snail:(p, a, b)=>{ p.R(b,3,23,27,5); p.R(b,4,14,4,10); p.R(b,4,9,1,5); p.R(b,7,9,1,5); p.O(a,19,16,9,9); p.O(shade(a,.7),19,16,6,6); p.O(a,19,16,3.5,3.5); p.O(shade(a,.7),20,16,1.5,1.5); },
+    pickle:(p, a, b)=>{ p.O(a,16,16,7,14); [[12,8],[19,12],[13,17],[19,21],[14,25]].forEach(([x,y])=>p.R(b,x,y,2,2)); p.R(shade(a,1.3),12,6,2,6); },
+    comb:(p, a, b)=>{ p.R(a,3,8,26,6); for(let i=0;i<11;i++) p.R(a,4+i*2.4,14,1.2,11); p.R(b,5,10,22,1); },
+    mustache:(p, a, b)=>{ p.O(a,10,17,7,4); p.O(a,22,17,7,4); p.O(a,4,13,2.5,2.5); p.O(a,28,13,2.5,2.5); p.R(b,8,15,5,1); p.R(b,19,15,5,1); },
+    ball:(p, a, b)=>{ p.O(a,16,16,13,13); p.L(b,4,12,28,20,2); p.O(b,16,16,4,4); p.R(W,9,8,3,3); },
+    cushion:(p, a, b)=>{ p.O(a,16,19,13,9); p.R(a,13,5,6,8); p.R(b,12,4,8,2); p.R(shade(a,1.3),8,16,4,2); },
+    buzzer:(p, a, b)=>{ p.R(b,5,20,22,9); p.O(shade(a,.7),16,20,10,5); p.O(a,16,17,10,5); p.R(W,11,15,4,1); },
+    shell:(p, a, b)=>{ p.O(a,16,18,13,12); p.R(0,0,24,32,8); p.R(a,13,24,6,4); for(let i=0;i<7;i++){ const an = Math.PI + i*Math.PI/6; p.L(b,16,26,16+Math.cos(an)*12,18+Math.sin(an)*11,1); } },
+    wool:(p, a, b)=>{ p.O(a,16,16,12,12); p.L(b,7,9,25,22,1); p.L(b,6,15,22,27,1); p.L(b,11,5,27,16,1); p.L(a,26,24,31,30,1.5); },
+    wig:(p, a, b, h)=>{ for(let i=0;i<16;i++){ const an = i*Math.PI/8; p.O(i%2 ? a : shade(a,1.2),16+Math.cos(an)*10,15+Math.sin(an)*10,4.5,4.5); } p.O(a,16,15,8,8); p.O('#f0c8a0',16,20,6,6); p.R(K,13,19,2,2); p.R(K,18,19,2,2); p.R(b,14,24,4,1); },
+    apple:(p, a, b)=>{ p.O(a,12,18,8,10); p.O(a,20,18,8,10); p.R('#6a3a1a',15,4,2,6); p.O(b,21,6,4,2); p.R(W,9,12,2,4); },
+    glove:(p, a, b)=>{ p.R(a,9,12,15,14); p.R(a,9,4,3,10); p.R(a,13,2,3,11); p.R(a,17,3,3,10); p.R(a,21,5,3,9); p.R(a,4,14,6,5); p.R(b,9,25,15,5); },
+    card:(p, a, b)=>{ p.R(b,6,2,20,28); p.R(W,7,3,18,26); p.O(a,13,13,3.5,3.5); p.O(a,19,13,3.5,3.5); p.G(a,[9.5,14,22.5,14,16,23]); p.R(a,8,4,2,3); p.R(a,22,25,2,3); },
+    brush:(p, a, b)=>{ p.R(b,15,2,3,14); p.R('#c0c0c0',13,15,7,4); p.R(a,13,19,7,10); p.R(shade(a,.7),15,21,1,8); },
+    plunger:(p, a, b)=>{ p.R('#a06030',15,2,3,18); p.O(a,16,25,10,6); p.R(0,0,27,32,5); p.R(b,6,26,20,2); },
+    ship:(p, a, b)=>{ p.G(a,[2,20,30,20,25,28,7,28]); p.R('#6a3a1a',15,3,2,17); p.G(b,[17,4,17,18,28,18]); p.G(W,[15,6,15,17,6,17]); p.R('#e02020',15,1,5,2); },
+    globe:(p, a, b)=>{ p.O('#3070d0',16,14,11,11); p.O(a,12,10,4,3); p.O(a,20,16,5,4); p.O(a,11,19,3,2); p.R(b,15,25,2,3); p.R(b,9,28,14,2); },
+    map:(p, a, b)=>{ p.R(a,4,6,24,20); p.R(shade(a,.8),12,6,1,20); p.R(shade(a,.8),20,6,1,20); [7,10,13,16].forEach((x,i)=>p.R(b,x,20-i*2,2,1)); p.L('#e02020',19,8,23,12,1.5); p.L('#e02020',23,8,19,12,1.5); },
+    compass:(p, a, b)=>{ p.O(b,16,16,14,14); p.O(a,16,16,11.5,11.5); p.G('#e02020',[16,5,13,16,19,16]); p.G(W,[16,27,13,16,19,16]); p.O(K,16,16,1.5,1.5); },
+    volcano:(p, a, b)=>{ p.G(a,[2,31,30,31,20,10,12,10]); p.R(b,12,8,8,4); p.L(b,14,12,10,24,2); p.L(b,19,12,22,21,2); p.O('#888888',13,4,3,2.5); p.O('#aaaaaa',18,2,3,2); },
+    worm:(p, a, b)=>{ for(let i=0;i<7;i++) p.O(i%2 ? a : shade(a,.85),5+i*3.6,18+Math.sin(i*1.1)*5,3.5,3.5); p.R(K,28,13,2,2); p.R(b,5,17,2,2); },
+    gem:(p, a, b)=>{ p.G(a,[8,9,24,9,30,15,16,30,2,15]); p.G(shade(a,1.3),[8,9,16,9,12,15,2,15]); p.G(shade(a,.75),[16,30,30,15,20,15]); p.L(b,2,15,30,15,1); p.R(W,11,10,3,2); },
+    scarf:(p, a, b)=>{ p.R(a,3,6,26,8); p.R(a,18,12,8,18); for(let i=0;i<4;i++) p.R(b,5+i*6,6,3,8); p.R(b,18,17,8,3); p.R(b,18,24,8,3); for(let i=0;i<4;i++) p.R(a,18+i*2,30,1,2); },
+    ring:(p, a, b)=>{ p.O(a,16,20,10,9); p.O(0,16,20,7,6); p.O(b,16,9,4.5,4.5); p.R(W,14,7,2,2); },
+    icecream:(p, a, b)=>{ p.G('#d0a050',[9,16,23,16,16,31]); p.L('#a07030',11,18,18,27,1); p.L('#a07030',21,18,14,27,1); p.O(a,16,13,8,6); p.O(b,16,7,6,5); p.O('#e02020',16,2,2,2); },
+    ufo:(p, a, b)=>{ p.G('rgba(255,240,120,.45)',[11,19,21,19,27,31,5,31]); p.O(b,16,11,6,5); p.O(a,16,16,14,4); [6,11,16,21,26].forEach(x=>p.R('#ffe040',x-1,16,2,2)); },
+    battery:(p, a, b)=>{ p.R(a,6,8,20,20); p.R(b,13,4,6,4); p.R(b,8,18,16,8); p.R(W,14,11,4,1); p.R(W,15,10,2,3); },
+    button:(p, a, b)=>{ p.O(shade(a,.6),16,17,13,13); p.O(a,16,16,12,12); p.O(shade(a,1.2),14,13,6,5); p.R(b,12,12,8,8); },
+    bell:(p, a, b)=>{ p.O(a,16,13,9,9); p.R(a,7,13,18,10); p.R(a,4,22,24,3); p.O(b,16,27,2.5,2.5); p.R(b,15,2,2,3); p.R(shade(a,1.3),10,10,2,10); },
+    trophy:(p, a, b)=>{ p.R(a,8,3,16,11); p.O(a,16,13,8,5); p.R(a,3,5,5,2); p.R(a,3,5,2,7); p.R(a,24,5,5,2); p.R(a,27,5,2,7); p.R(a,14,17,4,6); p.R(b,9,23,14,6); p.R(shade(a,1.3),10,5,2,8); },
+    baby:(p, a, b)=>{ p.O(a,16,16,11,11); p.R(K,11,14,3,3); p.R(K,18,14,3,3); p.O(b,16,22,3.5,2); p.O(W,16,22,1.5,1); p.L(shade(a,.7),15,5,18,2,1.5); },
+    wheel:(p, a, b)=>{ p.O(K,16,16,14,14); p.O(a,16,16,9,9); for(let i=0;i<5;i++){ const an = i*Math.PI*2/5; p.L(shade(a,.7),16,16,16+Math.cos(an)*8,16+Math.sin(an)*8,1.5); } p.O(b,16,16,3,3); },
+    llama:(p, a, b)=>{ p.R(a,7,14,16,9); p.R(a,18,5,6,12); p.R(a,18,5,10,6); p.R(a,19,1,2,4); p.R(a,23,1,2,4); p.R(K,24,7,2,2); p.R(a,8,22,3,8); p.R(a,19,22,3,8); p.R(b,17,0,10,2); p.R(b,19,-1,6,1); p.R(shade(a,.8),7,14,16,2); },
+    crab:(p, a, b)=>{ p.O(a,16,20,10,7); p.O(a,4,11,4,4); p.O(a,28,11,4,4); p.O(0,6,9,1.5,1.5); p.O(0,26,9,1.5,1.5); p.R(a,6,14,2,5); p.R(a,24,14,2,5); p.R(a,12,9,1,5); p.R(a,19,9,1,5); p.O(W,12,9,1.5,1.5); p.O(W,19,9,1.5,1.5); for(let i=0;i<3;i++){ p.R(b,4,22+i*3,5,1); p.R(b,23,22+i*3,5,1); } },
+    coconut:(p, a, b)=>{ p.O(a,16,17,12,12); p.O(b,12,13,1.5,1.5); p.O(b,19,13,1.5,1.5); p.O(b,15.5,18,1.5,1.5); for(let i=0;i<6;i++) p.R(shade(a,1.3),6+i*4,22+(i%2)*2,2,1); },
+    goat:(p, a, b)=>{ p.G(b,[9,9,6,1,12,7]); p.G(b,[23,9,26,1,20,7]); p.R(a,10,7,12,15); p.R(a,6,10,4,3); p.R(a,22,10,4,3); p.R(K,12,12,3,2); p.R(K,18,12,3,2); p.R(shade(a,.8),13,19,6,3); p.G(W,[13,22,19,22,16,30]); },
+    violin:(p, a, b)=>{ p.O(a,16,22,8,8); p.O(a,16,12,6,6); p.R(b,15,1,2,13); p.R(K,12,19,1,4); p.R(K,19,19,1,4); for(let i=0;i<3;i++) p.R('#dddddd',14+i*1.5,4,.6,24); p.R(K,13,28,6,2); },
+    bat:(p, a, b)=>{ p.L(a,9,27,24,5,5); p.L(a,22,8,26,3,6); p.L(b,6,30,10,26,3); p.R(shade(a,1.3),18,9,2,2); },
+    bone:(p, a, b)=>{ p.R(a,8,14,16,5); p.O(a,6,13,3.5,3.5); p.O(a,6,19,3.5,3.5); p.O(a,26,13,3.5,3.5); p.O(a,26,19,3.5,3.5); p.R(b,9,18,14,1); },
+    pillow:(p, a, b)=>{ p.O(a,16,16,14,10); p.R(a,4,8,24,16); p.R(b,4,15,24,2); p.O(shade(a,1.15),10,11,3,2); },
+    balloon:(p, a, b)=>{ p.O(a,16,12,9,11); p.G(a,[14,24,18,24,16,21]); p.L(b,16,24,14,31,1); p.R(W,11,6,2,4); },
+    lemon:(p, a, b)=>{ p.O(a,16,16,12,9); p.O(a,4,16,2.5,2); p.O(a,28,16,2.5,2); p.R(W,10,11,4,2); p.R(b,15,24,4,1); },
+    plush:(p, a, b)=>{ p.O(a,9,6,3.5,3.5); p.O(a,23,6,3.5,3.5); p.O(a,16,11,8,7); p.O(a,16,24,9,7); p.R(K,12,9,2,2); p.R(K,18,9,2,2); p.O(shade(a,1.25),16,14,3,2); p.O(b,16,24,3,3); p.O(a,6,22,3,3); p.O(a,26,22,3,3); }
+  };
+  const ITEM = {}; ITEMS.forEach(q=>{ ITEM[q[0]] = q; });
+  const genArt = {};
+  function makeArt(name){
+    if(genArt[name] !== undefined) return genArt[name];
+    const q = ITEM[name]; if(!q) return (genArt[name] = null);
+    const c = document.createElement('canvas'); c.width = c.height = 32; const x = c.getContext('2d'); const p = painter(x), h = hstr(name);
+    try{ (TPL[q[1]] || TPL.gem)(p, hx(q[2]), hx(q[3]), h); }catch(e){ TPL.gem(p, hx(q[2]), hx(q[3]), h); }
+    for(let i=0;i<3;i++){ const sx = 1 + ((h >> (i*5)) % 29), sy = 1 + ((h >> (i*5 + 15)) % 29); p.R(i ? '#40fff0' : '#ffffff', sx, sy, 1, 1); }   // a Divine twinkle, in a different spot on every item
+    return (genArt[name] = c.toDataURL());
+  }
+
+  // ---------- the new Divine items join the old ones
+  const _da = window.__divArt, _dd = window.__divDesc;
+  window.__divArt = n=>(_da && _da(n)) || makeArt(n);
+  window.__divDesc = n=>(_dd && _dd(n)) || (ITEM[n] ? ITEM[n][4] : null);
+  window.__DIVINE_NAMES = (window.__DIVINE_NAMES || []).concat(ITEMS.map(q=>q[0]));
+  function giveDivine(n, why){
+    save.mats = save.mats || {}; const key = '6|'+n;
+    if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1;
+    save.mats[key] = (save.mats[key] || 0) + 1; save.divines = (save.divines || 0) + 1;
+    pushFeed(n+'  [Divine]', 1, '#40fff0'); persist();
+    toast((why || 'DIVINE FIND!!! ')+n+'! '+(ITEM[n] ? ITEM[n][4] : ''));
+    blip(1568, .4, .15, 'triangle'); setTimeout(()=>blip(2093, .5, .12, 'sine'), 200); shake = Math.max(shake, .05);
+  }
+
+  // ---------- WORLD EDGE: the map ends 30,000 blocks from spawn, in every direction
+  const EDGE = 30000, BAND = 120, LAND0 = EDGE - BAND;
+  const MAIN = x=>x < UPPER_EDGE - 450;
+  function zone(x, z){                                   // 0 normal world, 1 World Edge land, 2 the void
+    if(!MAIN(x)) return 0;
+    const m = Math.max(Math.abs(x), Math.abs(z));
+    return m < LAND0 ? 0 : m < EDGE ? 1 : 2;
+  }
+  // its own blocks (kept in save.customBlocks like the biome blocks, so their ids never move)
+  function block(spec, fb){
+    let j = BLOCKS.findIndex(b=>b.name === spec.name);
+    if(j < 0 && (save.customBlocks || []).length < 120 && BLOCKS.length < 250){
+      save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
+      const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
+    }
+    return j >= 0 ? j+1 : fb;
+  }
+  const stoneId = (BLOCKS.findIndex(b=>b.name === 'Stone') + 1) || 1;
+  const EB = {
+    grass:block({name:'Glitch Grass', h:4, v:6, c1:[70,200,100], c2:[170,60,210], glow:0, pattern:'checker', edge:1}, 0),
+    dirt:block({name:'Edge Dirt', h:6, v:8, c1:[90,50,110], c2:[60,30,80], glow:0, pattern:'plain', edge:1}, 0),
+    stone:block({name:'Edge Stone', h:14, v:12, c1:[50,30,70], c2:[90,40,140], glow:0, pattern:'brick', edge:1}, 0),
+    missing:block({name:'Missing Texture', h:5, v:40, c1:[255,0,220], c2:[10,10,10], glow:.25, pattern:'checker', edge:1}, 0),
+    shard:block({name:'Edge Shard', h:16, v:250, c1:[40,20,60], c2:[80,255,240], glow:.5, pattern:'ore', edge:1}, 0)
+  };
+  // the ground: glitchy grass, purple dirt and stone, crumbling at the very edge, then nothing at all
+  const _bb = baseBlock;
+  baseBlock = function(x, d, z){
+    const zn = zone(x, z);
+    if(!zn) return _bb(x, d, z);
+    if(zn === 2) return 0;
+    const m = Math.max(Math.abs(x), Math.abs(z)), cr = EDGE - m;          // blocks left before the void
+    if(cr <= 6 && hash3(x, d, z, 911) < (7 - cr)/8 + d*.04) return 0;      // the cliff crumbles away, more at the bottom
+    if(cr <= 2 && d > 4) return 0;
+    if(d < 0 || d >= D) return _bb(x, d, z);
+    if(!EB.grass) return _bb(x, d, z);
+    if(d === 0) return hash3(x, 0, z, 913) < .08 ? (EB.missing || EB.grass) : EB.grass;
+    if(d < 4) return EB.dirt || EB.grass;
+    if(d < 14){
+      const r = _bb(x, d, z), Bk = BLOCKS[r-1];
+      if(Bk && (Bk.ore || Bk.cave)) return r;
+      if(EB.shard && hash3(x>>1, d>>1, z>>1, 917) < .05 && hash3(x, d, z, 919) < .6) return EB.shard;
+      if(EB.missing && hash3(x, d, z, 921) < .015) return EB.missing;
+      return EB.stone || r;
+    }
+    return _bb(x, d, z);
+  };
+  const _gt = get;
+  get = function(x, d, z){                               // no hills, islands or anything else poking up out there
+    if(d < 0 && zone(x, z)) return skyEdits.size ? (skyEdits.get(ek(x, d, z)) || {t:0}).t : 0;
+    return _gt(x, d, z);
+  };
+  const _gb = getBlock;
+  getBlock = function(x, d, z){ if(d < 0 && zone(x, z)) return get(x, d, z); return _gb(x, d, z); };
+  // mining out there sometimes turns up a Divine item
+  const _brk = breakBlock;
+  breakBlock = function(h){
+    const zn = h && zone(h.i, h.k);
+    _brk(h);
+    if(zn === 1 && Math.random() < 1/80) giveDivine(ITEMS[Math.floor(Math.random()*ITEMS.length)][0], 'WORLD EDGE DIVINE!!! You found ');
+  };
+
+  // ---------- portals: one near the shop to World Edge, one at World Edge back home
+  const SPOT = {x:12.5, z:-(EDGE - 40) + .5};
+  const HOME_P = {x:-22.5, z:-14.5}, EDGE_P = {x:SPOT.x, z:SPOT.z + 9};
+  function label(text, col){
+    const c = document.createElement('canvas'); c.width = 512; c.height = 96; const g = c.getContext('2d');
+    g.fillStyle = 'rgba(30,0,50,.8)'; g.fillRect(20, 10, 472, 76); g.strokeStyle = col; g.lineWidth = 4; g.strokeRect(20, 10, 472, 76);
+    g.fillStyle = col; g.font = '900 46px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 50);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false})); sp.scale.set(5.3, 1, 1); return sp;
+  }
+  function swirlTex(){
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.3, '#e040ff'); gr.addColorStop(.7, '#5010a0'); gr.addColorStop(1, '#100020');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    g.strokeStyle = 'rgba(120,255,240,.8)'; g.lineWidth = 3;
+    for(let k=0;k<4;k++){ g.beginPath(); for(let t=0;t<60;t++){ const a = t*.18 + k*Math.PI/2, r = t*1.05; g.lineTo(64 + Math.cos(a)*r, 64 + Math.sin(a)*r); } g.stroke(); }
+    for(let i=0;i<30;i++){ g.fillStyle = i%2 ? '#ff00dc' : '#000000'; g.fillRect(Math.random()*120, Math.random()*120, 6, 6); }
+    return new THREE.CanvasTexture(c);
+  }
+  const swirl = swirlTex();
+  function makePortal(pos, text, col){
+    const g = new THREE.Group(), fm = new THREE.MeshLambertMaterial({color:0x2a1040, emissive:0x8020ff, emissiveIntensity:.6});
+    [[-1.75,2,0,.5,4.4,.6],[1.75,2,0,.5,4.4,.6],[0,4.2,0,4,.5,.6],[0,-.05,0,4,.3,.9]].forEach(q=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(q[3], q[4], q[5]), fm); m.position.set(q[0], q[1], q[2]); g.add(m); });
+    for(let i=0;i<6;i++){ const cube = new THREE.Mesh(new THREE.BoxGeometry(.35,.35,.35), new THREE.MeshBasicMaterial({color:i%2 ? 0xff00dc : 0x40fff0})); cube.position.set(-1.75 + (i%2)*3.5, .8 + Math.floor(i/2)*1.4, .4); g.add(cube); }
+    const pm = new THREE.MeshBasicMaterial({map:swirl, side:THREE.DoubleSide, transparent:true, opacity:.92});
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3.95), pm); plane.position.y = 2; g.add(plane); g.userData.plane = plane;
+    const lb = label(text, col); lb.position.y = 5.3; g.add(lb);
+    g.traverse(o=>{ o.userData.noMine = true; });
+    g.position.set(pos.x, 0, pos.z); scene.add(g); return g;
+  }
+  const homePortal = makePortal(HOME_P, 'WORLD EDGE', '#e070ff'), edgePortal = makePortal(EDGE_P, 'BACK HOME', '#70fff0');
+  function groundY(x, z){ for(let j=40;j>=1;j--) if(get(Math.floor(x), -j, Math.floor(z))) return j; return get(Math.floor(x), 0, Math.floor(z)) ? 0 : -1; }
+  let portCD = 0, flashEl = null;
+  function flash(col){
+    if(!flashEl){ flashEl = document.createElement('div'); flashEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;opacity:0;transition:opacity .6s'; document.body.appendChild(flashEl); }
+    flashEl.style.background = col; flashEl.style.transition = 'none'; flashEl.style.opacity = .85;
+    requestAnimationFrame(()=>{ flashEl.style.transition = 'opacity .9s'; flashEl.style.opacity = 0; });
+  }
+  function goTo(x, z, msg){
+    P.x = x; P.z = z; P.vx = P.vy = P.vz = 0; portCD = 3;
+    fillWindow(Math.round(P.x/8)*8, Math.round(P.z/8)*8);
+    const gy = groundY(P.x, P.z); P.y = Math.max(0, gy) + 1.5; P.ground = false;
+    flash('#c040ff'); blip(220, .5, .2, 'sawtooth'); setTimeout(()=>blip(660, .4, .15, 'triangle'), 150); shake = Math.max(shake, .08);
+    if(msg) toast(msg);
+  }
+  const goEdge = msg=>goTo(EDGE_P.x, EDGE_P.z - 4, msg || 'Welcome to WORLD EDGE! The world ends just ahead. Do not fall into the void! (Mining here can find Divine items.)');
+  const goHome = ()=>goTo(HOME_P.x, HOME_P.z + 4, 'Back home, safe and sound.');
+
+  // ---------- the look: glitch cubes floating over the void, a purple glitch tint and the odd flicker
+  const glitchG = new THREE.Group(); scene.add(glitchG); glitchG.visible = false;
+  const GC = [0xff00dc, 0x40fff0, 0x111111, 0xffffff, 0x8020ff];
+  for(let i=0;i<70;i++){
+    const s = .4 + Math.random()*1.8, m = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshBasicMaterial({color:GC[i%GC.length], transparent:true, opacity:.85}));
+    m.userData = {noMine:true, gone:true, a:Math.random()*6.28, sp:.3 + Math.random()*1.2, r:Math.random()*40, h:Math.random()*14 - 4};
+    glitchG.add(m);
+  }
+  const tint = document.createElement('div');
+  tint.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:3;opacity:0;background:linear-gradient(rgba(150,0,255,.10),rgba(255,0,200,.06)),repeating-linear-gradient(0deg,rgba(0,0,0,.08) 0 2px,transparent 2px 5px);mix-blend-mode:screen';
+  document.body.appendChild(tint);
+  const sign = document.createElement('div');
+  sign.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);font:900 20px system-ui,sans-serif;color:#f0a0ff;text-shadow:0 0 8px #8020ff,2px 0 #40fff0,-2px 0 #ff00dc;pointer-events:none;z-index:6;display:none;letter-spacing:3px';
+  sign.textContent = 'WORLD EDGE'; document.body.appendChild(sign);
+  // the grass plains drawn round the world stop at the edge, and down in the void there is only a dark glitchy nothing
+  const keepIn = [new THREE.Plane(new THREE.Vector3(-1,0,0), EDGE), new THREE.Plane(new THREE.Vector3(1,0,0), EDGE), new THREE.Plane(new THREE.Vector3(0,0,-1), EDGE), new THREE.Plane(new THREE.Vector3(0,0,1), EDGE)];
+  const keepOut = [new THREE.Plane(new THREE.Vector3(1,0,0), -EDGE), new THREE.Plane(new THREE.Vector3(-1,0,0), -EDGE), new THREE.Plane(new THREE.Vector3(0,0,1), -EDGE), new THREE.Plane(new THREE.Vector3(0,0,-1), -EDGE)];
+  try{ rings.forEach(r=>{ r.material.clippingPlanes = keepIn; r.material.needsUpdate = true; }); }catch(e){}
+  const voidTex = (()=>{ const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = '#07000f'; g.fillRect(0, 0, 128, 128);
+    for(let i=0;i<90;i++){ g.fillStyle = ['#2a0050','#40fff0','#ff00dc','#140028','#ffffff'][i%5]; const s = i%5 === 4 ? 1 : 2 + Math.random()*6; g.fillRect(Math.random()*128, Math.random()*128, s, s); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(40, 40); return t; })();
+  const voidMesh = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1600), new THREE.MeshBasicMaterial({map:voidTex, fog:false, side:THREE.DoubleSide, clippingPlanes:keepOut, clipIntersection:true}));
+  voidMesh.rotation.x = -Math.PI/2; voidMesh.visible = false; voidMesh.userData.noMine = true; scene.add(voidMesh);
+  // a see-through glitchy curtain stands right on the edge line, so you can tell where the world stops
+  const curTex = (()=>{ const c = document.createElement('canvas'); c.width = 64; c.height = 256; const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 256); gr.addColorStop(0, 'rgba(160,40,255,0)'); gr.addColorStop(.5, 'rgba(160,40,255,.35)'); gr.addColorStop(1, 'rgba(255,0,220,.7)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 256);
+    for(let i=0;i<40;i++){ g.fillStyle = i%2 ? 'rgba(64,255,240,.6)' : 'rgba(0,0,0,.5)'; g.fillRect(Math.random()*64, Math.random()*256, 2 + Math.random()*10, 2); }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(12, 1); return t; })();
+  const curtain = new THREE.Mesh(new THREE.PlaneGeometry(240, 60), new THREE.MeshBasicMaterial({map:curTex, transparent:true, side:THREE.DoubleSide, depthWrite:false, fog:false}));
+  curtain.visible = false; curtain.userData.noMine = true; scene.add(curtain);
+  let wasZone = 0, glT = 0, fallT = 0;
+  function edgeTick(dt){
+    if(portCD > 0) portCD -= dt;
+    homePortal.userData.plane.rotation.z += dt*.8; edgePortal.userData.plane.rotation.z -= dt*.8;
+    swirl.rotation += dt*.5; swirl.center.set(.5, .5);
+    homePortal.visible = realm === 0 && MAIN(P.x); edgePortal.visible = homePortal.visible;
+    if(realm !== 0){ glitchG.visible = false; tint.style.opacity = 0; sign.style.display = 'none'; return; }
+    // anyone who goes billions of blocks away (or breaks the numbers) lands at World Edge
+    const lost = !isFinite(P.x) || !isFinite(P.z) || (MAIN(P.x) ? (Math.abs(P.x) > EDGE + 2000 || Math.abs(P.z) > EDGE + 2000) : (Math.abs(P.x - UPPER.x) > 1e5 || Math.abs(P.z - UPPER.z) > 1e5));
+    if(lost && !(typeof launch !== 'undefined' && launch)){ goEdge('You went SO far that the world ran out of numbers! You landed at WORLD EDGE.'); return; }
+    // walking into a portal
+    if(portCD <= 0){
+      const near = (q)=>Math.abs(P.x - q.x) < 1.6 && Math.abs(P.z - q.z) < .9 && P.y > -1 && P.y < 4;
+      if(near(HOME_P)){ goEdge(); return; }
+      if(near(EDGE_P)){ goHome(); return; }
+    }
+    const zn = zone(P.x, P.z), zl = zn || (Math.max(Math.abs(P.x), Math.abs(P.z)) > LAND0 - 60 && MAIN(P.x) ? 1 : 0);
+    if(zn && !wasZone) toast('You reached WORLD EDGE, 30,000 blocks from home. The world ends here. Careful, the void is right ahead!');
+    wasZone = zn;
+    glitchG.visible = !!zl; sign.style.display = zn ? 'block' : 'none';
+    voidMesh.visible = curtain.visible = !!zl;
+    if(zl){
+      voidMesh.position.set(Math.round(P.x/16)*16, -28, Math.round(P.z/16)*16);
+      const ax = Math.abs(P.x) > Math.abs(P.z), sx = Math.sign(ax ? P.x : P.z) || 1;
+      if(ax){ curtain.position.set(sx*EDGE, 4, P.z); curtain.rotation.y = Math.PI/2; } else { curtain.position.set(P.x, 4, sx*EDGE); curtain.rotation.y = 0; }
+      curTex.offset.x += dt*.05; curTex.offset.y = Math.random() < .05 ? Math.random() : curTex.offset.y;
+    }
+    const bn = document.getElementById('biomename');
+    if(bn){ if(zn) bn.textContent = 'World Edge'; else if(bn.textContent === 'World Edge'){ try{ bn.textContent = window.__biome.at(P.x, P.z).name; }catch(e){} } }
+    let tOp = zl ? .55 + .35*Math.sin(performance.now()/300) : 0;
+    glT -= dt; if(zl && glT <= 0){ glT = 1 + Math.random()*4; tOp = 1; sign.style.transform = 'translateX(calc(-50% + '+((Math.random()-.5)*14)+'px))'; if(Math.random() < .5) blip(40 + Math.random()*900, .05, .05, 'square'); }
+    tint.style.opacity = tOp;
+    if(zl){
+      // the cubes hang over the void, just past the edge nearest you
+      const ax = Math.abs(P.x) > Math.abs(P.z), sx = Math.sign(ax ? P.x : P.z) || 1;
+      glitchG.children.forEach((m, i)=>{
+        const u = m.userData; u.a += dt*u.sp;
+        const along = (i - 35)*2.2 + Math.sin(u.a)*2, out = EDGE + 3 + u.r + Math.cos(u.a*.7)*2;
+        if(ax) m.position.set(sx*out, u.h + Math.sin(u.a*1.3)*1.5, P.z + along); else m.position.set(P.x + along, u.h + Math.sin(u.a*1.3)*1.5, sx*out);
+        m.rotation.x += dt*u.sp; m.rotation.y += dt*u.sp*.7;
+        if(Math.random() < dt*.3) m.visible = !m.visible;
+      });
+    }
+    // falling into the void: it spits you back out (and it hurts)
+    if(zn === 2 || (zn === 1 && EDGE - Math.max(Math.abs(P.x), Math.abs(P.z)) < 3)){
+      if(P.y < -8) fallT += dt;
+      if(P.y < -30 || fallT > 2.5){
+        fallT = 0;
+        const ax = Math.abs(P.x) > Math.abs(P.z);
+        const nx = ax ? Math.sign(P.x)*(EDGE - 25) + .5 : P.x, nz = ax ? P.z : Math.sign(P.z)*(EDGE - 25) + .5;
+        goTo(nx, nz, 'You fell off the edge of the world! The void did not like the taste of you and spat you back out.');
+        hurtPlayer(4);
+      }
+    } else fallT = 0;
+  }
+
+  // ---------- MEGA CITIES: hide underground long enough and the animal cities grow into giant skyscraper cities
+  const STAGE_AT = [200, 400, 600];                      // seconds underground (a whole day is 600)
+  const RAD = [0, 42, 80, 120], HMAX = [0, 28, 62, 105], LOT = 11, LW = 8;
+  const glassId = block({name:'Skyscraper Glass', h:8, v:15, c1:[120,170,210], c2:[60,90,130], glow:0, pattern:'tile', mega:1}, stoneId);
+  const allCities = ()=>(window.__bobciv && window.__bobciv.allCities) ? window.__bobciv.allCities() : (save.nations || []);
+  // window textures: walls with rows of windows, and a glow map so they light up at night
+  function winTex(wall, glass, frame, lit, seed){
+    const c = document.createElement('canvas'), e = document.createElement('canvas'); c.width = e.width = 64; c.height = e.height = 64;
+    const g = c.getContext('2d'), h = e.getContext('2d'); g.fillStyle = wall; g.fillRect(0, 0, 64, 64); h.fillStyle = '#000'; h.fillRect(0, 0, 64, 64);
+    let s = seed; const rnd = ()=>((s = (s*1103515245 + 12345) & 0x7fffffff)/0x7fffffff);
+    for(let r=0;r<4;r++) for(let k=0;k<4;k++){
+      const x = k*16 + 3, y = r*16 + 3; g.fillStyle = frame; g.fillRect(x-1, y-1, 12, 12); g.fillStyle = glass; g.fillRect(x, y, 10, 10);
+      g.fillStyle = 'rgba(255,255,255,.25)'; g.fillRect(x, y, 3, 10);
+      if(rnd() < lit){ h.fillStyle = rnd() < .8 ? '#ffe9a0' : '#a0e0ff'; h.fillRect(x, y, 10, 10); }
+    }
+    g.fillStyle = wall; g.fillRect(0, 0, 2, 2); h.fillStyle = '#000'; h.fillRect(0, 0, 2, 2);
+    const t = new THREE.CanvasTexture(c), te = new THREE.CanvasTexture(e);
+    [t, te].forEach(q=>{ q.wrapS = q.wrapT = THREE.RepeatWrapping; q.magFilter = THREE.NearestFilter; });
+    return {t, te};
+  }
+  const STYLES = [
+    winTex('#7a8a9c', '#2a4a70', '#5a6a7c', .5, 11),     // blue glass tower
+    winTex('#d8cbb0', '#3a4a5a', '#b0a088', .55, 23),    // pale stone, like the old New York towers
+    winTex('#9a4a3a', '#2a3a4a', '#7a3a2a', .45, 37),    // brick
+    winTex('#2a3038', '#4aa8c8', '#1a2028', .6, 51),     // dark glass with teal windows
+    winTex('#c0c8d0', '#203040', '#a0a8b0', .5, 67)      // silver
+  ];
+  const MATS = STYLES.map(s=>new THREE.MeshLambertMaterial({map:s.t, emissive:0xffffff, emissiveMap:s.te, emissiveIntensity:.15}));
+  const metalMat = new THREE.MeshLambertMaterial({color:0xb8c0c8});
+  const redMat = new THREE.MeshBasicMaterial({color:0xff2020});
+  const carMat = [new THREE.MeshLambertMaterial({color:0xffd020, emissive:0x403000}), new THREE.MeshLambertMaterial({color:0x30e0ff, emissive:0x003040}), new THREE.MeshLambertMaterial({color:0xff4080, emissive:0x400010})];
+  // many boxes glued into one shape per style, so a whole city is only a few meshes
+  function Merge(){ this.p = []; this.n = []; this.u = []; }
+  Merge.prototype.box = function(cx, y0, cz, w, h, d, win){
+    const g = new THREE.BoxGeometry(w, h, d).toNonIndexed(); g.translate(cx, y0 + h/2, cz);
+    const P_ = g.attributes.position.array, N_ = g.attributes.normal.array, U_ = g.attributes.uv.array;
+    for(let i=0;i<P_.length;i++){ this.p.push(P_[i]); this.n.push(N_[i]); }
+    for(let f=0; f<6; f++) for(let v=0; v<6; v++){
+      const k = (f*6 + v)*2, side = f < 2 ? d : w;
+      if(!win || f === 2 || f === 3){ this.u.push(.01, .01); continue; }
+      this.u.push(U_[k]*side/4, U_[k+1]*h/4);
+    }
+    g.dispose();
+  };
+  Merge.prototype.mesh = function(mat){
+    if(!this.p.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
+    g.computeBoundingSphere(); const m = new THREE.Mesh(g, mat); m.castShadow = false; m.receiveShadow = true; m.userData.noMine = true; return m;
+  };
+  const MEGA = {};                                        // city id -> {c, stage, group, grid, x0..z1, ox, oz, cars, lights}
+  function rng(seed){ let s = seed >>> 0 || 1; return ()=>((s = Math.imul(s ^ (s >>> 15), 2246822519) + 0x9e3779b9 >>> 0)/4294967296); }
+  function skyCols(){ const S = new Set(); skyEdits.forEach(v=>S.add(v.x*100003 + v.z)); return S; }
+  function mkSign(text){
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 160; const g = c.getContext('2d');
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineWidth = 12; g.strokeStyle = 'rgba(0,0,0,.85)'; g.font = '900 72px system-ui,sans-serif';
+    g.strokeText(text, 512, 80); g.fillStyle = '#ffe680'; g.fillText(text, 512, 80);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false, fog:false})); sp.scale.set(40, 6.25, 1); return sp;
+  }
+  function buildMega(c, stage){
+    const am = anyMega; anyMega = false;                    // measure the real ground, not last time's towers
+    try{ return buildMega2(c, stage); } finally { anyMega = am || !!MEGA[c.id]; }
+  }
+  function buildMega2(c, stage){
+    const old = MEGA[c.id]; if(old){ scene.remove(old.group); old.group.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }
+    const R = RAD[stage], H = HMAX[stage], rnd = rng(hstr(String(c.id)) + stage*7919), cols = skyCols();
+    const M = {c, stage, grid:new Map(), ox:Math.floor(c.x) - Math.ceil(R/LOT)*LOT - Math.floor(LOT/2), oz:Math.floor(c.z) - Math.ceil(R/LOT)*LOT - Math.floor(LOT/2), x0:c.x - R - LOT, x1:c.x + R + LOT, z0:c.z - R - LOT, z1:c.z + R + LOT, cars:[], lights:[]};
+    const merges = MATS.map(()=>new Merge()), metal = new Merge(), lights = new Merge();
+    const others = allCities().filter(q=>q.id !== c.id);
+    const n = Math.ceil(R/LOT)*2 + 1; let built = 0, landmark = null, tallest = 0;
+    for(let li=0; li<n; li++) for(let lj=0; lj<n; lj++){
+      const x0 = M.ox + li*LOT, z0 = M.oz + lj*LOT, cx = x0 + LW/2, cz = z0 + LW/2;
+      const dc = Math.hypot(cx - c.x, cz - c.z);
+      if(dc > R || dc < 15) continue;                                         // the old town (and its flag) stays in the middle
+      if(Math.hypot(cx - 12, cz - 6) < 100 || zone(cx, cz) || Math.max(Math.abs(cx), Math.abs(cz)) > EDGE - 200) continue;
+      if(others.some(q=>Math.hypot(cx - q.x, cz - q.z) < 16)) continue;
+      if(Math.hypot(cx - P.x, cz - P.z) < 9) continue;                        // never build on top of you
+      if(Math.hypot(cx - HOME_P.x, cz - HOME_P.z) < 10) continue;
+      let blocked = false;
+      for(let a=-1; a<=LW && !blocked; a++) for(let b=-1; b<=LW; b++) if(cols.has((x0+a)*100003 + (z0+b))){ blocked = true; break; }
+      if(blocked) continue;                                                   // keep everybody's own builds
+      let gmin = 99, gmax = -1;
+      for(const [a, b] of [[1,1],[LW-2,1],[1,LW-2],[LW-2,LW-2],[LW/2,LW/2]]){ const g = groundY(x0+a+.5, z0+b+.5); if(g < 0){ gmin = -1; break; } gmin = Math.min(gmin, g); gmax = Math.max(gmax, g); }
+      if(gmin < 0 || gmax - gmin > 4) continue;                               // no skyscrapers in lakes or on cliffs
+      if(rnd() < .12) continue;                                               // a few little parks
+      const f = 1 - dc/R, top = Math.max(6, Math.round((H*(.25 + .75*f*f))*(.6 + rnd()*.6)));
+      const st = Math.floor(rnd()*MATS.length), mg = merges[st], base = gmin, boxes = [];
+      const tier = (inset, h0, h1, win)=>{ const w = LW - inset*2; boxes.push({x0:x0+inset, z0:z0+inset, x1:x0+inset+w, z1:z0+inset+w, b:base + h0, t:base + h1}); (win ? mg : metal).box(x0 + LW/2, base + h0, z0 + LW/2, w, h1 - h0, w, win); };
+      const kind = rnd();
+      if(kind < .45 || top < 14){ tier(0, 0, gmax - base + top, true); }
+      else if(kind < .8){ const t1 = Math.round(top*.6); tier(0, 0, gmax - base + t1, true); tier(1, gmax - base + t1, gmax - base + top, true); }
+      else { const t1 = Math.round(top*.5), t2 = Math.round(top*.8); tier(0, 0, gmax - base + t1, true); tier(1, gmax - base + t1, gmax - base + t2, true); tier(2, gmax - base + t2, gmax - base + top, true); }
+      const roof = gmax + top;
+      if(top > 25 && rnd() < .5){ metal.box(x0 + LW/2, roof, z0 + LW/2, .4, 6, .4, false); lights.box(x0 + LW/2, roof + 6, z0 + LW/2, .6, .6, .6, false); M.lights.push(1); }
+      else if(rnd() < .5) metal.box(x0 + 2.5, roof, z0 + 2.5, 2, 1.5, 2, false);   // a little roof hut
+      const rec = {boxes, base}; M.grid.set(li*1000 + lj, rec); built++;
+      if(top > tallest && dc < R*.5){ tallest = top; landmark = {li, lj, x0, z0, base, gmax, st}; }
+    }
+    // the giant landmark tower in the middle, like the Empire State Building
+    if(landmark && stage >= 2){
+      const L_ = landmark, rec = M.grid.get(L_.li*1000 + L_.lj), Hh = H + 15, b0 = L_.base, top0 = L_.gmax - b0;
+      rec.boxes = [];
+      const mg = merges[1], tier = (inset, h0, h1)=>{ const w = LW - inset*2; rec.boxes.push({x0:L_.x0+inset, z0:L_.z0+inset, x1:L_.x0+inset+w, z1:L_.z0+inset+w, b:b0 + h0, t:b0 + h1}); mg.box(L_.x0 + LW/2, b0 + h0, L_.z0 + LW/2, w, h1 - h0, w, true); };
+      // (its old, smaller tower is replaced: rebuild the style meshes without it is not needed, the landmark is wider at the bottom and covers it)
+      tier(-1, 0, top0 + Math.round(Hh*.3)); tier(0, top0 + Math.round(Hh*.3), top0 + Math.round(Hh*.62)); tier(1, top0 + Math.round(Hh*.62), top0 + Math.round(Hh*.85)); tier(2, top0 + Math.round(Hh*.85), top0 + Hh); tier(3, top0 + Hh, top0 + Hh + 6);
+      metal.box(L_.x0 + LW/2, b0 + top0 + Hh + 6, L_.z0 + LW/2, .5, 16, .5, false);
+      lights.box(L_.x0 + LW/2, b0 + top0 + Hh + 22, L_.z0 + LW/2, .8, .8, .8, false);
+      M.landmarkTop = b0 + top0 + Hh + 22; M.landmark = {x:L_.x0 + LW/2, z:L_.z0 + LW/2};
+    }
+    const group = new THREE.Group();
+    merges.forEach((m, i)=>{ const me = m.mesh(MATS[i]); if(me) group.add(me); });
+    const mm = metal.mesh(metalMat); if(mm) group.add(mm);
+    const lm = lights.mesh(redMat); if(lm){ group.add(lm); M.blink = lm; }
+    // hover cars zooming between the towers
+    if(stage >= 2) for(let i=0;i<10;i++){ const car = new THREE.Mesh(new THREE.BoxGeometry(1.6, .6, .9), carMat[i%3]); car.userData = {noMine:true, r:20 + rnd()*(R - 20), a:rnd()*6.28, sp:(.15 + rnd()*.25)*(i%2 ? 1 : -1), h:12 + rnd()*30}; group.add(car); M.cars.push(car); }
+    if(stage >= 2){ const sg = mkSign('MEGA CITY: '+c.name); sg.position.set(c.x, (M.landmarkTop || H) + 12, c.z); group.add(sg); }
+    scene.add(group); M.group = group; MEGA[c.id] = M; dirty = true;
+    return built;
+  }
+  function megaAt(x, j, z){                                  // is there a skyscraper wall at this spot? (j = blocks above ground)
+    for(const id in MEGA){
+      const M = MEGA[id]; if(x < M.x0 || x > M.x1 || z < M.z0 || z > M.z1) continue;
+      const li = Math.floor((x - M.ox)/LOT), lj = Math.floor((z - M.oz)/LOT), rec = M.grid.get(li*1000 + lj); if(!rec) continue;
+      for(const b of rec.boxes) if(x >= b.x0 && x < b.x1 && z >= b.z0 && z < b.z1 && j > b.b && j <= b.t) return true;
+    }
+    return false;
+  }
+  // you can bump into them (and mine holes in them)
+  const holes = new Set(save.megaHoles || []);
+  const holeMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 1.04, 1.04), new THREE.MeshLambertMaterial({color:0x10141c}), 3000);
+  holeMesh.count = 0; holeMesh.frustumCulled = false; holeMesh.userData.noMine = true; scene.add(holeMesh);
+  const _hm = new THREE.Matrix4();
+  function drawHoles(){ let i = 0; holes.forEach(k=>{ if(i >= 3000) return; const q = Math.floor(k/256), d = (k%256) - 64, x = Math.floor(q/400000) - 200000, z = (q%400000) - 200000; _hm.makeTranslation(x + .5, -d - .5, z + .5); holeMesh.setMatrixAt(i++, _hm); }); holeMesh.count = i; holeMesh.instanceMatrix.needsUpdate = true; }
+  drawHoles();
+  let anyMega = false;
+  const _g2 = get;
+  get = function(x, d, z){
+    if(anyMega && d < 0 && d > -200){
+      const k = ek(x, d, z);
+      if(!holes.has(k) && !(skyEdits.size && skyEdits.has(k)) && megaAt(x, -d, z)) return glassId;
+    }
+    return _g2(x, d, z);
+  };
+  const _gb2 = getBlock;
+  getBlock = function(x, d, z){ if(d < 0) return get(x, d, z); return _gb2(x, d, z); };
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    if(anyMega && d < 0 && !t && megaAt(x, -d, z)){
+      const k = ek(x, d, z);
+      if(!holes.has(k)){ holes.add(k); save.megaHoles = Array.from(holes).slice(-3000); drawHoles(); }
+    }
+    _sb(x, d, z, t);
+  };
+  // growing: only while you are underground
+  let wasDeep = false, underT = 0, chkT = 0;
+  function stageOf(c){ let s = 0; STAGE_AT.forEach((t, i)=>{ if((c.megaT || 0) >= t) s = i + 1; }); return s; }
+  function megaTick(dt){
+    const cities = allCities();
+    // cities that are gone lose their skyscrapers too
+    for(const id in MEGA) if(!cities.some(c=>String(c.id) === id)){ scene.remove(MEGA[id].group); delete MEGA[id]; }
+    if(realm === 0 && P.y < -5 && !won){
+      underT += dt; cities.forEach(c=>{ c.megaT = (c.megaT || 0) + dt; });
+      if(!wasDeep) wasDeep = true;
+      chkT -= dt; if(chkT <= 0){ chkT = 10; persist(); }
+    }
+    // back up top: look how much they grew
+    if(realm === 0 && P.y > -2){
+      let grew = 0, names = [];
+      cities.forEach(c=>{
+        const s = stageOf(c);
+        if(s > (c.megaShown || 0) || (s > 0 && !MEGA[c.id])){
+          const fresh = s > (c.megaShown || 0);
+          c.megaShown = s; const n = buildMega(c, s);
+          if(fresh && n){ grew = Math.max(grew, s); names.push(c.name); }
+        }
+      });
+      anyMega = Object.keys(MEGA).length > 0;
+      if(grew){
+        persist();
+        const big = grew >= 3 ? 'GIANT MEGA CITIES with skyscrapers everywhere' : grew === 2 ? 'huge skyscraper cities' : 'tall cities';
+        toast('While you were hiding underground, the animals kept building! '+names.slice(0, 2).join(' and ')+(names.length > 2 ? ' and more' : '')+' grew into '+big+'! Look around!');
+        blip(523, .2, .12, 'triangle'); setTimeout(()=>blip(659, .2, .12, 'triangle'), 150); setTimeout(()=>blip(784, .35, .12, 'triangle'), 300);
+      }
+      wasDeep = false; underT = 0;
+    }
+    // lights on at night, blinking red lights, hover cars
+    const night = tod > .5;
+    MATS.forEach(m=>{ m.emissiveIntensity = night ? .95 : .12; });
+    const on = (performance.now()/700|0) % 2 === 0;
+    for(const id in MEGA){
+      const M = MEGA[id]; M.group.visible = realm === 0;
+      if(M.blink) M.blink.visible = on;
+      M.cars.forEach(car=>{ const u = car.userData; u.a += dt*u.sp; car.position.set(M.c.x + Math.cos(u.a)*u.r, (M.c.G || 0) + u.h + Math.sin(u.a*3)*1.5, M.c.z + Math.sin(u.a)*u.r); car.rotation.y = -u.a + (u.sp > 0 ? 0 : Math.PI); });
+    }
+  }
+
+  let last = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.5, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex') return;
+    try{ edgeTick(dt); }catch(e){ console.error(e); }
+    try{ megaTick(dt); }catch(e){ console.error(e); }
+  })(performance.now());
+  window.__edge = {getNow:(x, d, z)=>get(x, d, z), EDGE, zone, goEdge, goHome, HOME_P, EDGE_P, EB, ITEMS, makeArt, giveDivine, MEGA, buildMega, megaAt, glassId, stageOf, grow:s=>{ allCities().forEach(c=>{ c.megaT = (c.megaT || 0) + s; }); }};
+})();
+/* LN-edge end */
+
 
 
 
