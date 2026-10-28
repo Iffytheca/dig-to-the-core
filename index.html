@@ -1950,6 +1950,9 @@ PICKS.push({name:'Adamantite Pickaxe', power:4000, price:8000000, col:0x7a5cff, 
 [['Rusty Mars Pickaxe',1200,500000,0xb0603a,.2],['Red Dust Drill',2000,1500000,0xd0602a,.3],['Olympus Pickaxe',3000,4000000,0x8a5a50,.4],['Phobos Pickaxe',6000,20000000,0xa0a0c8,.5],['Deimos Pickaxe',7000,35000000,0xc8b8a0,.55],
  ['Martian Plasma Pickaxe',9500,60000000,0xff5aa0,.8],['Crater Crusher',13000,120000000,0x8a7a70,.6],['Red Planet Destroyer',16000,250000000,0xe02a2a,.9],['Martian King Pickaxe',21000,600000000,0xffd040,1]]
   .forEach((d,k)=>PICKS.push({name:d[0], power:d[1], price:d[2], col:d[3], glow:d[4], secret:true, tag:'mars'+(k+1)}));   /* LN-marsplus */
+[['Lava Pickaxe',40000,40000000,0xff6a1a,.6],['Obsidian Pickaxe',65000,150000000,0x3a2a5a,.5],['Steam Drill',100000,500000000,0xd8e0f0,.5],['Diamond Rain Pickaxe',150000,1500000000,0xbfe8ff,.9],
+ ['Superheated Pickaxe',210000,4000000000,0xff8a30,1],['Gravity Crusher',280000,10000000000,0x8a4aff,.9],['Star Iron Pickaxe',330000,20000000000,0xf0f0ff,1],['TOI Core Pickaxe',375000,40000000000,0xff3a7a,1]]
+  .forEach((d,k)=>PICKS.push({name:d[0], power:d[1], price:d[2], col:d[3], glow:d[4], secret:true, tag:'toi'+(k+1)}));   /* LN-toi */
 const D = LAYERS.reduce((s,l)=>s+l.th,0);          // total depth in blocks
 const layerAtDepth = [];
 LAYERS.forEach((l,i)=>{ for(let k=0;k<l.th;k++) layerAtDepth.push(i); });
@@ -3247,7 +3250,7 @@ function getBlock(x,d,z){
 }
 const WIN = 56;                           // size of the generated window around the player
 let wox = 0, woz = 0;
-const wblk = new Uint8Array(D*WIN*WIN);
+const wblk = new Uint16Array(D*WIN*WIN);   /* LN-toi: more than 255 block types */
 let dirty = true;
 let floorGone = false;
 function get(x,d,z){
@@ -7067,7 +7070,7 @@ const buffs = [];
 let craftSlots = [null,null,null], selRef = null, selBlock = 0, selName = null, recentSel = [], hotbarT = 0;
 let invMode = 'craft', activeSlot = 0, craftType = 'auto';
 function strHash(str){ let h = 2166136261; for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } h ^= h>>>15; h = Math.imul(h, 2246822519); h ^= h>>>13; return (h>>>0)/4294967296; }
-function hardLvl(B){ return Math.max(1, Math.min(10, Math.round(Math.log10(B.h+1)*3.6))); }
+function hardLvl(B){ if(B && B.toi) return B.h.toLocaleString(); return Math.max(1, Math.min(10, Math.round(Math.log10(B.h+1)*3.6))); }
 function powLvl(name){ const bi = blockIdOf(name), B = bi ? BLOCKS[bi-1] : null; return Math.max(1, Math.min(10, Math.round(B && B.custom ? itemPower(name)/1.5 : itemPower(name)*2))); }
 function blockStats(name){ const bi = blockIdOf(name); if(!bi) return ''; const B = BLOCKS[bi-1]; return 'Power '+powLvl(name)+'/10  \u00b7  Hardness '+hardLvl(B)+'/10'; }
 function itemPower(name){
@@ -7884,11 +7887,11 @@ const GFXL = (function(){
   const used = new Uint8Array(NL);
   let owned = false, scanT = 0, lastRealm = -1, shParked = false, lastCell = 0, lastEdits = -1;
   // per block id: glow strength (0 = not a light source) and light colour
-  const glowOf = new Float32Array(256), gK = new Float32Array(256), gR = new Float32Array(256), gG = new Float32Array(256), gB = new Float32Array(256);
+  const glowOf = new Float32Array(1024), gK = new Float32Array(1024), gR = new Float32Array(1024), gG = new Float32Array(1024), gB = new Float32Array(1024);
   let nB = -1;
   function refreshGlow(){
     nB = BLOCKS.length; glowOf.fill(0);
-    for(let i=0;i<BLOCKS.length && i<255;i++){
+    for(let i=0;i<BLOCKS.length && i<1023;i++){
       const B = BLOCKS[i], g = B.glow || 0; if(g < .3) continue;
       let c = B.oreCol || B.base || [255,200,120];
       if(!B.oreCol && B.sp && B.sp[0] && g >= .7) c = [(c[0]+B.sp[0][0])/2, (c[1]+B.sp[0][1])/2, (c[2]+B.sp[0][2])/2];   // hot layers glow like their bright speckles
@@ -7899,7 +7902,7 @@ const GFXL = (function(){
   }
   // candidate list (preallocated)
   const CMAX = 400;
-  const kx = new Float32Array(CMAX), ky = new Float32Array(CMAX), kz = new Float32Array(CMAX), ks = new Float32Array(CMAX), kt = new Uint8Array(CMAX);
+  const kx = new Float32Array(CMAX), ky = new Float32Array(CMAX), kz = new Float32Array(CMAX), ks = new Float32Array(CMAX), kt = new Uint16Array(CMAX);
   const sx = new Float32Array(NL), sy = new Float32Array(NL), sz = new Float32Array(NL), sc = new Float32Array(NL), st = new Uint8Array(NL);
   const RX = 7, RU = 6;
   function W(lx,d,lz){ return (lx<0||lx>=WIN||lz<0||lz>=WIN||d<0||d>=D) ? 1 : wblk[(d*WIN+lz)*WIN+lx]; }
@@ -24820,7 +24823,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const MARS_EDGE = 65000, MARS = {x:80000, z:50000};
   const rnd = a=>a[Math.floor(Math.random()*a.length)];
   const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
-  const onMars = ()=>realm === 0 && P.x >= MARS_EDGE;
+  const onMars = ()=>realm === 0 && P.x >= MARS_EDGE && P.z < 110000;
 
   /* ------------------------------------------------ layers and ores */
   const ML = [   /* LN-marsplus: much tougher than the Earth rock, you need the Mars pickaxes */
@@ -24930,7 +24933,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // raised land (Olympus Mons, crater rims, dunes): served by get, drawn by rebuild, minable like the biome hills
   const _gM = get;
   get = function(x, d, z){
-    if(d < 0 && d > -40 && x >= MARS_EDGE){
+    if(d < 0 && d > -40 && x >= MARS_EDGE && z < 110000){
       const c = mcol(x, z);
       if(c.h > 0 && -d <= c.h){ if(edits.size){ const k = ek(x,d,z); if(edits.has(k)) return edits.get(k); } return skyM(c, d); }
     }
@@ -24939,7 +24942,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _sbM = setBlock;
   setBlock = function(x, d, z, t){
     _sbM(x, d, z, t);
-    if(d < 0 && !t && x >= MARS_EDGE){ const c = mcol(x, z); if(c.h > 0 && -d <= c.h){ edits.set(ek(x,d,z), 0); editsDirty = true; } }
+    if(d < 0 && !t && x >= MARS_EDGE && z < 110000){ const c = mcol(x, z); if(c.h > 0 && -d <= c.h){ edits.set(ek(x,d,z), 0); editsDirty = true; } }
   };
   const _m4 = new THREE.Matrix4(), _cM = new THREE.Color();
   const hAt = (x, z)=>mcol(x, z).h;
@@ -24950,7 +24953,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(wox + WIN < MARS_EDGE) return;
     let any = false;
     for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
-      const x = wox+lx, z = woz+lz; if(x < MARS_EDGE) continue;
+      const x = wox+lx, z = woz+lz; if(x < MARS_EDGE || z >= 110000) continue;
       const c = mcol(x, z); if(c.h <= 0) continue;
       const h = c.h, hn = Math.min(hAt(x-1,z), hAt(x+1,z), hAt(x,z-1), hAt(x,z+1));
       for(let j=1; j<=h; j++){
@@ -25046,10 +25049,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // the rocket on the planet moves to Mars while you are there
   const solR = solids.find(s=>Math.abs(s[0] - (ROCKET_UP.x - 1.3)) < .01 && Math.abs(s[4] - (ROCKET_UP.z - 1.3)) < .01);
   const UPR = {x:ROCKET_UP.x, z:ROCKET_UP.z};
-  let rocketOnMars = false;
+  let rocketOnMars = 0;
   function placeRocket(m){
     rocketOnMars = m;
-    ROCKET_UP.x = m ? MARS.x + 7.5 : UPR.x; ROCKET_UP.z = m ? MARS.z + .5 : UPR.z;
+    ROCKET_UP.x = m === 2 ? 80007.5 : m ? MARS.x + 7.5 : UPR.x; ROCKET_UP.z = m === 2 ? 130000.5 : m ? MARS.z + .5 : UPR.z;   /* LN-toi: 2 = TOI-1853b */
     if(!launch) rocketUp.position.set(ROCKET_UP.x, 0, ROCKET_UP.z);
     if(solR){ solR[0] = ROCKET_UP.x - 1.3; solR[1] = ROCKET_UP.x + 1.3; solR[4] = ROCKET_UP.z - 1.3; solR[5] = ROCKET_UP.z + 1.3; }
   }
@@ -25160,7 +25163,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       }
       const m = onMars();
       if(m !== swapped){ swapped = m; load(m ? MS : ORIG); }
-      if((P.x >= MARS_EDGE) !== rocketOnMars) placeRocket(P.x >= MARS_EDGE);
+      { const rm = P.x >= MARS_EDGE ? (P.z >= 110000 ? 2 : 1) : 0; if(rm !== rocketOnMars) placeRocket(rm); }
       base.visible = m;
       phobos.visible = deimos.visible = m && P.y > -3;
       if(m){
@@ -25534,7 +25537,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   document.body.appendChild(shop);
   const msL = shop.querySelector('#msL'), msC = shop.querySelector('#msC');
   function marsDeep(p){ let n = 'nothing'; if(M) M.ML.forEach(l=>{ if(l.h/p.power <= MAXT) n = l.name; }); return n; }
-  { const _tM = toast; toast = function(msg){ if(typeof msg === 'string' && /^Too tough for the /.test(msg) && M && realm === 0 && P.x >= M.MARS_EDGE) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Mars rock is extra tough. Buy a stronger Mars pickaxe at the Mars Base (H).'); return _tM.call(this, msg); }; }
+  { const _tM = toast; toast = function(msg){ if(typeof msg === 'string' && /^Too tough for the /.test(msg) && M && realm === 0 && P.x >= M.MARS_EDGE && P.z < 110000) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Mars rock is extra tough. Buy a stronger Mars pickaxe at the Mars Base (H).'); return _tM.call(this, msg); }; }
   function renderMS(){
     msC.textContent = 'Your money: ' + money(save.coins); msL.innerHTML = '';
     marsPicks().forEach(({p, i})=>{
@@ -25582,7 +25585,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---- knocked out on Mars or the rocket planet: wake up at that planet's landing spot, not back on Earth
   const _ko = knockOut;
   knockOut = function(){
-    const onMars = realm === 0 && P.x >= M.MARS_EDGE, onUp = realm === 0 && !onMars && P.x >= UPPER_EDGE;
+    const onMars = realm === 0 && P.x >= M.MARS_EDGE && P.z < 110000, onUp = realm === 0 && !onMars && P.x >= UPPER_EDGE && P.x < M.MARS_EDGE;
     const r = _ko.apply(this, arguments);
     if(onMars || onUp){
       const to = onMars ? M.MARS : UPPER;
@@ -25613,6 +25616,429 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 500);
 })();
 /* LN-planetlife end */
+/* LN-toi start: TOI-1853b, a real super-dense, super-hot planet 545 light years away; the third rocket choice, unlocks at the Mars Core; its core block has 1,500,000 hardness (Irfan 2026-10-28 16:11) */
+(function(){
+  const M = window.__mars; if(!M) return;
+  const MARS_EDGE = M.MARS_EDGE, TOI_Z = 110000, TOI = {x:80000, z:130000}, NAME = 'TOI-1853b';
+  const rnd = a=>a[Math.floor(Math.random()*a.length)];
+  const money = v=>'$' + Math.round(v).toLocaleString('en-US');
+  const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
+  const onTOI = ()=>realm === 0 && P.x >= MARS_EDGE && P.z >= TOI_Z;
+  const inTOI = (x, z)=>x >= MARS_EDGE && z >= TOI_Z;
+
+  /* ------------------------------------------------ layers: crushed so hard by the planet's gravity that the rock is denser than iron */
+  const TL = [
+    {name:'Lava Crust',          th:4, h:100000,  v:40000,   base:[70,30,22],    amp:22, sp:[[255,110,30],[30,12,10]],    p:.3,  glow:.35},
+    {name:'Scorched Glass',      th:4, h:140000,  v:60000,   base:[90,70,50],    amp:18, sp:[[200,170,120],[50,36,26]],   p:.3,  glow:.1},
+    {name:'Obsidian Shell',      th:5, h:190000,  v:85000,   base:[24,18,30],    amp:12, sp:[[90,70,130],[8,6,12]],       p:.25, glow:.05},
+    {name:'Scorched Basalt',     th:5, h:250000,  v:120000,  base:[54,44,42],    amp:18, sp:[[120,80,60],[30,24,22]],     p:.3,  glow:.1},
+    {name:'Steam Rock',          th:5, h:320000,  v:160000,  base:[150,150,160], amp:20, sp:[[230,235,245],[90,90,100]],  p:.3,  glow:.05},
+    {name:'Hot Ice',             th:5, h:400000,  v:210000,  base:[120,200,230], amp:16, sp:[[230,250,255],[255,150,80]], p:.3,  glow:.3},
+    {name:'Diamond Rain Rock',   th:5, h:490000,  v:270000,  base:[40,44,60],    amp:14, sp:[[240,250,255],[150,200,255]],p:.35, glow:.2},
+    {name:'Sulfur Stone',        th:5, h:590000,  v:340000,  base:[200,180,40],  amp:22, sp:[[255,240,90],[120,100,20]],  p:.3,  glow:.15},
+    {name:'Superheated Iron',    th:5, h:700000,  v:420000,  base:[150,60,30],   amp:22, sp:[[255,170,60],[90,30,14]],    p:.35, glow:.5},
+    {name:'Crystal Mantle',      th:5, h:820000,  v:520000,  base:[110,60,160],  amp:20, sp:[[220,160,255],[60,30,90]],   p:.35, glow:.4},
+    {name:'Hyperdense Stone',    th:5, h:950000,  v:640000,  base:[30,30,36],    amp:10, sp:[[80,80,100],[12,12,16]],     p:.25, glow:.1},
+    {name:'Gravity Crush Rock',  th:5, h:1100000, v:780000,  base:[60,30,80],    amp:18, sp:[[160,90,255],[20,10,30]],    p:.35, glow:.45},
+    {name:'Star Iron',           th:5, h:1300000, v:900000,  base:[180,180,200], amp:20, sp:[[255,255,255],[255,200,90]], p:.35, glow:.6},
+    {name:'TOI-1853b Core',      th:6, h:1500000, v:1000000, base:[255,90,20],   amp:22, sp:[[255,240,120],[200,20,10]],  p:.4,  glow:1}
+  ];
+  // name, value, colour, layers it hides in, how common, glow
+  const TO = [
+    ['Hyperdense Iron',   1000000,   [190,190,210], [0,1,2,3],    .05,  .1],
+    ['Steam Opal',        5000000,   [200,255,255], [4,5,6],      .035, .5],
+    ['Volcanic Sapphire', 20000000,  [40,90,255],   [7,8,9],      .025, .6],
+    ['Toinite',           80000000,  [255,60,200],  [10,11,12],   .016, .8],
+    ['Core Heart Gem',    400000000, [255,250,200], [13],         .012, 1]
+  ];
+  // the top of each biome (soft enough for the Mars Soul Pickaxe, so you can start digging)
+  const TS = {
+    lavaglass:{name:'Lava Glass',          h:100000, v:50000, base:[255,100,20],  amp:20, sp:[[255,220,80],[160,30,10]],  p:.35, glow:.9},
+    obsid:    {name:'Obsidian Spike Rock', h:110000, v:55000, base:[20,16,26],    amp:10, sp:[[110,90,160],[6,4,8]],      p:.25, glow:.05},
+    glass:    {name:'Glass Dune Sand',     h:100000, v:45000, base:[214,170,110], amp:16, sp:[[255,230,170],[150,110,60]], p:.3,  glow:0},
+    steam:    {name:'Steam Crust',         h:105000, v:50000, base:[170,170,176], amp:18, sp:[[240,240,250],[110,110,116]],p:.3,  glow:0},
+    crystal:  {name:'Crystal Crust',       h:120000, v:70000, base:[150,90,210],  amp:20, sp:[[240,200,255],[80,40,120]],  p:.35, glow:.45},
+    frost:    {name:'Dark Side Frost',     h:110000, v:55000, base:[50,60,90],    amp:14, sp:[[160,190,255],[20,24,40]],   p:.3,  glow:.08}
+  };
+  function addB(o){
+    let j = BLOCKS.findIndex(b=>b.name === o.name);
+    if(j < 0 && BLOCKS.length < 1000){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length-1)); j = BLOCKS.length-1; }
+    return j >= 0 ? j + 1 : 0;
+  }
+  { const want = Math.max(40, D - 4), have = TL.reduce((s, l)=>s + l.th, 0); let left = want;   // as deep as the world goes, like Mars
+    TL.forEach(l=>{ l.th = Math.max(3, Math.floor(l.th*want/have)); left -= l.th; });
+    for(let i=TL.length-1; left > 0; i = i > 0 ? i - 1 : TL.length - 1){ TL[i].th++; left--; }
+    for(let i=TL.length-1; left < 0 && i >= 0; i--){ if(TL[i].th > 3){ TL[i].th--; left++; } } }
+  const tIds = [], tAt = [], tStart = []; let TOI_D = 0;
+  TL.forEach(l=>{ tStart.push(TOI_D); for(let k=0;k<l.th;k++) tAt.push(tIds.length); tIds.push(addB(Object.assign({upper:true, ore:false, mars:true, toi:true}, l))); TOI_D += l.th; });
+  const oIds = TO.map(o=>{ const H = TL[o[3][0]];
+    return addB({name:o[0], ore:true, mars:true, toi:true, cat:/Iron/.test(o[0]) ? 'ore' : 'crystal', oreName:o[0], hostName:NAME, host:0, th:0, max:1500, h:Math.round(H.h*1.05), v:o[1],
+      base:H.base, amp:H.amp, sp:[o[2]], p:.4, glow:o[5], oreCol:o[2]}); });
+  const sIds = {}; for(const k in TS) sIds[k] = addB(Object.assign({upper:true, ore:false, mars:true, toi:true, th:0}, TS[k]));
+  const fb = tIds[0] || M.mIds[0] || 1;
+  for(let i=0;i<tIds.length;i++) if(!tIds[i]) tIds[i] = fb;
+  for(const k in sIds) if(!sIds[k]) sIds[k] = fb;
+  try{ _blockIds = null; }catch(e){}
+  const TUFF = ()=>{ try{ return window.__world.ids().TUFF || 0; }catch(e){ return 0; } };
+
+  /* ------------------------------------------------ biomes: lava seas, obsidian spikes, a glass desert, steam vents, crystal fields and the dark side (it always faces away from its star) */
+  const TB = [
+    {k:'glass',   name:'Glass Desert',    top:'glass'},
+    {k:'lava',    name:'Lava Seas',       top:'lavaglass'},
+    {k:'spikes',  name:'Obsidian Spikes', top:'obsid'},
+    {k:'steam',   name:'Steam Vents',     top:'steam'},
+    {k:'crystal', name:'Crystal Fields',  top:'crystal'},
+    {k:'dark',    name:'The Dark Side',   top:'frost'}
+  ];
+  const S = 110, cache = new Map();
+  function vn(x, z, sd){
+    const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, ux = fx*fx*(3-2*fx), uz = fz*fz*(3-2*fz);
+    const a = hash3(ix,0,iz,sd), b = hash3(ix+1,0,iz,sd), c = hash3(ix,0,iz+1,sd), d = hash3(ix+1,0,iz+1,sd);
+    return a + (b-a)*ux + (c-a)*uz + (a-b-c+d)*ux*uz;
+  }
+  function tcol(x, z){
+    const key = (x - MARS_EDGE)*400000 + (z - TOI_Z);
+    let c = cache.get(key); if(c) return c;
+    if(cache.size > 200000) cache.clear();
+    const hd = Math.hypot(x - TOI.x, z - TOI.z);
+    if(hd < 34){ c = {b:TB[0], h:0}; cache.set(key, c); return c; }               // the flat landing site and the station
+    const gx = Math.floor(x/S), gz = Math.floor(z/S);
+    let d1 = 1e9, d2 = 1e9, bx = 0, bz = 0, cx = 0, cz = 0;
+    for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
+      const px = (gx+i + .2 + .6*hash3(gx+i,7,gz+j,1911))*S, pz = (gz+j + .2 + .6*hash3(gx+i,9,gz+j,1913))*S, d = Math.hypot(x-px, z-pz);
+      if(d < d1){ d2 = d1; d1 = d; bx = gx+i; bz = gz+j; cx = px; cz = pz; } else if(d < d2) d2 = d;
+    }
+    const b = TB[Math.floor(hash3(bx,11,bz,1917)*TB.length)];
+    const e = Math.min(1, (d2 - d1)/26) * Math.min(1, (hd - 34)/24);
+    let h = 0;
+    if(b.k === 'lava'){ const t = 1 - d1/(S*.42); if(t > 0) h = -Math.round(e*4*Math.min(1, t*2.2)); }
+    else if(b.k === 'spikes'){
+      for(let i=0;i<7;i++){ const ox = cx + (hash3(bx,20+i,bz,1925) - .5)*80, oz = cz + (hash3(bx,30+i,bz,1927) - .5)*80, r = 1.6 + hash3(bx,40+i,bz,1929)*2, dd = Math.hypot(x-ox, z-oz);
+        if(dd < r) h = Math.max(h, Math.round(e*(5 + hash3(bx,50+i,bz,1931)*9)*(1 - dd/r))); }
+    }
+    else if(b.k === 'glass') h = Math.round(e*2*(.5 + .5*Math.sin(x*.14 + 3*vn(x*.05, z*.05, 1933))));
+    else if(b.k === 'steam'){
+      for(let i=0;i<4;i++){ const ox = cx + (hash3(bx,60+i,bz,1935) - .5)*70, oz = cz + (hash3(bx,70+i,bz,1937) - .5)*70, dd = Math.hypot(x-ox, z-oz);
+        if(dd < 4.5 && dd >= 1) h = Math.max(h, Math.round(e*3*(1 - dd/4.5) + .4)); }
+    }
+    else if(b.k === 'crystal'){
+      for(let i=0;i<6;i++){ const ox = Math.floor(cx + (hash3(bx,80+i,bz,1939) - .5)*70), oz = Math.floor(cz + (hash3(bx,90+i,bz,1941) - .5)*70);
+        if(Math.abs(x - ox) <= 1 && Math.abs(z - oz) <= 1) h = Math.max(h, Math.round(e*(3 + hash3(bx,100+i,bz,1943)*5))); }
+    }
+    else if(b.k === 'dark') h = Math.round(e*1.6*vn(x*.06, z*.06, 1945));
+    c = {b, h}; cache.set(key, c); return c;
+  }
+  const topId = c=>sIds[c.b.top] || fb;
+  function skyT(c, d){ const j = -d; return j > c.h ? 0 : topId(c); }
+  function toiBase(x, d, z){
+    if(d < 0) return 0;
+    if(d >= TOI_D){ const T = TUFF(); return d < TOI_D + 3 && T ? T : 0; }     // the Too Tuff Rock under the core: nothing goes deeper
+    const c = tcol(x, z);
+    if(c.h < 0 && d < -c.h) return 0;                          // the lava seas are open pits
+    if(c.h > 0 && d < 2) return tIds[0];
+    if(d === Math.max(0, -c.h)) return topId(c);
+    const li = tAt[d];
+    if(hash3(x>>1, d>>1, z>>1, 1951) < .3){
+      for(let i=TO.length-1;i>=0;i--){ const o = TO[i]; if(oIds[i] && o[3].indexOf(li) >= 0 && hash3(x, d, z, 1953 + i) < o[4]*3.2) return oIds[i]; }
+    }
+    return tIds[li];
+  }
+  const _ub = upperBase;
+  upperBase = function(x, d, z){ return inTOI(x, z) ? toiBase(x, d, z) : _ub(x, d, z); };
+  const _g = get;
+  get = function(x, d, z){
+    if(d < 0 && d > -40 && inTOI(x, z)){
+      const c = tcol(x, z);
+      if(c.h > 0 && -d <= c.h){ if(edits.size){ const k = ek(x,d,z); if(edits.has(k)) return edits.get(k); } return skyT(c, d); }
+    }
+    return _g(x, d, z);
+  };
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    _sb(x, d, z, t);
+    if(d < 0 && !t && inTOI(x, z)){ const c = tcol(x, z); if(c.h > 0 && -d <= c.h){ edits.set(ek(x,d,z), 0); editsDirty = true; } }
+  };
+  const _m4 = new THREE.Matrix4(), _cM = new THREE.Color();
+  const hAt = (x, z)=>tcol(x, z).h;
+  function nearE(x, d, z){ return edits.has(ek(x-1,d,z)) || edits.has(ek(x+1,d,z)) || edits.has(ek(x,d,z-1)) || edits.has(ek(x,d,z+1)) || edits.has(ek(x,d-1,z)) || edits.has(ek(x,d+1,z)); }
+  const _rb = rebuild;
+  rebuild = function(){
+    _rb();
+    if(wox + WIN < MARS_EDGE || woz + WIN < TOI_Z) return;
+    let any = false;
+    for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
+      const x = wox+lx, z = woz+lz; if(!inTOI(x, z)) continue;
+      const c = tcol(x, z); if(c.h <= 0) continue;
+      const h = c.h, hn = Math.min(hAt(x-1,z), hAt(x+1,z), hAt(x,z-1), hAt(x,z+1));
+      for(let j=1; j<=h; j++){
+        const d = -j, k = ek(x,d,z);
+        if(edits.size && edits.has(k)) continue;
+        if(j < h && j <= hn && !(edits.size && nearE(x, d, z))) continue;
+        const t = skyT(c, d), m = meshes[t-1]; if(!m || m.count >= m.userData.max) continue;
+        _m4.makeTranslation(x+.5, j-.5, z+.5); m.setMatrixAt(m.count, _m4);
+        const jj = .82 + hash3(x,d,z,7)*.3; _cM.setRGB(jj,jj,jj); m.setColorAt(m.count, _cM); m.count++; any = true;
+      }
+    }
+    if(any) meshes.forEach(m=>{ m.instanceMatrix.needsUpdate = true; if(m.instanceColor) m.instanceColor.needsUpdate = true; });
+  };
+
+  /* ------------------------------------------------ layer list and name, heavy gravity, a hot orange sky */
+  const ORIG = {L:UPPER_LAYERS.slice(), at:upperLayerAt.slice(), ids:upperIds.slice(), st:upperStart.slice(), D:UPPER_D};
+  const TSX = {L:TL, at:tAt, ids:tIds, st:tStart, D:TOI_D};
+  let swapped = false;
+  function load(Sx){
+    UPPER_LAYERS.length = 0; Sx.L.forEach(l=>UPPER_LAYERS.push(l));
+    upperLayerAt.length = 0; Sx.at.forEach(v=>upperLayerAt.push(v));
+    upperIds.length = 0; Sx.ids.forEach(v=>upperIds.push(v));
+    upperStart.length = 0; Sx.st.forEach(v=>upperStart.push(v));
+    UPPER_D = Sx.D;
+    try{ if(panelUp){ renderLayerPanel(UPPER_LAYERS); lastUpName = ''; } }catch(e){}
+  }
+  const _mn = window.__marsName;
+  window.__marsName = ()=>swapped ? NAME : (_mn ? _mn() : null);
+  const _st = step;
+  step = function(dt){
+    if(!onTOI() || GRAV.float || !(GRAV.scale > 0)) return _st.apply(this, arguments);
+    const g0 = GRAV.scale; GRAV.scale = g0*1.15;              // heavy: the planet is 73 times heavier than Earth
+    try{ return _st.apply(this, arguments); } finally { GRAV.scale = g0; }
+  };
+  let curB = null;
+  const _ps = planetsSky;
+  const _sT = new THREE.Color(), _sB = new THREE.Color();
+  planetsSky = function(s){
+    if(!onTOI() || s <= 0 || typeof skyMat === 'undefined') return _ps(s);
+    const t = performance.now()*.001, w = .5 + .5*Math.sin(t*.3), dk = curB && curB.k === 'dark';
+    if(dk){ _sT.setRGB(.02, .01, .04); _sB.setRGB(.12, .05, .08); }                  // the night side never sees its star
+    else { _sT.setRGB(.36 + .04*w, .1, .06); _sB.setRGB(.95, .45 + .05*w, .16); }   // a burning orange haze
+    skyMat.uniforms.top.value.copy(dark).lerp(_sT, s); skyMat.uniforms.bot.value.copy(dark).lerp(_sB, s); skyMat.uniforms.night.value = dk ? 1 : 0;
+    scene.background.copy(skyMat.uniforms.top.value);
+    try{ clouds[0].children[0].material.color.setRGB(dk ? .2 : .9, dk ? .2 : .5, dk ? .25 : .3); }catch(e){}
+    if(lightOn){ scene.fog.color.copy(skyMat.uniforms.bot.value); ambient.intensity = Math.max(ambient.intensity, (dk ? .2 : .35) + .4*s); }
+  };
+  // its star, TOI-1853, hangs huge in the sky because the planet is so close to it (a year lasts 1.24 days)
+  const star = new THREE.Group(); star.visible = false; scene.add(star);
+  star.add(new THREE.Mesh(new THREE.SphereGeometry(26, 24, 16), new THREE.MeshBasicMaterial({color:0xffb040, fog:false})));
+  star.add(new THREE.Mesh(new THREE.SphereGeometry(34, 24, 16), new THREE.MeshBasicMaterial({color:0xff7020, fog:false, transparent:true, opacity:.35})));
+
+  /* ------------------------------------------------ the rocket: a third choice in the rocket chooser */
+  const pB = document.getElementById('mrsB'), pH = document.getElementById('mrsHint');
+  const pC = document.createElement('button'); pC.id = 'mrsC'; pC.className = 'btn'; pC.style.cssText = 'display:block;width:100%;margin:6px 0;padding:12px;font-size:16px';
+  const pCH = document.createElement('div'); pCH.style.cssText = 'opacity:.8;font-size:13px;margin-top:4px';
+  if(pB && pB.parentNode){ pB.parentNode.insertBefore(pC, pB.nextSibling); if(pH) pH.parentNode.insertBefore(pCH, pH.nextSibling); }
+  const pickPanel = pB ? pB.closest('div[style*="inset:0"]') || pB.parentNode.parentNode : null;
+  function refreshC(){
+    if(save.toiUnlocked){ pC.textContent = '3   ' + NAME; pC.disabled = false; pC.style.opacity = 1; pC.style.background = '#a02a5a';
+      pCH.textContent = NAME + ': a real planet 545 light years away. Super hot, denser than iron, heavy gravity. Its core has 1,500,000 hardness.'; }
+    else { pC.textContent = '3   ' + NAME + ' (locked)'; pC.disabled = true; pC.style.opacity = .5; pC.style.background = '#4a2a3a';
+      pCH.textContent = 'To unlock ' + NAME + ', fly to Mars and dig all the way down to the Mars Core once.'; }
+  }
+  let goTOI = false;
+  function goT(){
+    if(!save.toiUnlocked) return;
+    goTOI = true; M.go(false);
+  }
+  pC.onclick = e=>{ e.stopPropagation(); goT(); };
+  addEventListener('keydown', e=>{ if(pickPanel && pickPanel.style.display === 'flex' && e.code === 'Digit3') goT(); });
+  if(pickPanel) addEventListener('keydown', e=>{ if(e.code === 'Digit1' || e.code === 'Digit2') goTOI = false; }, true);
+  if(pB) pB.addEventListener('click', ()=>{ goTOI = false; }, true);
+  { const pA = document.getElementById('mrsA'); if(pA) pA.addEventListener('click', ()=>{ goTOI = false; }, true); }
+  const _tr = tickRocket;
+  tickRocket = function(dt){
+    const L = launch; _tr(dt);
+    if(L && !launch && L.up && goTOI){
+      goTOI = false; P.x = TOI.x + .5; P.z = TOI.z + .5; P.y = 30; P.vx = P.vy = P.vz = 0; dirty = true;
+      save.toiVisits = (save.toiVisits || 0) + 1; persist();
+      setTimeout(()=>toast('Welcome to ' + NAME + '! A real planet 545 light years from Earth. It is about 1,200 C here, the gravity is heavy and the rock is denser than iron. Buy TOI pickaxes at the station (H).'), 400);
+      if(save.toiVisits === 1) news('BREAKING: A miner has landed on ' + NAME + ', a real planet heavier than 73 Earths. Scientists say: please bring sunscreen.');
+    }
+  };
+
+  /* ------------------------------------------------ the TOI-1853b research station */
+  const base = new THREE.Group(); base.position.set(TOI.x, 0, TOI.z); base.visible = false; scene.add(base);
+  { const shell = new THREE.Mesh(new THREE.CylinderGeometry(6, 6.5, 4, 20), new THREE.MeshLambertMaterial({color:0xc8ccd6}));
+    shell.position.set(-12, 2, -10); shell.castShadow = true; base.add(shell);
+    const roof = new THREE.Mesh(new THREE.SphereGeometry(6, 20, 10, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshLambertMaterial({color:0x6a7a9a, transparent:true, opacity:.85}));
+    roof.position.set(-12, 4, -10); base.add(roof);
+    sbox(2.2, 2.6, .3, 0x9aa0aa, -12, 1.3, -3.6, base); sbox(1.2, 2, .32, 0x30343c, -12, 1, -3.5, base);
+    // heat shields: big mirrors that bounce the star's heat away
+    for(let i=0;i<4;i++){ const m = sbox(4, 3, .15, 0xe8f0ff, -2 + i*4.5, 2.2, -18, base); m.rotation.x = .35; sbox(.2, 1.4, .2, 0x8a8a90, -2 + i*4.5, .7, -17.6, base); }
+    sbox(5, 3, 4, 0x8a3a3a, 9, 1.5, -12, base); sbox(5.2, .3, 4.2, 0x5a2a2a, 9, 3.15, -12, base);
+    sbox(.12, 6, .12, 0xcfcfd4, 3, 3, -6, base);
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(3.2, 1.4, .06), new THREE.MeshLambertMaterial({map:textTex(NAME + ' STATION', 320, 140, '#a02a5a', '#ffffff', 'bold 34px Arial')}));
+    fl.position.set(4.65, 5.2, -6); base.add(fl);
+    solids.push([TOI.x + 6.5, TOI.x + 11.5, 0, 3.3, TOI.z - 14, TOI.z - 10]);
+  }
+
+  /* ------------------------------------------------ the TOI pick shop (H near the station) */
+  const toiPicks = ()=>PICKS.map((p, i)=>({p, i})).filter(o=>/^toi/.test(o.p.tag || '')).sort((a, b)=>a.p.power - b.p.power);
+  const shop = document.createElement('div');
+  shop.style.cssText = 'position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  shop.innerHTML = '<div style="position:relative;background:#1e0e16;color:#f6e0ea;border:2px solid #ff5a9a;border-radius:10px;padding:18px 20px;width:min(560px,92vw);max-height:88vh;overflow:auto;font:15px system-ui,sans-serif">' +
+    '<button id="tsX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 22px system-ui;color:#ff9ac0;margin-bottom:4px">' + NAME + ' Station Pick Shop</div>' +
+    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">The rock here is squeezed so hard by the planet\'s gravity that it is denser than iron. Each TOI pickaxe digs one step deeper. The ' + NAME + ' Core has 1,500,000 hardness: only the TOI Core Pickaxe can dig it.</div>' +
+    '<div id="tsC" style="font-weight:900;color:#ffd86a;margin-bottom:6px"></div><div id="tsL"></div></div>';
+  document.body.appendChild(shop);
+  const tsL = shop.querySelector('#tsL'), tsC = shop.querySelector('#tsC');
+  function toiDeep(p){ let n = 'nothing (too weak for this planet)'; TL.forEach(l=>{ if(l.h/p.power <= MAXT) n = l.name; }); return n; }
+  function renderTS(){
+    tsC.textContent = 'Your money: ' + money(save.coins); tsL.innerHTML = '';
+    toiPicks().forEach(({p, i})=>{
+      const own = !!save.owned[i], eq = save.equipped === i;
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;margin:6px 0';
+      row.innerHTML = '<div style="width:26px;height:26px;border-radius:6px;background:#' + p.col.toString(16).padStart(6, '0') + ';box-shadow:0 0 12px #' + p.col.toString(16).padStart(6, '0') + '"></div><div style="flex:1"><b>' + p.name + '</b><div style="font-size:12px;opacity:.8">Power ' + p.power.toLocaleString() + ' &middot; digs ' + NAME + ' down to ' + toiDeep(p) + '</div></div>';
+      const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'padding:8px 14px';
+      if(eq){ b.textContent = 'Equipped'; b.disabled = true; }
+      else if(own){ b.textContent = 'Equip'; b.onclick = e=>{ e.stopPropagation(); save.equipped = i; equipGun(null); persist(); updatePickModel(); updatePickInfo(); renderTS(); }; }
+      else { b.textContent = 'Buy ' + money(p.price); b.disabled = save.coins < p.price;
+        b.onclick = e=>{ e.stopPropagation(); if(save.coins < p.price) return; save.coins -= p.price; save.owned[i] = true; save.equipped = i; equipGun(null); persist(); updatePickModel(); updatePickInfo(); renderTS(); blip(660, .15, .15, 'triangle');
+          news('NEWS: A miner bought the ' + p.name + ' on ' + NAME + '. It is still really hot there.'); }; }
+      row.appendChild(b); tsL.appendChild(row);
+    });
+  }
+  const nearSt = ()=>onTOI() && Math.hypot(P.x - TOI.x, P.z - TOI.z) < 22 && P.y > -3;
+  function openShop(){ renderTS(); shop.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closeShop(){ shop.style.display = 'none'; }
+  shop.addEventListener('click', e=>{ if(e.target === shop || e.target.id === 'tsX') closeShop(); });
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:30;background:rgba(40,6,20,.8);color:#ffd0e0;border:1px solid #ff5a9a;border-radius:8px;padding:6px 12px;font:700 14px system-ui,sans-serif;display:none;pointer-events:none';
+  hint.textContent = NAME + ' STATION: press H for the TOI Pick Shop';
+  document.body.appendChild(hint);
+  setInterval(()=>{ hint.style.display = nearSt() && locked && shop.style.display !== 'flex' ? 'block' : 'none'; }, 400);
+  addEventListener('keydown', e=>{
+    if(e.target && e.target.tagName === 'INPUT') return;
+    if(e.code === 'Escape'){ if(shop.style.display === 'flex') closeShop(); return; }
+    if(e.repeat) return;
+    if(e.code === 'KeyH'){ if(shop.style.display === 'flex') closeShop(); else if(locked && nearSt()) openShop(); }
+  });
+  { const _t = toast; toast = function(msg){
+      if(typeof msg === 'string' && onTOI()){
+        msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' ' + NAME + ' rock is denser than iron. Buy a stronger TOI pickaxe at the ' + NAME + ' Station (H).')
+          .replace('the bottom of Mars', 'the bottom of ' + NAME).replace('even the Mars Soul Pickaxe', 'even the TOI Core Pickaxe');
+      }
+      return _t.call(this, msg); }; }
+
+  /* ------------------------------------------------ knocked out on TOI-1853b: wake up at the station */
+  const _ko = knockOut;
+  knockOut = function(){
+    const was = onTOI();
+    const r = _ko.apply(this, arguments);
+    if(was){
+      P.x = TOI.x + .5; P.z = TOI.z + 4.5; P.vx = P.vy = P.vz = 0;
+      try{ P.y = Math.max(0, groundTop(Math.floor(P.x), 20, Math.floor(P.z))) + .05; }catch(e){ P.y = 1; }
+      dirty = true;
+      setTimeout(()=>toast('You woke up at the ' + NAME + ' Station. You are still on ' + NAME + '.'), 300);
+    }
+    return r;
+  };
+
+  /* ------------------------------------------------ animals that can live on a 1,200 C planet */
+  Object.assign(AD, {
+    lavaslug:  {name:'Lava Slug',       hp:90,  r:.7, yo:.4, speed:1.0, reward:150, toi:true, quips:['Sizzle... it oozes back into the lava.','The Lava Slug leaves a glowing trail.']},
+    obsbeetle: {name:'Obsidian Beetle', hp:140, r:.8, yo:.5, speed:1.6, reward:220, toi:true, quips:['Clack clack! Its shell is as hard as glass.','The Obsidian Beetle scuttles under a spike.']},
+    steampuff: {name:'Steam Puff',      hp:60,  r:.6, yo:1,  speed:2.2, reward:180, toi:true, quips:['Pffffft! It turns into a cloud of steam.','The Steam Puff floats away.']},
+    magmamole: {name:'Magma Mole',      hp:120, r:.8, yo:.6, speed:1.8, reward:260, toi:true, quips:['It digs back into the hot rock.','The Magma Mole sneezes sparks.']}
+  });
+  Object.assign(ANIMAL_DROP, {lavaslug:'Slug Goo', obsbeetle:'Glass Shell', steampuff:'Steam Wisp', magmamole:'Magma Claw'});
+  const TOI_ANIMALS = ['lavaslug', 'obsbeetle', 'steampuff', 'magmamole', 'obsbeetle'];
+  const _bA = buildAnimal;
+  buildAnimal = function(type){
+    if(!AD[type] || !AD[type].toi) return _bA(type);
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const leg = (x, z, h, col)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); sbox(.14, h, .14, col, 0, -h/2, 0, lg); g.userData.legs.push(lg); };
+    const eyes = (y, z, dx, s)=>{ [-dx, dx].forEach(x=>{ sbox(s, s, .05, 0xffffff, x, y, z, g); sbox(s*.5, s*.5, .05, 0x111111, x, y, z + .03, g); }); };
+    const glow = (m, c)=>{ m.material.emissive = new THREE.Color(c); return m; };
+    if(type === 'lavaslug'){
+      glow(sbox(.5, .3, 1.2, 0xff6a1a, 0, .15, 0, g), 0x802000); glow(sbox(.42, .32, .4, 0xff8a2a, 0, .3, .55, g), 0x803000);
+      [-.1, .1].forEach(x=>{ sbox(.05, .3, .05, 0xffa040, x, .55, .65, g); sbox(.1, .1, .1, 0xffffff, x, .72, .65, g); sbox(.05, .05, .05, 0x111111, x, .72, .7, g); });
+      for(let i=0;i<4;i++) glow(sbox(.12, .08, .12, 0xffe060, (i%2 ? .15 : -.15), .32, -.4 + i*.2, g), 0x806000);
+    } else if(type === 'obsbeetle'){
+      const C = 0x1a1424;
+      [-1, 1].forEach(sd=>{ for(let i=0;i<3;i++){ const l = new THREE.Group(); l.position.set(sd*.4, .25, -.25 + i*.25); l.rotation.z = sd*.6; g.add(l); sbox(.06, .3, .06, C, 0, -.12, 0, l); g.userData.legs.push(l); } });
+      sbox(.75, .4, 1, C, 0, .45, 0, g); sbox(.04, .42, 1.02, 0x6a5aa0, 0, .46, 0, g); sbox(.5, .3, .35, 0x2a2238, 0, .4, .6, g);
+      eyes(.48, .78, .14, .09); sbox(.06, .06, .35, 0x6a5aa0, 0, .55, .9, g).rotation.x = -.4;
+    } else if(type === 'steampuff'){
+      for(let i=0;i<6;i++){ const m = new THREE.Mesh(new THREE.BoxGeometry(.4, .4, .4), new THREE.MeshLambertMaterial({color:0xf0f4ff, transparent:true, opacity:.85})); m.position.set(Math.cos(i)*.3, .9 + Math.sin(i*2)*.2, Math.sin(i)*.3); g.add(m); }
+      eyes(1.02, .45, .12, .1); sbox(.14, .05, .04, 0x334455, 0, .85, .46, g);
+    } else if(type === 'magmamole'){
+      const C = 0x5a2a1a; [-.2, .2].forEach(x=>{ leg(x, .25, .25, C); leg(x, -.25, .25, C); });
+      sbox(.6, .45, .9, C, 0, .45, 0, g); glow(sbox(.62, .1, .5, 0xff5a10, 0, .7, -.1, g), 0xa02000);
+      sbox(.4, .35, .3, C, 0, .45, .55, g); glow(sbox(.14, .12, .1, 0xff8a6a, 0, .42, .72, g), 0x401010);
+      [-1, 1].forEach(sd=>sbox(.22, .08, .2, 0xe8d0b0, sd*.36, .25, .45, g));
+      sbox(.06, .06, .05, 0x111111, -.1, .55, .71, g); sbox(.06, .06, .05, 0x111111, .1, .55, .71, g);
+    }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  };
+  let toiAuto = false;
+  const _sA = spawnAnimal;
+  spawnAnimal = function(type, x, z){
+    if(!(toiAuto && onTOI())) return _sA.apply(this, arguments);
+    type = rnd(TOI_ANIMALS);
+    const d = AD[type], g = buildAnimal(type), gy = groundTop(Math.floor(x), 3, Math.floor(z));
+    const a = {type, d, g, pos:new THREE.Vector3(x, gy, z), vy:0, hp:d.hp, max:d.hp, t:Math.random()*10, dir:Math.random()*6.283, wanderT:Math.random()*3, fleeT:0, moving:false, ang:0};
+    g.position.copy(a.pos); scene.add(g); animals.push(a); return a;
+  };
+  const _uA = updateAnimals;
+  updateAnimals = function(dt){
+    toiAuto = true; try{ _uA(dt); } finally { toiAuto = false; }
+    if(onTOI()){ for(const a of animals.slice()) if(a.d && !a.d.toi && !a.pet) removeAnimal(a); }
+  };
+
+  /* ------------------------------------------------ steam geysers that blast you up */
+  const geysers = [];
+  for(let i=0;i<3;i++){
+    const g = new THREE.Group(); g.visible = false; scene.add(g);
+    for(let k=0;k<14;k++){ const m = new THREE.Mesh(new THREE.BoxGeometry(.6, .6, .6), new THREE.MeshLambertMaterial({color:0xf4f6ff, transparent:true, opacity:.6})); g.add(m); }
+    geysers.push({g, x:0, z:0, t:0, life:0, hit:0});
+  }
+
+  /* ------------------------------------------------ every frame: unlock, layers, rocket, station, star, biome name, geysers */
+  const bioEl = ()=>document.getElementById('biomename');
+  let lastF = performance.now();
+  const lastMarsTh = M.ML[M.ML.length - 1].th;
+  function frame(){
+    requestAnimationFrame(frame);
+    const now = performance.now(), dt = Math.min(.05, (now - lastF)/1000); lastF = now;
+    try{
+      // unlock: reach the Mars Core once
+      if(!save.toiUnlocked && realm === 0 && P.x >= MARS_EDGE && P.z < TOI_Z && -P.y >= M.MARS_D - lastMarsTh){
+        save.toiUnlocked = 1; persist();
+        toast(NAME + ' UNLOCKED! You reached the Mars Core. Fly the rocket and pick 3: ' + NAME + '.');
+        news('BREAKING: A miner dug to the Mars Core. The rocket can now fly to ' + NAME + ', a real planet 545 light years away!');
+        blip(523, .2, .1, 'triangle'); setTimeout(()=>blip(784, .3, .1, 'triangle'), 150); setTimeout(()=>blip(1046, .3, .1, 'triangle'), 300);
+      }
+      if(pickPanel && pickPanel.style.display === 'flex') refreshC();
+      const m = onTOI();
+      if(m !== swapped){ swapped = m; if(m) load(TSX); else if(!(P.x >= MARS_EDGE)) load(ORIG); }
+      base.visible = m;
+      if(m){
+        if(!save.toiCore && -P.y >= TOI_D - TL[TL.length - 1].th){
+          save.toiCore = 1; persist();
+          toast('YOU REACHED THE CORE OF ' + NAME + '! Hardness 1,500,000. You are one of the best miners in the galaxy.');
+          news('BREAKING: A miner reached the core of ' + NAME + '. Scientists are speechless. The miner is very sweaty.');
+        }
+        const c = tcol(Math.floor(P.x), Math.floor(P.z)), el = bioEl(); if(el && el.textContent !== c.b.name) el.textContent = c.b.name;
+        if(c.b !== curB){ if(curB && P.y > -4) toast('You entered: ' + c.b.name); curB = c.b; }
+        star.visible = P.y > -3 && c.b.k !== 'dark';
+        star.position.set(P.x + 150, 85, P.z - 220);
+        for(const v of geysers){
+          v.life -= dt;
+          if(v.life <= 0){ const a = Math.random()*6.283, r = 10 + Math.random()*22; v.x = Math.floor(P.x + Math.cos(a)*r) + .5; v.z = Math.floor(P.z + Math.sin(a)*r) + .5; v.life = 6 + Math.random()*6; v.t = 0; }
+          v.t += dt;
+          const on = (v.t % 3) < 1.6, gy = Math.max(0, hAt(Math.floor(v.x), Math.floor(v.z)));
+          v.g.position.set(v.x, gy, v.z); v.g.visible = P.y > -4 && (curB && (curB.k === 'steam' || curB.k === 'glass' || curB.k === 'lava'));
+          v.g.children.forEach((b, k)=>{ const up = on ? ((v.t*5 + k*.7) % 7) : 0; b.visible = on; b.position.set(Math.sin(k*2.1 + v.t)*.3, up, Math.cos(k*1.7 + v.t)*.3); b.scale.setScalar(.6 + up*.12); });
+          if(on && v.g.visible && locked && Math.hypot(P.x - v.x, P.z - v.z) < 1.3 && P.y < gy + 3 && !v.hit){ v.hit = 1; P.vy = Math.max(P.vy, 13); P.ground = false; toast('WHOOSH! A steam geyser blasted you into the air!'); blip(200, .3, .12, 'sawtooth'); }
+          if(Math.hypot(P.x - v.x, P.z - v.z) > 2.5) v.hit = 0;
+        }
+      } else { star.visible = false; geysers.forEach(v=>{ v.g.visible = false; v.life = 0; }); curB = null; }
+    }catch(e){}
+  }
+  frame();
+  window.__toi = {TOI, TOI_Z, TL, TO, TB, tIds, oIds, sIds, tcol, toiBase, TOI_D, onTOI, go:goT, unlock:()=>{ save.toiUnlocked = 1; persist(); }, openShop, closeShop, renderTS, nearSt, pC, refreshC, get goTOI(){ return goTOI; }};
+})();
+/* LN-toi end */
 
 
 
