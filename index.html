@@ -5078,8 +5078,8 @@ function updateMining(dt){
     if(!cur || cur.i!==hit.i || cur.d!==hit.d || cur.k!==hit.k){ cur = hit; prog = 0; }
     hlEdges.position.set(hit.i+.5, -hit.d-.5, hit.k+.5); crack.position.copy(hlEdges.position);
     hlEdges.visible = crack.visible = true;
-    blockName.textContent = BLOCKS[li].name + (BLOCKS[li].ore ? ' (in '+(BLOCKS[li].hostName || LAYERS[BLOCKS[li].host].name)+')' : '') + '  ·  $' + BLOCKS[li].v + '  ·  Power ' + powLvl(BLOCKS[li].name) + '  ·  Hardness ' + hardLvl(BLOCKS[li]) + '  ·  ' + (mineAny ? 'instant (Mine Anything)' : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig) > MAXT ? 'too tough!' : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig)).toFixed(1)+'s'));
-    const time = (mineAny ? Math.min(digTime(li), .12) : digTime(li)) / (1 + gear.dig);
+    blockName.textContent = BLOCKS[li].name + (BLOCKS[li].ore ? ' (in '+(BLOCKS[li].hostName || LAYERS[BLOCKS[li].host].name)+')' : '') + '  ·  $' + BLOCKS[li].v + '  ·  Power ' + powLvl(BLOCKS[li].name) + '  ·  Hardness ' + hardLvl(BLOCKS[li]) + '  ·  ' + (mineAny && !(window.__marsTough && window.__marsTough(li)) ? 'instant (Mine Anything)' : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig) > MAXT ? 'too tough!' : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig)).toFixed(1)+'s'));
+    const time = (mineAny && !(window.__marsTough && window.__marsTough(li)) ? Math.min(digTime(li), .12) : digTime(li)) / (1 + gear.dig);   /* LN-marsrule */
     if(mouseDown){
       if(time > MAXT){
         barwrap.style.display='block'; barEl.className='bad';
@@ -5569,7 +5569,7 @@ function explode(x, y, z){
     const i = cx+dx, d = cd+dd, k = cz+dz;
     if(d < -48 || d >= D) continue;
     const id = get(i,d,k); if(!id) continue;
-    const B = BLOCKS[id-1]; if(!B || (!mineAny && B.h/40 > MAXT)) continue;
+    const B = BLOCKS[id-1]; if(!B || ((!mineAny || B.mars) && B.h/40 > MAXT)) continue;   /* LN-marsrule */
     const wasPlaced = (edits.get(ek(i,d,k))||0) > 0;
     setBlock(i,d,k,0); if(d === 0) checkTreeSupport(i,k);
     if(!wasPlaced){ save.coins += B.v; save.mined++; }
@@ -25594,6 +25594,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return r;
   };
   window.__planetlife = {ko:()=>knockOut()};
+  // Mine Anything is no help on Mars: Mars rock that is too tough for your pickaxe stays too tough
+  window.__marsTough = li=>{ const B = BLOCKS[li]; return !!(B && B.mars && realm === 0 && P.x >= M.MARS_EDGE && digTime(li) > MAXT); };
   // ---- the one-time gift: the strongest Mars pickaxe, Mars unlocked, and a rocket ride to Mars
   let pend = false;
   try{ pend = !localStorage.getItem('digcore_gift_marssoul'); }catch(e){}
