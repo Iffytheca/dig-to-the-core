@@ -26055,6 +26055,26 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-planetR end */
+/* LN-toigift start: one-time gift of the TOI Core Pickaxe and a rocket ride to TOI-1853b (Irfan 2026-10-28 16:45) */
+(function(){
+  const T = window.__toi; if(!T) return;
+  let pend = false;
+  try{ pend = !localStorage.getItem('digcore_gift_toicore'); }catch(e){}
+  if(!pend) return;
+  const i = PICKS.findIndex(p=>p.tag === 'toi8');
+  if(i < 0) return;
+  save.owned[i] = true; save.equipped = i; save.toiUnlocked = 1; save.marsUnlocked = 1; persist();
+  try{ equipGun(null); updatePickModel(); updatePickInfo(); }catch(e){}
+  const t = setInterval(()=>{
+    if(startEl.style.display === 'flex' || !locked || won) return;
+    if(typeof launch !== 'undefined' && launch) return;               // let the Mars gift ride finish first
+    clearInterval(t);
+    try{ localStorage.setItem('digcore_gift_toicore', '1'); }catch(e){}
+    toast('GIFT: You got the ' + PICKS[i].name + ', the toughest pickaxe in the game (power 375,000)! TOI-1853b is unlocked. Blast off!');
+    if(!T.onTOI()) setTimeout(()=>{ try{ T.go(); }catch(e){ console.warn('LN-toigift', e); } }, 1500);
+  }, 500);
+})();
+/* LN-toigift end */
 
 
 
