@@ -25576,6 +25576,41 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     ids:()=>({ADAM, SOUL, TUFF, POLISHED}), sb:(x,d,z,t)=>setBlock(x,d,z,t), ub:(x,d,z)=>upperBase(x,d,z), brk:h=>breakBlock(h), towns, get town(){ return town; }, set town(v){ town = v; }, mainView};
 })();
 /* LN-world end */
+/* LN-planetlife start: one-time gift of the Mars Soul Pickaxe and a rocket ride to Mars; knocked out on a planet = wake up on that planet (Irfan 2026-10-28 15:42) */
+(function(){
+  const M = window.__mars; if(!M) return;
+  // ---- knocked out on Mars or the rocket planet: wake up at that planet's landing spot, not back on Earth
+  const _ko = knockOut;
+  knockOut = function(){
+    const onMars = realm === 0 && P.x >= M.MARS_EDGE, onUp = realm === 0 && !onMars && P.x >= UPPER_EDGE;
+    const r = _ko.apply(this, arguments);
+    if(onMars || onUp){
+      const to = onMars ? M.MARS : UPPER;
+      P.x = to.x + .5; P.z = to.z + 4.5; P.vx = P.vy = P.vz = 0;
+      try{ P.y = Math.max(0, groundTop(Math.floor(P.x), 20, Math.floor(P.z))) + .05; }catch(e){ P.y = 1; }
+      dirty = true;
+      setTimeout(()=>toast(onMars ? 'You woke up at the Mars Base. You are still on Mars.' : 'You woke up at the rocket. You are still on ' + PLANET_NAME + '.'), 300);
+    }
+    return r;
+  };
+  window.__planetlife = {ko:()=>knockOut()};
+  // ---- the one-time gift: the strongest Mars pickaxe, Mars unlocked, and a rocket ride to Mars
+  let pend = false;
+  try{ pend = !localStorage.getItem('digcore_gift_marssoul'); }catch(e){}
+  if(!pend) return;
+  const i = PICKS.findIndex(p=>p.tag === 'marsS');
+  if(i < 0) return;
+  save.owned[i] = true; save.equipped = i; save.marsUnlocked = 1; persist();
+  try{ equipGun(null); updatePickModel(); updatePickInfo(); }catch(e){}
+  const t = setInterval(()=>{
+    if(startEl.style.display === 'flex' || !locked || won) return;
+    clearInterval(t);
+    try{ localStorage.setItem('digcore_gift_marssoul', '1'); }catch(e){}
+    toast('GIFT: You got the ' + PICKS[i].name + ', the strongest pickaxe in the game! Mars is unlocked. Blast off!');
+    if(!(realm === 0 && P.x >= M.MARS_EDGE)) setTimeout(()=>{ try{ M.go(true); }catch(e){ console.warn('LN-planetlife', e); } }, 1500);
+  }, 500);
+})();
+/* LN-planetlife end */
 
 
 
