@@ -18563,11 +18563,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   addEventListener('keydown', e=>{
     if(e.code !== 'KeyF' || !locked || shopOpen || won || act || (e.target && e.target.tagName === 'INPUT')) return;
     if(!near || !alive(near)) return;
-    e.stopImmediatePropagation(); e.preventDefault(); talk(near);
+    e.stopImmediatePropagation(); e.preventDefault(); if(window.__cityTalk) window.__cityTalk(near, talk); else talk(near);
   }, true);
   setInterval(()=>{
     near = (locked && !act && realm === 0) ? nearest() : null;
-    if(near){ const q = near.popRef; hint.textContent = (window.__wealthTag && !near.pet ? window.__wealthTag(q) : '') + (near.suspect ? 'F: arrest the suspect '+q.nm : near.pet ? 'F: pat '+q.nm : q.rel < 0 ? 'F: say sorry to '+q.nm : q.rel >= 3 ? 'F: talk to your friend '+q.nm+' (gifts)' : 'F: talk to '+q.nm); hint.style.display = 'block'; }
+    if(near){ const q = near.popRef; hint.textContent = (window.__cityHint && window.__cityHint(near)) || (window.__wealthTag && !near.pet ? window.__wealthTag(q) : '') + (near.suspect ? 'F: arrest the suspect '+q.nm : near.pet ? 'F: pat '+q.nm : q.rel < 0 ? 'F: say sorry to '+q.nm : q.rel >= 3 ? 'F: talk to your friend '+q.nm+' (gifts)' : 'F: talk to '+q.nm); hint.style.display = 'block'; }
     else hint.style.display = 'none';
   }, 200);
   // ---- main city loop
@@ -22717,6 +22717,724 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__eggs = {EGG, found, openEggs, sendNyan, state:()=>({fT:fTimes.length, stillT, tod, py:P.y, locked, shopOpen, dlgOpen, act:!!act, played:window.__played, realm, won})};
 })();
 /* LN-play end */
+/* LN-citylife start (run): residents live in big city buildings you can walk into (apartments, mansion, villa, town houses, mall, museum, park), workplaces with residents at work (police, restaurant, school, hospital, fire station); enemy bullets stop at walls and every enemy has its own bullet (Irfan 2026-10-28) */
+(function(){
+  // ================= 1. ENEMY BULLETS: they stop when they hit a wall, and every enemy has its own bullet
+  const BZ = new THREE.Vector3(0, 0, 1), _bv = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bs = new THREE.Quaternion();
+  const bM = (c, o)=>new THREE.MeshBasicMaterial(Object.assign({color:c}, o || {}));
+  const GLOW = {transparent:true, opacity:.5, blending:THREE.AdditiveBlending, depthWrite:false};
+  const SPH = new THREE.SphereGeometry(1, 12, 9), CONE = new THREE.ConeGeometry(1, 1, 10), CYL = new THREE.CylinderGeometry(1, 1, 1, 14), TOR = new THREE.TorusGeometry(1, .18, 8, 20), OCT = new THREE.OctahedronGeometry(1), BOX = new THREE.BoxGeometry(1, 1, 1);
+  function part(geo, mat, sx, sy, sz, x, y, z, g){ const m = new THREE.Mesh(geo, mat); m.scale.set(sx, sy, sz); m.position.set(x || 0, y || 0, z || 0); g.add(m); return m; }
+  function trail(g, len, w, mat){ const t = part(CONE, mat, w, len, w, 0, 0, -len/2 - .05, g); t.rotation.x = -Math.PI/2; return t; }   // a glowing cone that points backwards
+  // every style is built pointing along +z (the way it flies). tint() recolours the parts that take the enemy's colour
+  const STYLES = {
+    apple(g){ part(SPH, bM(0xd8261c), .24, .22, .24, 0, 0, 0, g); part(CYL, bM(0x5a3a1a), .025, .14, .025, 0, .25, 0, g); const l = part(SPH, bM(0x3aa83a), .09, .03, .05, .07, .27, 0, g); l.rotation.z = .5; part(SPH, bM(0xff8a80), .06, .05, .04, -.1, .08, .17, g); },
+    bolt(g, T){ part(SPH, bM(0xffffff), .09, .09, .32, 0, 0, 0, g); T.push(part(SPH, bM(0xffffff, GLOW), .18, .18, .5, 0, 0, 0, g).material); T.push(trail(g, 1.3, .16, bM(0xffffff, Object.assign({}, GLOW, {opacity:.35}))).material); },
+    slug(g, T){ const b = part(CYL, bM(0xc8a040), .07, .26, .07, 0, 0, 0, g); b.rotation.x = Math.PI/2; const tp = part(CONE, bM(0xb06030), .07, .14, .07, 0, 0, .2, g); tp.rotation.x = Math.PI/2; T.push(trail(g, 1.6, .05, bM(0xffffff, Object.assign({}, GLOW, {opacity:.6}))).material); },
+    coin(g){ const c = part(CYL, bM(0xffcc30), .2, .05, .2, 0, 0, 0, g); c.rotation.x = Math.PI/2; const i = part(CYL, bM(0xe0a010), .13, .06, .13, 0, 0, 0, g); i.rotation.x = Math.PI/2; part(BOX, bM(0xfff2a0), .04, .12, .07, 0, 0, 0, g); g.userData.spin = 14; },
+    slime(g, T){ T.push(part(SPH, bM(0x7bff4a, {transparent:true, opacity:.85}), .22, .19, .26, 0, 0, 0, g).material); part(SPH, bM(0xe8ffe0), .06, .06, .06, .08, .07, .14, g); for(let i=0;i<3;i++) T.push(part(SPH, bM(0x7bff4a), .06 - i*.015, .06 - i*.015, .06 - i*.015, (i - 1)*.08, -.05, -.28 - i*.14, g).material); g.userData.wob = 1; },
+    fire(g, T){ part(SPH, bM(0xfff2b0), .1, .1, .12, 0, 0, 0, g); T.push(part(SPH, bM(0xff8a1c, GLOW), .2, .2, .26, 0, 0, 0, g).material); T.push(part(SPH, bM(0xff4a10, Object.assign({}, GLOW, {opacity:.35})), .3, .3, .36, 0, 0, -.05, g).material); for(let i=0;i<3;i++) T.push(part(SPH, bM(0xff6a10, Object.assign({}, GLOW, {opacity:.45 - i*.12})), .13 - i*.03, .13 - i*.03, .13 - i*.03, 0, 0, -.35 - i*.25, g).material); g.userData.flick = 1; },
+    spark(g, T){ const core = bM(0xffffff); for(let i=0;i<4;i++){ const b = part(BOX, core, .04, .04, .22, (i % 2 ? .06 : -.06), (i % 2 ? -.03 : .03), .24 - i*.17, g); b.rotation.y = i % 2 ? .7 : -.7; } T.push(part(SPH, bM(0xfff060, GLOW), .2, .2, .42, 0, 0, -.1, g).material); g.userData.spin = 22; },
+    void(g, T){ part(SPH, bM(0x12001e), .17, .17, .17, 0, 0, 0, g); T.push(part(TOR, bM(0xb060ff, GLOW), .27, .27, .27, 0, 0, 0, g).material); T.push(part(SPH, bM(0x6a2aa8, Object.assign({}, GLOW, {opacity:.3})), .3, .3, .3, 0, 0, 0, g).material); g.userData.spin = 6; g.userData.ring = 1; },
+    ice(g, T){ part(OCT, bM(0xe8ffff), .1, .1, .36, 0, 0, 0, g); T.push(part(OCT, bM(0x40f0ff, GLOW), .16, .16, .5, 0, 0, 0, g).material); T.push(trail(g, .9, .08, bM(0xbff8ff, Object.assign({}, GLOW, {opacity:.3}))).material); g.userData.spin = 9; },
+    acid(g, T){ T.push(part(SPH, bM(0x7fd04a), .18, .18, .22, 0, 0, 0, g).material); part(SPH, bM(0xd8ff90), .07, .07, .07, .06, .06, .1, g); for(let i=0;i<4;i++) T.push(part(SPH, bM(0x9fe050, {transparent:true, opacity:.8 - i*.15}), .07 - i*.012, .07 - i*.012, .07 - i*.012, Math.sin(i*2)*.05, -.06 - i*.03, -.22 - i*.13, g).material); g.userData.wob = 1; },
+    plasma(g, T){ part(SPH, bM(0xffffff), .09, .09, .09, 0, 0, 0, g); T.push(part(TOR, bM(0x8aff4a, GLOW), .2, .2, .2, 0, 0, 0, g).material); T.push(part(SPH, bM(0x8aff4a, Object.assign({}, GLOW, {opacity:.35})), .22, .22, .3, 0, 0, 0, g).material); T.push(trail(g, 1, .12, bM(0x8aff4a, Object.assign({}, GLOW, {opacity:.25}))).material); g.userData.spin = 12; g.userData.ring = 1; },
+    milk(g){ part(SPH, bM(0xffffff), .14, .14, .14, 0, 0, .05, g); const t = part(CONE, bM(0xf4f4f4), .14, .34, .14, 0, 0, -.16, g); t.rotation.x = -Math.PI/2; part(SPH, bM(0xffffff, {transparent:true, opacity:.6}), .05, .05, .05, .1, .06, -.3, g); part(SPH, bM(0xffffff, {transparent:true, opacity:.5}), .04, .04, .04, -.08, -.04, -.45, g); },
+    pellet(g, T){ part(SPH, bM(0xffe14a), .1, .1, .14, 0, 0, 0, g); const t = part(CONE, bM(0xd0a020), .1, .16, .1, 0, 0, .14, g); t.rotation.x = Math.PI/2; T.push(trail(g, .7, .05, bM(0xffe14a, Object.assign({}, GLOW, {opacity:.4}))).material); }
+  };
+  const BY_COL = {0x7bff4a:'slime', 0xff4fd8:'coin', 0xffd54a:'coin', 0xff2a2a:'slug', 0xffd030:'slug', 0xff8a1c:'fire', 0xd01010:'fire', 0xffe14a:'pellet', 0xfff060:'spark', 0x3a1a5a:'void', 0x40f0ff:'ice', 0x7fd04a:'acid', 0x8aff4a:'plasma', 0xffffff:'milk'};
+  const TINTED = {bolt:1, slug:1};
+  function styleOf(f, kind){
+    const U = f.m.userData; U.bst = U.bst || {};
+    if(!U.bst[kind]){ const outer = new THREE.Group(), inner = new THREE.Group(), T = []; outer.add(inner); STYLES[kind](inner, T); outer.userData = Object.assign({inner, T}, inner.userData); outer.visible = false; f.m.add(outer); U.bst[kind] = outer; }
+    return U.bst[kind];
+  }
+  const _ff3 = fireFoe;
+  fireFoe = function(x, y, z, dir, speed, dmg, color){
+    let f = null; for(let i=0;i<foes.length;i++) if(!foes[i].on){ f = foes[i]; break; }
+    _ff3.apply(this, arguments);
+    if(!f || !f.on) return;
+    const U = f.m.userData; if(U.bst) for(const k in U.bst) U.bst[k].visible = false;
+    f.age = 0; f.bSty = null; f.bKind = null;
+    if(f.mmL) return;                                                        // the meme boss L-shots keep their own look
+    const kind = color === undefined ? 'apple' : (BY_COL[color] || 'bolt'), s = styleOf(f, kind);
+    if(TINTED[kind] || kind === 'bolt') s.userData.T.forEach(m=>m.color.setHex(color === undefined ? 0xff3b30 : color));
+    s.visible = true; f.bSty = s; f.bKind = kind; f.bCol = color === undefined ? 0xff3b30 : color; f.m.material.visible = false; f.m.rotation.set(0, 0, 0); f.spinA = Math.random()*6;
+    f.lx = x; f.ly = y; f.lz = z;
+  };
+  // the little flash where a bullet smacks into a wall
+  const flashes = [];
+  for(let i=0;i<10;i++){ const m = new THREE.Mesh(SPH, bM(0xffffff, {transparent:true, opacity:.8, blending:THREE.AdditiveBlending, depthWrite:false})); m.visible = false; scene.add(m); flashes.push({m, t:0}); }
+  let flN = 0;
+  function impact(x, y, z, t, col){
+    const q = flashes[flN++ % flashes.length]; q.m.position.set(x, y, z); q.m.material.color.setHex(col); q.t = .25; q.m.visible = true; q.m.scale.setScalar(.15);
+    if(t && BLOCKS[t-1]) try{ burst(x, y, z, t-1, 5); }catch(e){}
+    if(Math.hypot(x - P.x, z - P.z) < 22) blip(110 + Math.random()*60, .06, .06, 'square');
+  }
+  const SOLID_SKIP = new Set();
+  function wallAt(x, y, z){
+    const t = get(Math.floor(x), Math.floor(-y), Math.floor(z)); if(t && !SOLID_SKIP.has(t)) return t;
+    for(let i=0;i<solids.length;i++){ const b = solids[i]; if(x > b[0] && x < b[1] && y > b[2] && y < b[3] && z > b[4] && z < b[5]) return -1; }
+    return 0;
+  }
+  const SCOL = {apple:0xff6040, coin:0xffd040, slime:0x7bff4a, slug:0xffe0a0, fire:0xff8a1c, pellet:0xffe14a, spark:0xfff060, void:0xb060ff, ice:0x9ff8ff, acid:0x9fe050, plasma:0x8aff4a, milk:0xffffff};
+  function bulletTick(dt){
+    const now = performance.now()*.001;
+    for(let i=0;i<foes.length;i++){
+      const f = foes[i];
+      if(!f.on){ continue; }
+      f.age = (f.age || 0) + dt;
+      const p = f.m.position;
+      // did it fly into a block since last frame? (checked in small steps so fast bullets cannot skip through a wall)
+      if(f.lx !== undefined && f.age > .06){
+        const dx = p.x - f.lx, dy = p.y - f.ly, dz = p.z - f.lz, len = Math.sqrt(dx*dx + dy*dy + dz*dz), n = Math.max(1, Math.ceil(len/.25));
+        for(let s=1;s<=n;s++){
+          const k = s/n, x = f.lx + dx*k, y = f.ly + dy*k, z = f.lz + dz*k, t = wallAt(x, y, z);
+          if(t){
+            const bx = f.lx + dx*(s - 1)/n, by = f.ly + dy*(s - 1)/n, bz = f.lz + dz*(s - 1)/n;
+            f.on = false; f.m.visible = false;
+            impact(bx, by, bz, t > 0 ? t : 0, f.bKind ? (TINTED[f.bKind] ? f.bCol : SCOL[f.bKind]) : 0xff3b30);
+            break;
+          }
+        }
+        if(!f.on) continue;
+      }
+      f.lx = p.x; f.ly = p.y; f.lz = p.z;
+      // point it the way it flies, and give it a little life
+      const s = f.bSty; if(!s) continue;
+      _bv.copy(f.v); if(_bv.lengthSq() < 1e-6) continue; _bv.normalize();
+      s.quaternion.setFromUnitVectors(BZ, _bv);
+      const U = s.userData, inner = U.inner;
+      f.spinA += dt*(U.spin || 3);
+      if(U.ring){ inner.children[1].rotation.set(f.spinA*.7, f.spinA, 0); }
+      else inner.rotation.z = f.spinA;
+      if(U.wob){ const w = 1 + Math.sin(now*22 + i)*.12; inner.scale.set(w, 2 - w, 1 + (1 - w)*.5); }
+      if(U.flick){ const w = .85 + Math.random()*.3; inner.children[1].scale.set(.2*w, .2*w, .26*w); inner.children[2].scale.set(.3/w, .3/w, .36); }
+      if(s === f.m.userData.bst.apple) inner.rotation.x = f.spinA*.8;
+    }
+    for(const q of flashes){ if(!q.m.visible) continue; q.t -= dt; const k = 1 - q.t/.25; q.m.scale.setScalar(.15 + k*.7); q.m.material.opacity = .8*(1 - k); if(q.t <= 0) q.m.visible = false; }
+  }
+  const _uf = updateFights;
+  updateFights = function(dt){
+    const r = _uf.apply(this, arguments);
+    try{ bulletTick(dt); }catch(e){ console.warn(e); }
+    return r;
+  };
+  window.__bullets = {STYLES, BY_COL, styleOf, wallAt, impact, SCOL, foes, fire:(...a)=>fireFoe(...a)};
+
+  // ================= 2. CITY LIFE: big buildings you can walk into, homes for the residents, workplaces where they do their jobs, and parks
+  const NA = window.__nations, C = window.__city;
+  if(!NA || !C) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const news = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const hourNow = ()=>((tod*24 + 6) % 24);
+  // ---- building blocks: a few new ones, with old ones to fall back on when there is no room for new blocks
+  const CUST = {
+    brick:{name:'City Brick', h:9, v:6, c1:[176,72,52], c2:[222,206,186], glow:0, pattern:'brick'},
+    plaster:{name:'City Plaster', h:6, v:5, c1:[238,232,216], c2:[214,206,188], glow:0, pattern:'plain'},
+    roof:{name:'Roof Tile', h:7, v:5, c1:[92,94,108], c2:[62,64,76], glow:0, pattern:'stripes'},
+    floor:{name:'Wood Floor', h:5, v:4, c1:[178,126,76], c2:[128,86,48], glow:0, pattern:'planks'},
+    awning:{name:'Shop Awning', h:3, v:4, c1:[222,52,52], c2:[250,250,250], glow:0, pattern:'stripes'}
+  };
+  const NAMED = {
+    brick:['Terracotta','Toast Brick'], plaster:['White Marble','Quartz Block','Sock Wool'], roof:['Obsidian','Carrot Concrete'], floor:['Old Mine Plank','Scaffold Plank'], awning:['Red Flag Cloth'],
+    glass:['Skyscraper Glass','Packed Ice','Duck Marble'], stone:['Mountain Granite','Cave Stone','Rock','Hard Rock'], lamp:['Mine Lantern','Duck Marble'], grass:['Grass'], bars:['Jail Bars','Scaffold Plank'],
+    gold:['Wobbly Gold'], red:['Red Flag Cloth'], blue:['Blue Flag Cloth'], green:['Green Flag Cloth'], duck:['Duck Marble'], toast:['Toast Brick'], white:['Sock Wool'], hat:['Hard Hat Brick'],
+    plank:['Scaffold Plank'], beam:['Mine Support Beam','Scaffold Plank'], gravel:['Gravel','River Gravel','Cave Stone','Rock']
+  };
+  const MID = {};
+  const nameId = n=>{ const j = BLOCKS.findIndex(b=>b.name === n); return j >= 0 ? j + 1 : 0; };
+  function mat(k){
+    if(MID[k]) return MID[k];
+    let id = 0;
+    if(CUST[k]){
+      id = nameId(CUST[k].name);
+      if(!id && (save.customBlocks || []).length < 120 && BLOCKS.length < 250){
+        const spec = Object.assign({city:1}, CUST[k]); save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
+        const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length - 1)); id = BLOCKS.length;
+      }
+    }
+    if(!id) for(const n of NAMED[k] || []){ id = nameId(n); if(id) break; }
+    if(!id && k !== 'plaster' && k !== 'roof') id = mat(k === 'stone' || k === 'gravel' || k === 'beam' ? 'roof' : 'plaster');
+    return (MID[k] = id || 2);
+  }
+  CUST.brick && Object.keys(CUST).forEach(k=>{ if(nameId(CUST[k].name)) mat(k); });      // blocks made in an earlier game come back at once
+
+  // ---- the building plans. Each is drawn with its door on the +z side; it gets turned to face the middle of the city
+  function T(){
+    const cells = new Map(), t = {cells, furn:[], homes:[], work:[], seats:[], lamps:[],
+      put(x, y, z, m){ cells.set(x+','+y+','+z, m); },
+      del(x, y, z){ cells.delete(x+','+y+','+z); },
+      box(x0, x1, y0, y1, z0, z1, m){ for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++) for(let z=z0;z<=z1;z++) t.put(x, y, z, m); },
+      hole(x0, x1, y0, y1, z0, z1){ for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++) for(let z=z0;z<=z1;z++) t.del(x, y, z); },
+      shell(x0, x1, z0, z1, y0, y1, m){ for(let y=y0;y<=y1;y++){ for(let x=x0;x<=x1;x++){ t.put(x, y, z0, m); t.put(x, y, z1, m); } for(let z=z0;z<=z1;z++){ t.put(x0, y, z, m); t.put(x1, y, z, m); } } },
+      slab(x0, x1, z0, z1, y, m){ t.box(x0, x1, y, y, z0, z1, m); },
+      // windows: every other block along each wall (not the corners), on the given rows
+      win(x0, x1, z0, z1, rows, m){ rows.forEach(y=>{ for(let x=x0+1;x<x1;x++) if((x - x0) % 2 === 0){ t.put(x, y, z0, m || 'glass'); t.put(x, y, z1, m || 'glass'); } for(let z=z0+1;z<z1;z++) if((z - z0) % 2 === 0){ t.put(x0, y, z, m || 'glass'); t.put(x1, y, z, m || 'glass'); } }); },
+      // straight stairs: 5 steps up one floor (floors are 5 blocks apart), with a hole cut in the ceiling above
+      stairsX(x0, z, y0, dx){ for(let i=0;i<5;i++) t.put(x0 + i*dx, y0 + i, z, 'floor'); for(let i=1;i<4;i++){ t.del(x0 + i*dx, y0 + 4, z); } },
+      stairsZ(x, z0, y0, dz){ for(let i=0;i<5;i++) t.put(x, y0 + i, z0 + i*dz, 'floor'); for(let i=1;i<4;i++){ t.del(x, y0 + 4, z0 + i*dz); } },
+      f(kind, x, y, z, rot, col){ t.furn.push([kind, x, y, z, rot || 0, col]); }
+    };
+    return t;
+  }
+  const PI = Math.PI, H2 = Math.PI/2;
+  const PLANS = {
+    apartment(){ const t = T(), F = 4;
+      t.shell(-5, 5, -4, 4, 0, F*5 - 1, 'brick');
+      for(let k=1;k<=F;k++) t.slab(-5, 5, -4, 4, k*5 - 1, k === F ? 'roof' : 'floor');
+      for(let k=0;k<F;k++){ t.win(-5, 5, -4, 4, [k*5 + 1, k*5 + 2]); t.put(0, k*5 + 4, 0, 'lamp'); }
+      t.shell(-5, 5, -4, 4, F*5, F*5, 'brick'); t.put(-3, F*5, -2, 'green'); t.put(3, F*5, -2, 'green');
+      for(let k=0;k<F-1;k++) t.stairsX(-4, -3, k*5, 1);
+      t.hole(0, 0, 0, 1, 4, 4); t.box(-1, 1, 2, 2, 5, 5, 'awning');
+      for(let k=0;k<F;k++){ const y = k*5;
+        t.homes.push([0, y, 1, k]);
+        t.f('bed', 3, y, -2, 0); t.f('sofa', -3, y, 1, H2); t.f('table', 3, y, 2, 0); t.f('lamp', 4, y, 3, 0);
+      }
+      return Object.assign(t, {hx:5, hz:4, H:F*5 + 1, R:7, floors:F, signY:3.3, wall:0xb24a34}); },
+    mansion(){ const t = T();
+      t.shell(-7, 7, -6, 6, 0, 9, 'plaster'); t.shell(-7, 7, -6, 6, 0, 0, 'stone'); t.shell(-7, 7, -6, 6, 8, 8, 'gold');
+      [[-7,-6],[7,-6],[-7,6],[7,6]].forEach(([x,z])=>t.box(x, x, 0, 9, z, z, 'stone'));
+      t.slab(-7, 7, -6, 6, 4, 'floor'); t.slab(-7, 7, -6, 6, 9, 'roof');
+      for(let s=1;s<=3;s++) t.shell(-7 + s*2, 7 - s*2, -6 + s*2, 6 - s*2, 9 + s, 9 + s, 'roof');
+      t.box(-1, 1, 12, 12, 0, 0, 'roof');
+      t.win(-7, 7, -6, 6, [1, 2, 6, 7]);
+      t.put(-3, 4, 0, 'lamp'); t.put(3, 4, 0, 'lamp'); t.put(0, 9, 0, 'lamp');
+      t.stairsX(-6, -5, 0, 1);
+      t.hole(-1, 1, 0, 2, 6, 6);
+      [-3, 3].forEach(x=>t.box(x, x, 0, 4, 9, 9, 'white')); t.slab(-4, 4, 7, 9, 5, 'roof'); t.box(-2, 2, 0, 0, 10, 10, 'stone');
+      [-6, 6].forEach(x=>{ t.box(x, x, 0, 0, 9, 11, 'green'); });
+      t.homes.push([0, 0, 1, 0]);
+      t.f('sofa', -4, 0, 2, H2); t.f('sofa', 4, 0, 2, -H2); t.f('table', 0, 0, 1, 0); t.f('rug', 0, 0, 3, 0); t.f('statue', 5, 0, -4, 0); t.f('lamp', 6, 0, 5, 0); t.f('lamp', -6, 0, 5, 0);
+      t.f('bed', -4, 5, -3, 0); t.f('bed', 0, 5, -3, 0); t.f('bed', 4, 5, -3, 0); t.f('shelf', 5, 5, 4, PI); t.f('rug', 0, 5, 2, 0);
+      return Object.assign(t, {hx:7, hz:6, H:13, R:10, floors:2, signY:6.6, wall:0xeee8d8}); },
+    villa(){ const t = T();
+      t.shell(-6, 6, -5, 5, 0, 4, 'plaster'); t.slab(-6, 6, -5, 5, 4, 'floor');
+      for(let x=-5;x<=5;x++) for(let y=1;y<=3;y++) t.put(x, y, 5, 'glass');
+      t.win(-6, 6, -5, 5, [2]);
+      t.shell(-6, 6, -5, 5, 5, 5, 'glass');
+      t.shell(-6, 1, -5, 0, 5, 8, 'plaster'); t.slab(-6, 1, -5, 0, 9, 'roof'); t.win(-6, 1, -5, 0, [6, 7]);
+      t.hole(1, 1, 5, 6, -2, -2); t.put(-2, 4, 2, 'lamp'); t.put(-3, 9, -3, 'lamp');
+      t.stairsX(-5, -4, 0, 1);
+      t.hole(0, 0, 0, 1, 5, 5);
+      for(let x=8;x<=11;x++) for(let z=-3;z<=3;z++){ const rim = x === 8 || x === 11 || z === -3 || z === 3; t.put(x, -1, z, rim ? 'stone' : 'blue'); }
+      t.homes.push([0, 0, 1, 0]);
+      t.f('sofa', -3, 0, 2, H2); t.f('table', 2, 0, 1, 0); t.f('lamp', 5, 0, -4, 0); t.f('shelf', 5, 0, 0, -H2); t.f('bed', -4, 5, -3, 0); t.f('rug', -2, 5, -2, 0); t.f('sofa', 9, 0, 5, PI); t.f('sofa', 10, 0, -5, 0);
+      return Object.assign(t, {hx:6, hz:5, H:10, R:12, floors:1, signY:6.4, wall:0xf2eee2}); },
+    townhouse(){ const t = T(), parts = [[-7, -2, 'brick'], [-2, 2, 'plaster'], [2, 7, 'toast']];
+      parts.forEach(([a, b, m])=>{ t.shell(a, b, -4, 4, 0, 9, m); });
+      t.slab(-7, 7, -4, 4, 4, 'floor'); t.slab(-7, 7, -4, 4, 9, 'roof');
+      parts.forEach(([a, b, m], h)=>{
+        const xc = Math.round((a + b)/2);
+        for(let x=a+1;x<b;x++) if(x !== xc){ t.put(x, 1, 4, 'glass'); t.put(x, 6, 4, 'glass'); t.put(x, 7, 4, 'glass'); t.put(x, 1, -4, 'glass'); t.put(x, 6, -4, 'glass'); }
+        t.put(xc, 6, 4, 'glass'); t.put(xc, 7, 4, 'glass');
+        t.stairsZ(a + 1, -3, 0, 1);
+        t.hole(xc, xc, 0, 1, 4, 4); t.put(xc, 2, 5, 'awning');
+        t.put(b - 1, 10, -2, 'brick'); t.put(b - 1, 11, -2, 'brick');
+        t.put(xc, 4, -1, 'lamp'); t.put(xc, 9, -1, 'lamp');
+        t.homes.push([xc, 0, 2, h]);
+        t.f('sofa', b - 1, 0, -2, -H2); t.f('table', xc, 0, -3, 0); t.f('bed', b - 1, 5, -2, 0); t.f('lamp', xc, 5, 3, 0);
+      });
+      return Object.assign(t, {hx:7, hz:4, H:12, R:7, floors:2, signY:3.3, wall:0xc06a4a}); },
+    mall(){ const t = T();
+      t.shell(-8, 8, -6, 6, 0, 9, 'plaster'); t.slab(-8, 8, -6, 6, 4, 'floor'); t.slab(-8, 8, -6, 6, 9, 'roof');
+      for(let x=-7;x<=7;x++){ [1, 2, 3, 5, 6, 7, 8].forEach(y=>t.put(x, y, 6, 'glass')); }
+      t.win(-8, 8, -6, 6, [2, 7]);
+      t.hole(-1, 1, 0, 2, 6, 6); t.box(-8, 8, 4, 4, 7, 7, 'awning');
+      [[-4, 0], [4, 0]].forEach(([x, z])=>{ t.put(x, 4, z, 'lamp'); t.put(x, 9, z, 'lamp'); });
+      t.put(0, 0, 0, 'stone'); t.put(0, 1, 0, 'duck');
+      t.stairsZ(7, -5, 0, 1);
+      // little shops with counters, shelves and a shopkeeper each
+      [[-5, 0], [4, 0], [-5, 5], [3, 5]].forEach(([x, y])=>{ t.box(x - 1, x + 1, y, y, -3, -3, 'toast'); t.f('shelf', x, y, -5, 0); t.work.push([x, y, -4, 0]); });
+      t.f('crate', -6, 0, 3, 0); t.f('crate', 6, 0, 3, 0); t.f('shelf', -6, 5, 3, H2); t.f('sofa', 0, 5, 3, PI); t.f('lamp', -7, 0, 5, 0);
+      for(let i=0;i<4;i++) t.seats.push([-3 + i*2, 0, 2, PI]);
+      return Object.assign(t, {hx:8, hz:6, H:10, R:9, floors:2, signY:6.2, wall:0xeee8d8}); },
+    museum(){ const t = T();
+      t.shell(-7, 7, -6, 6, 0, 6, 'plaster'); t.slab(-7, 7, -6, 6, 6, 'plaster'); t.box(-7, 7, 6, 6, 7, 8, 'plaster');
+      [-6, -3, 3, 6].forEach(x=>t.box(x, x, 0, 5, 8, 8, 'white'));
+      for(let s=0;s<4;s++) for(let x=-7+2*s;x<=7-2*s;x++) t.put(x, 7 + s, 8, 'white');
+      t.box(-7, 7, 7, 7, -6, 5, 'roof');
+      [3, 4].forEach(y=>{ for(let z=-4;z<=4;z+=2){ t.put(-7, y, z, 'glass'); t.put(7, y, z, 'glass'); } });
+      t.hole(-1, 1, 0, 2, 6, 6); t.box(-2, 2, -1, -1, 9, 9, 'stone');
+      [[-4, -3], [4, -3], [-4, 3], [4, 3]].forEach(([x, z])=>t.put(x, 6, z, 'lamp'));
+      // a dinosaur skeleton in the middle
+      [-1, 1].forEach(x=>t.box(x, x, 0, 2, -1, -1, 'white')); t.box(0, 0, 3, 3, -4, 2, 'white'); t.box(0, 0, 2, 2, -6 + 1, -4, 'white'); t.box(0, 0, 4, 5, 2, 2, 'white'); t.box(0, 0, 5, 5, 3, 4, 'white');
+      [-1, 1].forEach(x=>t.put(x, 2, 0, 'white'));
+      // treasures on stands
+      [[-5, -4, 'gold'], [5, -4, 'duck'], [-5, 3, 'glass'], [5, 3, 'gold']].forEach(([x, z, m])=>{ t.put(x, 0, z, 'stone'); t.put(x, 1, z, m); });
+      t.f('statue', -5, 0, 0, H2); t.f('statue', 5, 0, 0, -H2); t.f('statue', -3, 0, -5, 0); t.f('statue', 3, 0, -5, 0);
+      t.work.push([3, 0, 4, PI]);
+      for(let i=0;i<4;i++) t.seats.push([-3 + i*2, 0, 4, PI]);
+      return Object.assign(t, {hx:7, hz:8, H:11, R:10, floors:1, signY:5.2, wall:0xf2f2f2, signZ:9}); },
+    police(){ const t = T();
+      t.shell(-6, 6, -5, 5, 0, 9, 'plaster'); t.shell(-6, 6, -5, 5, 3, 3, 'blue'); t.shell(-6, 6, -5, 5, 8, 8, 'blue');
+      t.slab(-6, 6, -5, 5, 4, 'floor'); t.slab(-6, 6, -5, 5, 9, 'roof'); t.win(-6, 6, -5, 5, [1, 6]);
+      t.put(-1, 10, 0, 'red'); t.put(1, 10, 0, 'blue'); t.put(0, 10, 0, 'lamp'); t.put(0, 4, 0, 'lamp'); t.put(0, 9, 0, 'lamp');
+      t.hole(0, 0, 0, 1, 5, 5);
+      // the jail cell in the back corner
+      for(let y=0;y<=3;y++){ for(let z=-4;z<=-2;z++) t.put(2, y, z, 'bars'); for(let x=3;x<=5;x++) t.put(x, y, -2, 'bars'); }
+      t.f('bed', 4, 0, -4, 0); t.jail = [4, 0, -3];
+      t.stairsX(-5, -4, 0, 1);
+      t.f('table', -3, 0, 1, 0); t.f('chair', -3, 0, 2, PI); t.f('table', 3, 5, 1, 0); t.f('shelf', 5, 5, -4, 0); t.f('sofa', -3, 5, 3, PI); t.f('lamp', 5, 0, 4, 0);
+      t.work.push([-3, 0, 0, 0], [3, 5, 0, 0]);
+      // a police car parked outside
+      t.box(8, 9, 0, 0, -2, 1, 'white'); t.box(8, 9, 1, 1, -1, 0, 'blue'); t.put(8, 2, -1, 'red'); t.put(9, 2, -1, 'blue'); t.put(8, 0, -2, 'roof'); t.put(9, 0, 1, 'roof');
+      return Object.assign(t, {hx:6, hz:5, H:11, R:9, floors:2, signY:5.6, wall:0xf0f0f0}); },
+    restaurant(){ const t = T();
+      t.shell(-5, 5, -4, 4, 0, 5, 'brick'); t.slab(-5, 5, -4, 4, 5, 'roof');
+      [1, 2].forEach(y=>{ [-4, -3, -2, 2, 3, 4].forEach(x=>t.put(x, y, 4, 'glass')); [-2, 0, 2].forEach(z=>{ t.put(-5, y, z, 'glass'); t.put(5, y, z, 'glass'); }); });
+      t.hole(0, 0, 0, 1, 4, 4); t.box(-5, 5, 3, 3, 5, 5, 'awning');
+      t.box(-4, 1, 0, 0, -2, -2, 'toast'); t.put(-4, 0, -3, 'stone'); t.put(-3, 0, -3, 'hat'); t.put(4, 6, -3, 'brick'); t.put(4, 7, -3, 'brick');
+      t.put(-2, 5, 0, 'lamp'); t.put(2, 5, 1, 'lamp');
+      t.f('table', -3, 0, 2, 0); t.f('chair', -4, 0, 2, H2); t.f('table', 3, 0, 2, 0); t.f('chair', 4, 0, 2, -H2); t.f('table', 3, 0, -1, 0); t.f('chair', 4, 0, -1, -H2);
+      t.work.push([-1, 0, -3, 0], [2, 0, 0, 0]);
+      t.seats.push([-2, 0, 2, -H2], [2, 0, 2, H2], [2, 0, -1, H2]);
+      return Object.assign(t, {hx:5, hz:4, H:8, R:7, floors:1, signY:4.4, wall:0xb24a34}); },
+    school(){ const t = T();
+      t.shell(-7, 7, -5, 5, 0, 9, 'brick'); t.slab(-7, 7, -5, 5, 4, 'floor'); t.slab(-7, 7, -5, 5, 9, 'roof');
+      t.win(-7, 7, -5, 5, [1, 2, 6, 7]);
+      t.hole(0, 0, 0, 1, 5, 5); t.put(0, 7, 5, 'duck');
+      t.box(-2, 2, 1, 2, -5, -5, 'roof');
+      t.stairsX(-6, -4, 0, 1);
+      t.put(-3, 4, 1, 'lamp'); t.put(3, 4, 1, 'lamp'); t.put(0, 9, 0, 'lamp');
+      [-4, -2, 2, 4].forEach(x=>[0, 2].forEach(z=>{ t.put(x, 0, z, 'plank'); t.seats.push([x, 0, z + 1, PI]); }));
+      t.work.push([0, 0, -3, 0]);
+      t.f('shelf', -5, 5, 3, H2); t.f('shelf', 5, 5, 3, -H2); t.f('shelf', 5, 5, -3, -H2); t.f('table', 0, 5, 1, 0); t.f('rug', 0, 5, -2, 0);
+      t.box(-6, -6, 10, 13, -4, -4, 'plank'); t.box(-5, -4, 12, 13, -4, -4, 'red');
+      return Object.assign(t, {hx:7, hz:5, H:14, R:9, floors:2, signY:5.6, wall:0xb24a34}); },
+    hospital(){ const t = T();
+      t.shell(-6, 6, -5, 5, 0, 9, 'plaster'); t.slab(-6, 6, -5, 5, 4, 'floor'); t.slab(-6, 6, -5, 5, 9, 'roof');
+      t.win(-6, 6, -5, 5, [1, 2, 6, 7]);
+      t.box(0, 0, 6, 8, 5, 5, 'red'); t.put(-1, 7, 5, 'red'); t.put(1, 7, 5, 'red');
+      t.box(-1, 1, 10, 10, 0, 0, 'red'); t.box(0, 0, 10, 10, -1, 1, 'red');
+      t.hole(-1, 0, 0, 1, 5, 5);
+      t.stairsX(1, -4, 0, 1);
+      t.put(-3, 4, 0, 'lamp'); t.put(3, 4, 1, 'lamp'); t.put(0, 9, 0, 'lamp');
+      t.f('bed', -4, 0, -3, H2); t.f('bed', -4, 0, 0, H2); t.f('table', 3, 0, 2, 0); t.f('bed', -4, 5, -3, H2); t.f('bed', -4, 5, 0, H2); t.f('bed', 3, 5, 2, 0); t.f('shelf', 5, 5, -2, -H2);
+      t.box(2, 4, 0, 0, 3, 3, 'white');
+      t.work.push([3, 0, 4, PI], [-2, 0, -1, -H2]);
+      t.seats.push([-4, 0, -3, 0], [-4, 0, 0, 0]);
+      return Object.assign(t, {hx:6, hz:5, H:11, R:8, floors:2, signY:3.4, wall:0xf4f4f4}); },
+    fire(){ const t = T();
+      t.shell(-5, 5, -5, 5, 0, 6, 'brick'); t.slab(-5, 5, -5, 5, 6, 'roof'); t.shell(-5, 5, -5, 5, 5, 5, 'red');
+      t.hole(-2, 2, 0, 3, 5, 5); t.win(-5, 5, -5, 5, [2]);
+      t.box(-1, 1, 0, 1, -3, 1, 'red'); t.box(-1, 1, 1, 1, 1, 1, 'glass'); t.box(0, 0, 2, 2, -3, 0, 'plank'); t.put(-1, 2, 1, 'blue'); t.put(1, 2, 1, 'red');
+      [[-1, -3], [1, -3], [-1, 1], [1, 1]].forEach(([x, z])=>t.put(x, 0, z, 'roof'));
+      t.box(4, 4, 0, 5, -4, -4, 'gold'); t.put(-3, 6, 0, 'lamp'); t.put(3, 6, 0, 'lamp'); t.put(0, 7, 0, 'red');
+      t.f('shelf', -4, 0, -4, 0); t.f('sofa', -4, 0, 2, H2);
+      t.work.push([-3, 0, -2, 0], [3, 0, 2, 0]);
+      return Object.assign(t, {hx:5, hz:5, H:8, R:7, floors:1, signY:5.6, wall:0xb24a34, garage:1}); },
+    park(){ const t = T();
+      for(let x=-8;x<=8;x++) for(let z=-7;z<=7;z++){ const edge = Math.abs(x) === 8 || Math.abs(z) === 7; if(edge && x !== 0 && x !== 1 && x !== -1 && z !== 0 && z !== 1 && z !== -1) t.put(x, 0, z, 'plank'); }
+      for(let x=-8;x<=8;x++) t.put(x, -1, 0, 'gravel'); for(let z=-7;z<=7;z++) t.put(0, -1, z, 'gravel');
+      for(let x=-2;x<=2;x++) for(let z=-2;z<=2;z++){ const ring = Math.max(Math.abs(x), Math.abs(z)) === 2; t.put(x, 0, z, ring ? 'stone' : 'blue'); t.del(x, -1, z); }
+      t.box(0, 0, 0, 1, 0, 0, 'stone'); t.put(0, 2, 0, 'duck');
+      [[-5, -4], [5, -4], [-5, 4], [5, 4]].forEach(([x, z])=>{ t.box(x, x, 0, 3, z, z, 'beam'); t.box(x - 1, x + 1, 3, 4, z - 1, z + 1, 'green'); t.put(x, 5, z, 'green'); t.put(x, 3, z, 'beam'); });
+      [[-7, -5], [-7, -3], [7, 3], [7, 5], [-3, 6], [3, -6]].forEach(([x, z], i)=>t.put(x, 0, z, i % 2 ? 'duck' : 'red'));
+      t.f('sofa', -3, 0, 2, PI); t.f('sofa', 3, 0, 2, PI); t.f('sofa', -3, 0, -2, 0); t.f('sofa', 3, 0, -2, 0); t.f('lamp', 2, 0, 5, 0); t.f('lamp', -2, 0, -5, 0);
+      t.box(-3, -3, 0, 3, 8, 8, 'beam'); t.box(3, 3, 0, 3, 8, 8, 'beam');
+      t.work.push([2, 0, 3, 0]);
+      t.seats.push([-3, 0, 3, PI], [3, 0, 3, PI], [-3, 0, -3, 0], [3, 0, -3, 0], [-6, 0, 2, 0], [6, 0, -2, 0]);
+      return Object.assign(t, {hx:8, hz:7, H:6, R:9, floors:1, signY:3, wall:0x4aa040, open:1, signZ:8}); }
+  };
+  const KINDS = {
+    apartment:{sign:'APARTMENTS', res:4, say:'a block of apartments'},
+    mansion:{sign:'MANSION', res:1, rich:1, say:'a giant mansion'},
+    villa:{sign:'VILLA', res:1, say:'a villa with a swimming pool'},
+    townhouse:{sign:'TOWN HOUSES', res:3, say:'a row of town houses'},
+    mall:{sign:'CITY MALL', hire:['Shopkeeper', 'Cashier', 'Cashier', 'Shopkeeper'], jobs:['Shopkeeper', 'Cashier', 'Mail Carrier'], shop:'mall', say:'a shopping mall'},
+    museum:{sign:'MUSEUM', hire:['Museum Guide'], jobs:['Museum Guide', 'Painter'], say:'a museum with a dinosaur inside'},
+    police:{sign:'POLICE', hire:['Police Officer', 'Police Officer'], jobs:['Police Officer', 'Guard'], say:'a police station'},
+    restaurant:{sign:'RESTAURANT', hire:['Chef', 'Waiter'], jobs:['Chef', 'Waiter', 'Baker'], shop:'food', say:'a restaurant'},
+    school:{sign:'SCHOOL', hire:['Teacher'], jobs:['Teacher'], say:'a school'},
+    hospital:{sign:'HOSPITAL', hire:['Doctor', 'Nurse'], jobs:['Doctor', 'Nurse'], shop:'heal', say:'a hospital'},
+    fire:{sign:'FIRE STATION', hire:['Firefighter', 'Firefighter'], jobs:['Firefighter'], say:'a fire station'},
+    park:{sign:'PARK', hire:['Park Ranger'], jobs:['Park Ranger', 'Gardener'], say:'a park with a duck fountain'}
+  };
+  const ORDER = ['park', 'apartment', 'restaurant', 'police', 'townhouse', 'school', 'mall', 'villa', 'hospital', 'museum', 'mansion', 'fire', 'apartment'];
+  // new jobs (their hats and what they say)
+  Object.assign(C.JOBS, {
+    'Police Officer':{col:0x1a3a8a, say:['Welcome to the police station. Please wipe your feet.','Our jail cell has a very comfy bed. Not that you will need it.','I have caught 12 sock thieves this week.','If you see a crime, catch the suspect with F!']},
+    Waiter:{col:0x202020, say:['Table for one? Right this way.','The special today is soup. It is always soup.','Mind the floor, I just mopped it with a sock.']},
+    Nurse:{col:0xf4f4f4, cross:1, say:['Sit down, the doctor will see you soon.','Have you had your vegetables today?','A plaster makes everything better.']},
+    Cashier:{col:0x2e8b57, say:['Beep! Beep! That will be one carrot, please.','Do you want a bag? It is a sock.','Have a nice day at the mall!']},
+    'Museum Guide':{col:0x7a4a9a, say:['This dinosaur is 65 million years old. Please do not climb on it.','That gold block was found by a miner just like you.','Please do not lick the statues.','The museum is free for everyone. Even Bobs. Well, maybe not Bobs.']},
+    'Park Ranger':{col:0x4a7a2a, say:['Please keep the park tidy!','The ducks in the fountain are made of marble. Do not feed them.','Trees are our friends. Leafy friends.']},
+    Butler:{col:0x111111, say:['Welcome to the mansion. Shall I take your pickaxe?','Dinner is served at eight. It is cake.','The master of the house is upstairs, having a nap.']}
+  });
+  const JOB_BUILD = {};
+  Object.keys(KINDS).forEach(k=>(KINDS[k].jobs || []).forEach(j=>{ JOB_BUILD[j] = k; }));
+  const SUR = ['Fluffington','Snoozeworth','Puddleby','Crumbleton','Wigglesworth','Picklestone','Bumbleby','Toastington','Muffinson','Noodleby','Dimpleton','Waffleby','Jellyworth','Pebbleton','Sprinkleton','Gigglesby'];
+  const KIDN = ['Poppy','Bubbles','Scoop','Biscuit','Fizz','Sunny','Wiggle','Pudding','Taffy','Nutmeg','Ziggy','Coco','Muffin','Pip'];
+  const ADULT = ['Baker','Farmer','Builder','Doctor','Teacher','Mail Carrier','Firefighter','Guard','Shopkeeper','Gardener','Chef','Painter','Inventor'];
+  let uid = 1;
+  const newId = ()=>'cl'+Date.now().toString(36)+(uid++);
+
+  // ---- where things are: a building's local spot -> the world
+  function rotXZ(r, x, z){ return r === 0 ? [x, z] : r === 1 ? [z, -x] : r === 2 ? [-x, -z] : [-z, x]; }
+  function W(b, x, y, z){ const [wx, wz] = rotXZ(b.r, x, z); return {x:b.x + wx, y:b.G + y, z:b.z + wz}; }
+  const planCache = {};
+  function planOf(b){ return planCache[b.kind] || (planCache[b.kind] = PLANS[b.kind]()); }
+  function listOf(b){
+    const p = planOf(b); if(p.list) return p.list;
+    const L = []; p.cells.forEach((m, k)=>{ const a = k.split(',').map(Number); L.push([a[0], a[1], a[2], m]); });
+    L.sort((a, c)=>a[1] - c[1] || a[0] - c[0] || a[2] - c[2]); p.list = L; return L;
+  }
+  function inside(b, x, z, pad){ const p = planOf(b), [lx, lz] = rotXZ((4 - b.r) % 4, x - b.x, z - b.z); return Math.abs(lx) <= p.hx + (pad || 0) && Math.abs(lz) <= p.hz + (pad || 0); }
+  function insideWalls(b, x, z){ const p = planOf(b), [lx, lz] = rotXZ((4 - b.r) % 4, Math.floor(x) - b.x, Math.floor(z) - b.z); return Math.abs(lx) < p.hx && Math.abs(lz) < p.hz; }
+  function door(b){ const p = planOf(b); return W(b, 0, 0, p.hz + 2); }
+
+  // ---- the saved list of city buildings
+  const CL = save.cityLife = save.cityLife || {b:[]};
+  const cities = ()=>(save.nations || []).filter(n=>n.pop);
+  const cityOf = b=>(save.nations || []).find(n=>n.id === b.nid);
+  const byCity = n=>CL.b.filter(b=>b.nid === n.id);
+  // ---- finding a place for a building: flat enough, dry, and not in the way of anything else
+  function lotOk(n, kind, x, z){
+    const p = PLANS[kind] ? planOf({kind}) : null; if(!p) return null;
+    const R = p.R;
+    if(realm !== 0 || x >= UPPER_EDGE - 450) return null;
+    if(Math.hypot(x - SHOP.x, z - SHOP.z) < 26 + R || Math.hypot(x - 12, z - 6) < 16 + R || Math.hypot(x, z) < 30) return null;
+    if(Math.hypot(x - P.x, z - P.z) < R + 3) return null;
+    for(const b of save.nbuilds || []) if(Math.hypot(b.x - x, b.z - z) < (b.r || 5) + R + 3) return null;
+    for(const b of CL.b) if(Math.hypot(b.x - x, b.z - z) < planOf(b).R + R + 2) return null;
+    for(const o of save.nations || []){ if(Math.hypot(o.x - x, o.z - z) < R + 8) return null; if(o.fx != null && Math.hypot(o.fx - x, o.fz - z) < R + 3) return null; }
+    const E = window.__edge;
+    const hs = {}; let best = 0, bh = 0;
+    for(let i=-R;i<=R;i+=1) for(let j=-R;j<=R;j+=1){
+      const c = BIOME.col(x + i, z + j); if(!c || c.liq) return null;
+      if((i % 3 === 0 && j % 3 === 0) && E && E.megaAt && E.megaAt(x + i, 2, z + j)) return null;
+      const h = BIOME.surfH(x + i, z + j); hs[h] = (hs[h] || 0) + 1; if(hs[h] > best){ best = hs[h]; bh = h; }
+    }
+    for(const h in hs) if(Math.abs(h - bh) > 3) return null;
+    for(const t of trees) if(!t.dead && Math.abs(t.bx - x) <= R && Math.abs(t.bz - z) <= R) return null;
+    return bh;
+  }
+  function findLot(n, kind){
+    for(let t=0;t<80;t++){
+      const ring = t < 25 ? 34 + Math.random()*10 : t < 50 ? 44 + Math.random()*16 : 60 + Math.random()*16, ang = Math.random()*6.283;
+      const x = Math.floor(n.x + Math.cos(ang)*ring), z = Math.floor(n.z + Math.sin(ang)*ring), G = lotOk(n, kind, x, z);
+      if(G === null) continue;
+      const vx = n.x - x, vz = n.z - z, r = Math.abs(vx) > Math.abs(vz) ? (vx > 0 ? 1 : 3) : (vz > 0 ? 0 : 2);
+      return {x, z, G, r};
+    }
+    return null;
+  }
+  function startBuilding(n, kind){
+    if(edits.size > 100000) return null;
+    const lot = findLot(n, kind); if(!lot) return null;
+    const b = {id:'cb'+Date.now().toString(36)+(uid++), nid:n.id, kind, x:lot.x, z:lot.z, G:lot.G, r:lot.r, i:0, done:0, fi:0, t:Date.now()};
+    CL.b.push(b);
+    // level the ground: fill dips with stone, shave off bumps, clear away bushes and flowers
+    const p = planOf(b), R = p.R, st = mat('stone'); let deco = false;
+    for(let i=-R;i<=R;i++) for(let j=-R;j<=R;j++){
+      const x = b.x + i, z = b.z + j, h = BIOME.surfH(x, z);
+      for(let y=h+1;y<=b.G;y++) setBlock(x, -y, z, st);
+      for(let y=b.G+1;y<=h;y++) setBlock(x, -y, z, 0);
+      if(BIOME.decoAt(x, z)){ BIOME.gone.add(x+','+z); deco = true; }
+    }
+    if(deco){ save.decoGone = [...BIOME.gone]; if(save.decoGone.length > 4000) save.decoGone = save.decoGone.slice(-4000); try{ BIOME.decoRefresh(); }catch(e){} }
+    mats(b);
+    if(Math.hypot(n.x - P.x, n.z - P.z) < 120) toast(n.name+' is building '+KINDS[kind].say+'!');
+    news('NEWS: '+n.name+' is building '+KINDS[kind].say+'. The '+n.animal+'s are very excited.', true);
+    persist(); return b;
+  }
+  function mats(b){ const used = new Set(); listOf(b).forEach(q=>used.add(q[3])); used.forEach(mat); }
+  // ---- building, many blocks at a time while you are nearby
+  function placeTick(){
+    for(const b of CL.b){
+      if(b.done) continue;
+      if(Math.hypot(b.x - P.x, b.z - P.z) > 200 || realm !== 0) continue;
+      const L = listOf(b);
+      for(let k=0;k<14 && b.i < L.length;k++){
+        const q = L[b.i], w = W(b, q[0], q[1], q[2]), d = -(w.y + 1);
+        if(Math.abs(w.x + .5 - P.x) < 1 && Math.abs(w.z + .5 - P.z) < 1 && w.y + 1 > P.y - .2 && w.y < P.y + 2){ break; }   // do not build a wall inside you
+        setBlock(w.x, d, w.z, mat(q[3])); b.i++;
+      }
+      if(Math.random() < .3 && Math.hypot(b.x - P.x, b.z - P.z) < 40) blip(300 + Math.random()*200, .03, .04, 'square');
+      if(b.i >= L.length) finish(b);
+    }
+  }
+  function finish(b){
+    b.done = 1; const n = cityOf(b), K = KINDS[b.kind];
+    show(b);
+    if(n){
+      if(!n.pop) try{ C.initCity(n); }catch(e){}
+      if(K.res && n.pop) moveIn(n, b);
+      if(K.hire && n.pop) hire(n, b);
+      if(Math.hypot(b.x - P.x, b.z - P.z) < 120) toast(n.name+' finished '+K.say+'! You can walk inside.');
+      news('NEWS: '+n.name+' opened '+K.say+'. Everyone queued up to look inside.');
+    }
+    persist(); saveEdits && (typeof saveEdits === 'function') && saveEdits();
+  }
+  // ---- residents move in
+  function fam(n, b, unit, rich){
+    const s = pick(SUR), out = [], [hx, , hz] = planOf(b).homes[unit] || [0, 0, 0], w = W(b, hx, 0, hz);
+    const base = {fam:s, rel:0, hx:w.x + .5, hz:w.z + .5, home:b.id, unit};
+    const job = ()=>{ const have = byCity(n).filter(o=>o.done && KINDS[o.kind].jobs); return have.length && Math.random() < .6 ? pick(KINDS[pick(have).kind].jobs) : pick(ADULT); };
+    out.push(Object.assign({id:newId(), nm:'Mum '+s, role:'Mum', job:job()}, base));
+    out.push(Object.assign({id:newId(), nm:'Dad '+s, role:'Dad', job:job()}, base));
+    if(rich || Math.random() < .3){ const gm = Math.random() < .5; out.push(Object.assign({id:newId(), nm:(gm ? 'Grandma ' : 'Grandpa ')+s, role:gm ? 'Grandma' : 'Grandpa', job:'Storyteller', elder:1}, base)); }
+    const kids = rich ? 3 : Math.floor(Math.random()*3);
+    for(let i=0;i<kids;i++) out.push(Object.assign({id:newId(), nm:pick(KIDN)+' '+s, role:'Kid', job:'Student', kid:1}, base));
+    if(rich){ out.push(Object.assign({id:newId(), nm:'Jeeves '+s, role:'Helper', job:'Butler'}, base)); out.forEach(q=>{ q.rich = 1; }); }
+    return out;
+  }
+  function moveIn(n, b){
+    const K = KINDS[b.kind]; let moved = null;
+    for(let u=0;u<K.res;u++){
+      // the first flat of an apartment block goes to a family that lived in a little house
+      if(u === 0 && b.kind === 'apartment' && !moved){
+        const old = n.pop.find(q=>q.role === 'Mum' && !q.home && q.fam);
+        if(old){ const w = W(b, ...planOf(b).homes[0].slice(0, 3)); n.pop.filter(q=>q.fam === old.fam && !q.home).forEach(q=>{ q.hx = w.x + .5; q.hz = w.z + .5; q.home = b.id; q.unit = 0; q.hx0 = q.hx; q.hz0 = q.hz; }); moved = old.fam; continue; }
+      }
+      const f = fam(n, b, u, K.rich); f.forEach(q=>{ q.hx0 = q.hx; q.hz0 = q.hz; }); n.pop.push(...f);
+    }
+    if(moved) news('NEWS: The '+moved+' family moved out of their little house and into the new apartments in '+n.name+'. "We have a lift!" they said. They do not have a lift.');
+    if(Math.hypot(b.x - P.x, b.z - P.z) < 120) toast('New residents are moving into the '+KINDS[b.kind].sign.toLowerCase()+' in '+n.name+'!');
+  }
+  function hire(n, b){
+    const K = KINDS[b.kind], homeB = byCity(n).filter(o=>o.done && KINDS[o.kind].res);
+    // residents who already do this kind of job start working here
+    n.pop.forEach(q=>{ if(!q.kid && !q.work && K.jobs.indexOf(q.job) >= 0) q.work = b.id; });
+    K.hire.forEach(job=>{
+      if(n.pop.filter(q=>q.work === b.id).length >= planOf(b).work.length + 1 && planOf(b).work.length) return;
+      const s = pick(SUR), hb = homeB.length ? pick(homeB) : null, hw = hb ? W(hb, ...planOf(hb).homes[0].slice(0, 3)) : {x:n.x, z:n.z};
+      const q = {id:newId(), nm:job.split(' ').pop()+' '+s, fam:s, role:'Worker', job, rel:0, hx:hw.x + .5, hz:hw.z + .5, work:b.id};
+      if(hb){ q.home = hb.id; q.unit = 0; } q.hx0 = q.hx; q.hz0 = q.hz; n.pop.push(q);
+    });
+  }
+  // ---- signs over the doors, and a simple far-away look (blocks are only drawn close to you)
+  const VIS = {};
+  function signTex(text){
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; const x = cv.getContext('2d');
+    x.fillStyle = '#1d2433'; x.fillRect(0, 0, 512, 96); x.strokeStyle = '#ffd860'; x.lineWidth = 6; x.strokeRect(4, 4, 504, 88);
+    x.fillStyle = '#ffffff'; x.textAlign = 'center'; x.textBaseline = 'middle'; let fs = 56; x.font = 'bold '+fs+'px system-ui,sans-serif';
+    while(x.measureText(text).width > 470 && fs > 20){ fs -= 2; x.font = 'bold '+fs+'px system-ui,sans-serif'; }
+    x.fillText(text, 256, 50); const t = new THREE.CanvasTexture(cv); return t;
+  }
+  const farMats = {};
+  function farMat(c){ return farMats[c] || (farMats[c] = new THREE.MeshLambertMaterial({color:c})); }
+  const bandMat = new THREE.MeshLambertMaterial({color:0x6a8ab0, emissive:0x223344}), roofMat = new THREE.MeshLambertMaterial({color:0x5c5e6c});
+  function show(b){
+    if(VIS[b.id]) return;
+    const p = planOf(b), K = KINDS[b.kind], n = cityOf(b), g = new THREE.Group();
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.2, .98), new THREE.MeshBasicMaterial({map:signTex(K.sign), side:THREE.DoubleSide}));
+    sign.position.set(0, p.signY + .5, (p.signZ || p.hz) + .56); g.add(sign);
+    const far = new THREE.Group();
+    if(!p.open){
+      const w = p.hx*2 + .9, d = p.hz*2 + .9, h = p.H - 1.1;
+      const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), farMat(p.wall)); body.position.set(0, h/2, 0); far.add(body);
+      for(let k=0;k<p.floors;k++){ const band = new THREE.Mesh(new THREE.BoxGeometry(w + .04, 1.6, d + .04), bandMat); band.position.set(0, k*5 + 2, 0); far.add(band); }
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(w + .1, .4, d + .1), roofMat); cap.position.set(0, h, 0); far.add(cap);
+    }
+    g.add(far); g.position.set(b.x + .5, b.G, b.z + .5); g.rotation.y = b.r*H2; scene.add(g);
+    VIS[b.id] = {g, far, sign};
+  }
+  function visTick(){
+    for(const b of CL.b){
+      const v = VIS[b.id]; if(!v) continue;
+      const p = planOf(b), on = realm === 0;
+      v.g.visible = on;
+      const inWin = b.x - p.R >= wox && b.x + p.R < wox + WIN && b.z - p.R >= woz && b.z + p.R < woz + WIN;
+      v.far.visible = !inWin;
+    }
+  }
+  // ---- furniture: the residents bring it in, a piece at a time
+  const FCOL = {bed:0xd04a4a, table:0x9a6a3a, chair:0x8a5a2a, lamp:0xffe080, rug:0x4a8ad0, sofa:0x5a7ad0, shelf:0x8a5a2a, statue:0xe8e0c8, crate:0xa07a40};
+  const LABEL = {apartment:'Apartments', mansion:'Mansion', villa:'Villa', townhouse:'Town Houses', mall:'Mall', museum:'Museum', police:'Police Station', restaurant:'Restaurant', school:'School', hospital:'Hospital', fire:'Fire Station', park:'Park'};
+  const FNAME = {apartment:'Apartment', mansion:'Mansion', villa:'Villa', townhouse:'Town House', mall:'Mall', museum:'Museum', police:'Police', restaurant:'Restaurant', school:'School', hospital:'Hospital', fire:'Fire Station', park:'Park'};
+  function furnTick(){
+    for(const b of CL.b){
+      if(!b.done || Math.hypot(b.x - P.x, b.z - P.z) > 70) continue;
+      const F = planOf(b).furn; if(b.fi >= F.length) continue;
+      const [k, x, y, z, rot, col] = F[b.fi++], w = W(b, x, y, z), d = -(w.y + 1);
+      if(get(w.x, d, w.z)) continue;
+      const name = FNAME[b.kind]+' '+k.charAt(0).toUpperCase() + k.slice(1);
+      save.furnItems = save.furnItems || {}; save.furnItems[name] = {kind:k, col:col || FCOL[k]};
+      save.furn = save.furn || []; save.furnId = (save.furnId || 0) + 1;
+      const dd = {id:save.furnId, name, kind:k, col:col || FCOL[k], shape:null, back:{t:'i', key:name}, x:w.x + .5, y:w.y, z:w.z + .5, rot:rot + b.r*H2, city:b.id};
+      save.furn.push(dd); addFurnitureObject(dd);
+      if(b.fi >= F.length) persist();
+      return;                                                    // one piece per tick
+    }
+  }
+  // ---- daily life: home at night, at work (or school, or the park) in the day
+  const byId = {};
+  const bOf = id=>{ let b = byId[id]; if(b && CL.b.indexOf(b) >= 0) return b; b = CL.b.find(o=>o.id === id); if(b) byId[id] = b; return b; };
+  function spotFor(a){
+    const q = a.popRef, h = hourNow(), day = h >= 8 && h < 18;
+    if(q.rel < 0 || a.bandit || a.suspect || a.pet || q.arrive || a.police) return null;
+    if(day && (q.job === 'Lumberjack' || q.job === 'Miner')) return null;             // they are out chopping trees and digging
+    if(q.work){ const wb = bOf(q.work); if(wb && q.role !== 'Worker' && (KINDS[wb.kind].jobs || []).indexOf(q.job) < 0) q.work = null; }
+    if(q.work && day){ const b = bOf(q.work); if(b && b.done){ const p = planOf(b), list = p.work.length ? p.work : p.seats; if(list.length){ const i = Math.abs(hashS(q.id)) % list.length; return {b, s:list[i], job:1}; } } }
+    if(q.kid && day){
+      const n = a.cityN, sch = n && byCity(n).find(o=>o.done && o.kind === 'school'), park = n && byCity(n).find(o=>o.done && o.kind === 'park');
+      if(sch && h < 15){ const S = planOf(sch).seats; return {b:sch, s:S[Math.abs(hashS(q.id)) % S.length], school:1}; }
+      if(park){ const S = planOf(park).seats; return {b:park, s:S[Math.abs(hashS(q.id)) % S.length], play:1}; }
+    }
+    if(!q.work && !q.kid && day && (hashS(q.id) & 3) === 0){                   // some grown-ups go shopping, to the museum or the park
+      const n = a.cityN, fun = n && byCity(n).filter(o=>o.done && (o.kind === 'park' || o.kind === 'mall' || o.kind === 'museum' || o.kind === 'restaurant'));
+      if(fun && fun.length){ const b = fun[Math.abs(hashS(q.id + Math.floor(h/3))) % fun.length], S = planOf(b).seats; if(S.length) return {b, s:S[Math.abs(hashS(q.id)) % S.length], visit:1}; }
+    }
+    if(q.home){ const b = bOf(q.home); if(b && b.done){ const H = planOf(b).homes[q.unit || 0] || planOf(b).homes[0]; return {b, s:[H[0] + ((Math.abs(hashS(q.id)) % 3) - 1), H[1], H[2], 0], home:1}; } }
+    return null;
+  }
+  function hashS(s){ let h = 0; for(let i=0;i<s.length;i++) h = (h*31 + s.charCodeAt(i)) | 0; return h; }
+  function placeAt(a, w){ a.pos.set(w.x + .5, w.y, w.z + .5); a.vy = 0; a.g.position.copy(a.pos); }
+  function lifeTick(){
+    const L = C.live;
+    for(const id in L){
+      const a = L[id]; if(!a || animals.indexOf(a) < 0) continue;
+      const q = a.popRef; if(!q) continue;
+      if(q.hx0 == null){ q.hx0 = q.hx; q.hz0 = q.hz; }
+      const sp = spotFor(a);
+      if(!sp){ a.clSpot = null; if(q.hx !== q.hx0){ q.hx = q.hx0; q.hz = q.hz0; } continue; }
+      const w = W(sp.b, sp.s[0], sp.s[1], sp.s[2]); q.hx = w.x + .5; q.hz = w.z + .5;
+      const key = sp.b.id+':'+sp.s.join(',');
+      const dist = Math.hypot(a.pos.x - (w.x + .5), a.pos.z - (w.z + .5)), dy = Math.abs(a.pos.y - w.y), pd = Math.hypot(P.x - a.pos.x, P.z - a.pos.z);
+      // new here (just spawned) or far from you: just be there
+      if(a.clKey !== key){
+        a.clKey = key; a.clSpot = {w, sp, t:0};
+        if(!a.clSeen || pd > 30 || P.y < -4){ placeAt(a, w); }
+      }
+      a.clSeen = 1;
+      if(dist > 2.5 || dy > 1.5){
+        const cur = CL.b.find(o=>o !== sp.b && o.done && Math.abs(a.pos.y - o.G) < planOf(o).H && insideWalls(o, a.pos.x, a.pos.z));
+        if(cur){ placeAt(a, door(cur)); a.clGoT = 0; }
+        a.clGoT = (a.clGoT || 0) + .5; if(a.clGoT > 25){ placeAt(a, w); a.clGoT = 0; continue; }
+        const dr = door(sp.b);
+        if(sp.b.kind === 'park' || pd > 30){ if(pd > 30 || dist > 30) placeAt(a, w); }
+        else if(Math.hypot(a.pos.x - (dr.x + .5), a.pos.z - (dr.z + .5)) < 2.2 || insideWalls(sp.b, a.pos.x, a.pos.z)) placeAt(a, w);   // walks in at the door (and takes the stairs)
+        else { a.clGo = {x:dr.x + .5, z:dr.z + .5}; }
+      } else { a.clGo = null; a.clGoT = 0; }
+      a.clDuty = (sp.job || sp.school) && dist < 1.6 && dy < 1.5 ? sp : null;
+    }
+  }
+  // every frame, after the other city code: workers stay at their posts, pupils sit at their desks
+  function steerTick(){
+    const L = C.live;
+    for(const id in L){
+      const a = L[id]; if(!a || !a.clSpot || animals.indexOf(a) < 0 || a.fleeT > 0) continue;
+      const q = a.popRef; if(q.rel < 0 || a.suspect || a.bandit || a.pet) continue;
+      if(a.clGo){ const dx = a.clGo.x - a.pos.x, dz = a.clGo.z - a.pos.z; a.dir = Math.atan2(dx, dz); a.wanderT = 1; continue; }
+      const w = a.clSpot.w, sp = a.clSpot.sp, dx = w.x + .5 - a.pos.x, dz = w.z + .5 - a.pos.z, d = Math.hypot(dx, dz);
+      if(a.clDuty){ a.dir = null; a.wanderT = 1; a.ang = sp.s[3] + sp.b.r*H2; continue; }
+      if(sp.home || sp.visit || sp.play){
+        if(!insideWalls(sp.b, a.pos.x, a.pos.z) && sp.b.kind !== 'park' && d > 1.2){ a.dir = Math.atan2(dx, dz); a.wanderT = 1; }
+        else if(sp.play && d > 4){ a.dir = Math.atan2(dx, dz); a.wanderT = 1; }
+        else if(d > 3.5){ a.dir = Math.atan2(dx, dz); a.wanderT = .5; }
+      } else if(d > .8){ a.dir = Math.atan2(dx, dz); a.wanderT = 1; }
+    }
+  }
+  // extra residents come out so the new buildings are not empty (the city itself only lets 16 out at once)
+  let extraT = 0;
+  function extraTick(){
+    if(realm !== 0 || P.y < -10) return;
+    for(const n of cities()){
+      if(Math.hypot(n.x - P.x, n.z - P.z) > 110) continue;
+      const near = byCity(n).filter(b=>b.done && Math.hypot(b.x - P.x, b.z - P.z) < 45); if(!near.length) continue;
+      const ids = new Set(near.map(b=>b.id)); let live = 0, made = 0;
+      for(const id in C.live) if(C.live[id] && C.live[id].cityN === n && animals.indexOf(C.live[id]) >= 0) live++;
+      if(live >= 30) continue;
+      for(const q of n.pop){
+        if(made >= 2 || live >= 30) break;
+        if(C.live[q.id] && animals.indexOf(C.live[q.id]) >= 0) continue;
+        if(q.awayUntil && Date.now() < q.awayUntil) continue;
+        if(!(ids.has(q.home) || ids.has(q.work))) continue;
+        try{ C.spawnCitizen(n, q); made++; live++; }catch(e){}
+      }
+    }
+  }
+  // ---- naughty residents sit in the police station jail while they wait to go home
+  const jailed = {};
+  function jailTick(){
+    for(const n of cities()){
+      const ps = byCity(n).find(b=>b.done && b.kind === 'police'); if(!ps) continue;
+      if(Math.hypot(ps.x - P.x, ps.z - P.z) > 60){ n.pop.forEach(q=>{ const a = jailed[q.id]; if(a){ if(animals.indexOf(a) >= 0) removeAnimal(a); delete jailed[q.id]; } }); continue; }
+      for(const q of n.pop){
+        const a = jailed[q.id];
+        if(q.awayUntil && Date.now() < q.awayUntil && q.crimes && !(a && animals.indexOf(a) >= 0)){
+          if(Object.keys(jailed).filter(k=>jailed[k] && animals.indexOf(jailed[k]) >= 0).length >= 2) continue;
+          const j = planOf(ps).jail, w = W(ps, j[0], j[1], j[2]), g = spawnAnimal(n.type, w.x + .5, w.z + .5);
+          g.nation = n.id; g.clJail = q.id; placeAt(g, w); g.dir = null; jailed[q.id] = g;
+          if(Math.hypot(ps.x - P.x, ps.z - P.z) < 30) toast(q.nm+' is in the jail cell at the police station. Two minutes, then home for tea.');
+        } else if(a && (!q.awayUntil || Date.now() >= q.awayUntil)){ if(animals.indexOf(a) >= 0) removeAnimal(a); delete jailed[q.id]; }
+        else if(a && animals.indexOf(a) >= 0){ a.dir = null; a.wanderT = 1; }
+      }
+    }
+  }
+  // ---- walking into a building
+  let inB = null;
+  function enterTick(){
+    if(realm !== 0){ inB = null; return; }
+    let now = null;
+    for(const b of CL.b){ if(!b.done) continue; if(Math.abs(P.y - b.G) < planOf(b).H + 1 && insideWalls(b, P.x, P.z)){ now = b; break; } }
+    if(now && now !== inB){
+      const n = cityOf(now), K = KINDS[now.kind];
+      const extra = K.shop === 'food' ? ' Talk to the chef or waiter (F) to buy a meal.' : K.shop === 'heal' ? ' Talk to the doctor or nurse (F) to get healed.' : K.shop === 'mall' ? ' Talk to a shopkeeper (F) to buy a snack.' : now.kind === 'police' ? ' The jail cell is in the back.' : now.kind === 'museum' ? ' Do not touch the dinosaur.' : now.kind === 'school' ? ' Shh! Lessons are on.' : '';
+      toast('Welcome to '+(n ? (/^the /i.test(n.name) ? '' : 'the ')+n.name+' ' : 'the ')+LABEL[now.kind]+'!'+extra);
+    }
+    inB = now;
+  }
+  // ---- talking to people at work: some of them sell you things
+  const MEALS = ['a bowl of soup of the day (it is soup)','a cheese toastie','spaghetti with a meatball as big as your head','a carrot cake','fish and chips','a pancake stack'];
+  const SNACKS = ['Fresh Bread','Garden Apple','Chef Soup'];
+  function onDuty(a){ const q = a && a.popRef; if(!q || !q.work || q.rel < 0 || a.suspect || a.pet) return null; const b = bOf(q.work); if(!b || !b.done || !a.clDuty) return null; return b; }
+  window.__cityHint = function(a){
+    const b = onDuty(a); if(!b) return null; const K = KINDS[b.kind], nm = a.popRef.nm;
+    if(K.shop === 'food') return 'F: buy a meal from '+nm+' ($10)';
+    if(K.shop === 'heal') return 'F: get healed by '+nm+' ($15)';
+    if(K.shop === 'mall') return 'F: buy a snack from '+nm+' ($8)';
+    return null;
+  };
+  window.__cityTalk = function(a, talk){
+    const b = onDuty(a), K = b && KINDS[b.kind], q = a.popRef;
+    if(!K || !K.shop) return talk(a);
+    const cost = K.shop === 'food' ? 10 : K.shop === 'heal' ? 15 : 8;
+    if((save.coins || 0) < cost){ toast(q.nm+': "Sorry, that costs $'+cost+'. Come back when you have dug up some coins!"'); return; }
+    if(K.shop === 'heal' && hp >= hpMax){ toast(q.nm+': "You look perfectly healthy to me! No charge."'); return; }
+    save.coins -= cost;
+    if(K.shop === 'food'){ const m = pick(MEALS); save.hunger = Math.min(100, (save.hunger == null ? 100 : save.hunger) + 55); hp = Math.min(hpMax, hp + 25); toast(q.nm+' served you '+m+'. Yum! Hunger +55. ($'+cost+')'); }
+    else if(K.shop === 'heal'){ hp = hpMax; toast(q.nm+' put a plaster on you. All better! Health is full. ($'+cost+')'); }
+    else { const s = pick(SNACKS); save.inv = save.inv || {}; save.inv[s] = (save.inv[s] || 0) + 1; toast('You bought '+s+' from '+q.nm+'. It is in your bag. ($'+cost+')'); }
+    blip(880, .08, .08, 'triangle'); setTimeout(()=>blip(1100, .1, .08, 'triangle'), 90);
+    q.rel = Math.min(3, (q.rel || 0) + 1); try{ C.retag(a); }catch(e){}
+    persist();
+  };
+  // ---- growing: a new building every so often while you are near the city
+  function growTick(dt){
+    if(realm !== 0) return;
+    for(const n of cities()){
+      if(Math.hypot(n.x - P.x, n.z - P.z) > 150) continue;
+      if(byCity(n).some(b=>!b.done)) continue;
+      n.clT = (n.clT == null ? 20 : n.clT) - dt; if(n.clT > 0) continue;
+      n.clT = 45;
+      const have = byCity(n).map(b=>b.kind), next = ORDER.find((k, i)=>ORDER.slice(0, i + 1).filter(o=>o === k).length > have.filter(o=>o === k).length);
+      if(!next) continue;
+      if(!startBuilding(n, next)) n.clT = 15;
+      return;
+    }
+  }
+  // buildings from an earlier game
+  CL.b.forEach(b=>{ if(PLANS[b.kind]){ mats(b); if(b.done) show(b); } });
+  CL.b = CL.b.filter(b=>PLANS[b.kind]);
+  let tA = 0, tB = 0, tC = 0, last2 = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.1, (now - last2)/1000); last2 = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      steerTick();
+      tA -= dt; if(tA <= 0){ tA = .05; placeTick(); }
+      tB -= dt; if(tB <= 0){ tB = .5; lifeTick(); visTick(); enterTick(); jailTick(); furnTick(); }
+      tC -= dt; if(tC <= 0){ tC = 1; growTick(1); extraTick(); }
+    }catch(e){ console.warn(e); }
+  })(performance.now());
+  window.__cityLife = {CL, PLANS, KINDS, ORDER, planOf, listOf, W, startBuilding, findLot, lotOk, finish, show, VIS, mat, MID, spotFor, inside, insideWalls, door, byCity, cities,
+    growNow(n, kinds){ n = n || cities()[0]; if(!n) return []; if(!n.pop) C.initCity(n); const out = []; (kinds || ORDER).forEach(k=>{ const b = startBuilding(n, k); if(b){ const L = listOf(b); L.forEach(q=>{ const w = W(b, q[0], q[1], q[2]); setBlock(w.x, -(w.y + 1), w.z, mat(q[3])); }); b.i = L.length; finish(b); out.push(b); } }); return out; }};
+})();
+/* LN-citylife end */
 
 
 
