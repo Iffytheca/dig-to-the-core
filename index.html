@@ -1946,7 +1946,10 @@ LNSH_MODES.forEach(m=>LNSH_PICKS[m].forEach((d,k)=>PICKS.push({name:cp('shopsPic
   lnMode:m, lnHandle:d[5], lnAcc:d[6], lnSc:d[7]})));
 /* LN-shops end (picks) */
 /* LN-world picks: the Mars Base pickaxes, appended here so save indexes stay stable */
-PICKS.push({name:'Adamantite Pickaxe', power:1600, price:5000000, col:0x7a5cff, glow:.8, secret:true, tag:'marsA'}, {name:'Mars Soul Pickaxe', power:6000, price:100000000, col:0xff3a2a, glow:1, secret:true, tag:'marsS'});
+PICKS.push({name:'Adamantite Pickaxe', power:4000, price:8000000, col:0x7a5cff, glow:.8, secret:true, tag:'marsA'}, {name:'Mars Soul Pickaxe', power:30000, price:2000000000, col:0xff3a2a, glow:1, secret:true, tag:'marsS'});
+[['Rusty Mars Pickaxe',1200,500000,0xb0603a,.2],['Red Dust Drill',2000,1500000,0xd0602a,.3],['Olympus Pickaxe',3000,4000000,0x8a5a50,.4],['Phobos Pickaxe',6000,20000000,0xa0a0c8,.5],['Deimos Pickaxe',7000,35000000,0xc8b8a0,.55],
+ ['Martian Plasma Pickaxe',9500,60000000,0xff5aa0,.8],['Crater Crusher',13000,120000000,0x8a7a70,.6],['Red Planet Destroyer',16000,250000000,0xe02a2a,.9],['Martian King Pickaxe',21000,600000000,0xffd040,1]]
+  .forEach((d,k)=>PICKS.push({name:d[0], power:d[1], price:d[2], col:d[3], glow:d[4], secret:true, tag:'mars'+(k+1)}));   /* LN-marsplus */
 const D = LAYERS.reduce((s,l)=>s+l.th,0);          // total depth in blocks
 const layerAtDepth = [];
 LAYERS.forEach((l,i)=>{ for(let k=0;k<l.th;k++) layerAtDepth.push(i); });
@@ -24820,21 +24823,27 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const onMars = ()=>realm === 0 && P.x >= MARS_EDGE;
 
   /* ------------------------------------------------ layers and ores */
-  const ML = [
-    {name:'Red Dust',        th:3, h:110,  v:500,  base:[196,84,44],   amp:16, sp:[[232,122,72],[150,60,30]],   p:.25, glow:0},
-    {name:'Rusty Sand',      th:4, h:180,  v:800,  base:[214,112,62],  amp:18, sp:[[240,152,92],[170,80,40]],   p:.25, glow:0},
-    {name:'Iron Oxide Rock', th:5, h:300,  v:1300, base:[150,62,40],   amp:20, sp:[[190,92,60],[100,40,26]],    p:.25, glow:0},
-    {name:'Olympus Basalt',  th:6, h:480,  v:2000, base:[72,42,40],    amp:18, sp:[[112,62,52],[40,24,24]],     p:.2,  glow:0},
-    {name:'Polar Frost',     th:5, h:620,  v:2800, base:[222,228,238], amp:14, sp:[[255,255,255],[180,190,212]], p:.25, glow:.1},
-    {name:'Deep Red Stone',  th:7, h:850,  v:4000, base:[122,30,26],   amp:22, sp:[[172,52,40],[80,18,16]],     p:.25, glow:.05},
-    {name:'Hematite Rock',   th:7, h:1150, v:6000, base:[62,52,58],    amp:20, sp:[[142,42,42],[30,26,30]],     p:.3,  glow:.08},
-    {name:'Mars Core',       th:6, h:1500, v:9000, base:[255,112,42],  amp:20, sp:[[255,202,82],[202,42,20]],   p:.35, glow:.85}
+  const ML = [   /* LN-marsplus: much tougher than the Earth rock, you need the Mars pickaxes */
+    {name:'Red Dust',             th:3, h:2000,   v:900,    base:[196,84,44],   amp:16, sp:[[232,122,72],[150,60,30]],   p:.25, glow:0},
+    {name:'Rusty Sand',           th:3, h:3000,   v:1400,   base:[214,112,62],  amp:18, sp:[[240,152,92],[170,80,40]],   p:.25, glow:0},
+    {name:'Iron Oxide Rock',      th:4, h:4500,   v:2200,   base:[150,62,40],   amp:20, sp:[[190,92,60],[100,40,26]],    p:.25, glow:0},
+    {name:'Olympus Basalt',       th:4, h:6500,   v:3300,   base:[72,42,40],    amp:18, sp:[[112,62,52],[40,24,24]],     p:.2,  glow:0},
+    {name:'Polar Frost',          th:3, h:8000,   v:4500,   base:[222,228,238], amp:14, sp:[[255,255,255],[180,190,212]], p:.25, glow:.1},
+    {name:'Deep Red Stone',       th:4, h:11000,  v:6000,   base:[122,30,26],   amp:22, sp:[[172,52,40],[80,18,16]],     p:.25, glow:.05},
+    {name:'Hematite Rock',        th:4, h:15000,  v:8000,   base:[62,52,58],    amp:20, sp:[[142,42,42],[30,26,30]],     p:.3,  glow:.08},
+    {name:'Martian Granite',      th:4, h:20000,  v:11000,  base:[150,96,88],   amp:24, sp:[[210,160,150],[90,50,46]],   p:.35, glow:0},
+    {name:'Phobos Shard Rock',    th:4, h:27000,  v:15000,  base:[90,82,96],    amp:20, sp:[[170,160,200],[50,44,60]],   p:.3,  glow:.15},
+    {name:'Crimson Magma Rock',   th:4, h:36000,  v:21000,  base:[120,20,16],   amp:26, sp:[[255,90,30],[60,8,6]],       p:.3,  glow:.35},
+    {name:'Ancient Martian Crust',th:4, h:48000,  v:29000,  base:[160,120,70],  amp:20, sp:[[220,190,120],[90,60,30]],   p:.3,  glow:.05},
+    {name:'Lost Rover Rock',      th:4, h:62000,  v:40000,  base:[110,100,96],  amp:18, sp:[[200,200,210],[60,56,54]],   p:.3,  glow:.1},
+    {name:'Martian Mantle',       th:4, h:80000,  v:55000,  base:[200,50,20],   amp:24, sp:[[255,140,40],[120,20,10]],   p:.35, glow:.5},
+    {name:'Mars Core',            th:5, h:105000, v:75000,  base:[255,112,42],  amp:20, sp:[[255,202,82],[202,42,20]],   p:.35, glow:.85}
   ];
   // name, value, colour, layers it hides in, how common, glow
   const MO = [
-    ['Hematite Ore',        400,  [170,170,182], [0,1,2,3], .05,  .05],
-    ['Martian Opal',        2500, [120,255,222], [3,4,5],   .03,  .4],
-    ['Red Planet Diamond',  9000, [255,60,90],   [5,6,7],   .014, .6]
+    ['Hematite Ore',        5000,   [170,170,182], [0,1,2,3],      .05,  .05],
+    ['Martian Opal',        40000,  [120,255,222], [4,5,6,7],      .03,  .4],
+    ['Red Planet Diamond',  250000, [255,60,90],   [8,9,10,11,12], .014, .6]
   ];
   function addB(o){
     let j = BLOCKS.findIndex(b=>b.name === o.name);
@@ -25473,9 +25482,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   let ADAM = 0, SOUL = 0, TUFF = 0;
   const mk = (o)=>{ let j = BLOCKS.findIndex(b=>b.name === o.name); if(j < 0 && BLOCKS.length < 254){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length - 1)); j = BLOCKS.length - 1; } return j >= 0 ? j + 1 : 0; };
   if(M){
-    ADAM = mk({name:'Adamantite', ore:true, mars:true, cat:'ore', oreName:'Adamantite', hostName:'deep Mars', host:0, th:0, max:1500, h:2600, v:3000000,
+    ADAM = mk({name:'Adamantite', ore:true, mars:true, cat:'ore', oreName:'Adamantite', hostName:'deep Mars', host:0, th:0, max:1500, h:85000, v:3000000,
       base:[62,52,58], amp:20, sp:[[90,60,255],[200,180,255]], p:.4, glow:.55, oreCol:[120,90,255]});
-    SOUL = mk({name:'Mars Soul Stone', ore:true, mars:true, cat:'crystal', oreName:'Mars Soul Stone', hostName:'the Mars Core', host:0, th:0, max:1500, h:5200, v:40000000,
+    SOUL = mk({name:'Mars Soul Stone', ore:true, mars:true, cat:'crystal', oreName:'Mars Soul Stone', hostName:'the Mars Core', host:0, th:0, max:1500, h:110000, v:40000000,
       base:[255,112,42], amp:18, sp:[[255,40,40],[255,230,160]], p:.45, glow:1, oreCol:[255,60,40]});
     TUFF = mk({name:'Too Tuff Rock', mars:true, upper:true, ore:false, th:0, max:20000, h:1e12, v:0, base:[34,26,34], amp:10, sp:[[70,50,70],[16,12,16]], p:.3, glow:.08});
     try{ _blockIds = null; }catch(e){}
@@ -25510,22 +25519,24 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     digTime = function(li){ if(TUFF && li === TUFF - 1){ if(performance.now() - tuffT > 2500 && mouseDown){ tuffT = performance.now(); toast('The Too Tuff Rock is the bottom of Mars. It is too tuff for ANY pickaxe, even the Mars Soul Pickaxe.'); } return 1e9; } return _dt(li); };
   }
   // the Mars Base pick shop (H near the base)
-  const marsPicks = ()=>PICKS.map((p, i)=>({p, i})).filter(o=>o.p.tag === 'marsA' || o.p.tag === 'marsS');
+  const marsPicks = ()=>PICKS.map((p, i)=>({p, i})).filter(o=>/^mars/.test(o.p.tag || '')).sort((a, b)=>a.p.power - b.p.power);
   const shop = document.createElement('div');
   shop.style.cssText = 'position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
-  shop.innerHTML = '<div style="position:relative;background:#22140e;color:#f6e6d6;border:2px solid #ff8a4a;border-radius:10px;padding:18px 20px;width:min(520px,92vw);font:15px system-ui,sans-serif">' +
+  shop.innerHTML = '<div style="position:relative;background:#22140e;color:#f6e6d6;border:2px solid #ff8a4a;border-radius:10px;padding:18px 20px;width:min(560px,92vw);max-height:88vh;overflow:auto;font:15px system-ui,sans-serif">' +
     '<button id="msX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
     '<div style="font:900 22px system-ui;color:#ffb07a;margin-bottom:4px">Mars Base Pick Shop</div>' +
-    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">The strongest pickaxes in the game. You need one for Mars Soul Stone. Even these can not break the Too Tuff Rock at the bottom of Mars.</div>' +
+    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">Mars rock is much tougher than Earth rock. Each Mars pickaxe digs one step deeper. You need the Mars Soul Pickaxe for the Mars Core and Mars Soul Stone. Nothing breaks the Too Tuff Rock at the bottom of Mars.</div>' +
     '<div id="msC" style="font-weight:900;color:#ffd86a;margin-bottom:6px"></div><div id="msL"></div></div>';
   document.body.appendChild(shop);
   const msL = shop.querySelector('#msL'), msC = shop.querySelector('#msC');
+  function marsDeep(p){ let n = 'nothing'; if(M) M.ML.forEach(l=>{ if(l.h/p.power <= MAXT) n = l.name; }); return n; }
+  { const _tM = toast; toast = function(msg){ if(typeof msg === 'string' && /^Too tough for the /.test(msg) && M && realm === 0 && P.x >= M.MARS_EDGE) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Mars rock is extra tough. Buy a stronger Mars pickaxe at the Mars Base (H).'); return _tM.call(this, msg); }; }
   function renderMS(){
     msC.textContent = 'Your money: ' + money(save.coins); msL.innerHTML = '';
     marsPicks().forEach(({p, i})=>{
       const own = !!save.owned[i], eq = save.equipped === i;
       const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;margin:6px 0';
-      row.innerHTML = '<div style="width:26px;height:26px;border-radius:6px;background:#' + p.col.toString(16).padStart(6, '0') + ';box-shadow:0 0 12px #' + p.col.toString(16).padStart(6, '0') + '"></div><div style="flex:1"><b>' + p.name + '</b><div style="font-size:12px;opacity:.8">Power ' + p.power.toLocaleString() + '</div></div>';
+      row.innerHTML = '<div style="width:26px;height:26px;border-radius:6px;background:#' + p.col.toString(16).padStart(6, '0') + ';box-shadow:0 0 12px #' + p.col.toString(16).padStart(6, '0') + '"></div><div style="flex:1"><b>' + p.name + '</b><div style="font-size:12px;opacity:.8">Power ' + p.power.toLocaleString() + ' &middot; digs Mars down to ' + marsDeep(p) + '</div></div>';
       const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'padding:8px 14px';
       if(eq){ b.textContent = 'Equipped'; b.disabled = true; }
       else if(own){ b.textContent = 'Equip'; b.onclick = e=>{ e.stopPropagation(); save.equipped = i; equipGun(null); persist(); updatePickModel(); updatePickInfo(); renderMS(); }; }
