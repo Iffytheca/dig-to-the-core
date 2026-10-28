@@ -1945,6 +1945,8 @@ const LNSH_PICKS = {   // [name, power, price, head colour, glow, handle colour,
 LNSH_MODES.forEach(m=>LNSH_PICKS[m].forEach((d,k)=>PICKS.push({name:cp('shopsPick_'+m+(k+1), d[0]), power:d[1], price:d[2], col:d[3], glow:d[4],
   lnMode:m, lnHandle:d[5], lnAcc:d[6], lnSc:d[7]})));
 /* LN-shops end (picks) */
+/* LN-world picks: the Mars Base pickaxes, appended here so save indexes stay stable */
+PICKS.push({name:'Adamantite Pickaxe', power:1600, price:5000000, col:0x7a5cff, glow:.8, secret:true, tag:'marsA'}, {name:'Mars Soul Pickaxe', power:6000, price:100000000, col:0xff3a2a, glow:1, secret:true, tag:'marsS'});
 const D = LAYERS.reduce((s,l)=>s+l.th,0);          // total depth in blocks
 const layerAtDepth = [];
 LAYERS.forEach((l,i)=>{ for(let k=0;k<l.th;k++) layerAtDepth.push(i); });
@@ -20316,7 +20318,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     for(let i=0;i<6;i++) for(let j=0;j<4;j++){
       const p = new THREE.Group(); p.position.set(i - 2.5, 0, j - 1.5); g.add(p);
       sbox(.1,.5,.1,0x3a9a30,0,.25,0,p);
-      if(crop) sbox(.18,.3,.18,0xe8c860,0,.62,0,p); else { sbox(.3,.08,.08,0x4ab040,0,.45,0,p); sbox(.14,.14,.14,0xf08a20,0,.05,0,p); }
+      if(window.__cropLook && window.__cropLook(f, p)){} else if(crop) sbox(.18,.3,.18,0xe8c860,0,.62,0,p); else { sbox(.3,.08,.08,0x4ab040,0,.45,0,p); sbox(.14,.14,.14,0xf08a20,0,.05,0,p); }
     }
     return g;
   }
@@ -20326,7 +20328,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const f = {x:s.x, z:s.z, G:s.G, crop:n.farms.length ? 'wheat' : 'carrot', grow:0};
     for(let i=0;i<6;i++) for(let j=0;j<4;j++) setBlock(f.x + i - 3, -f.G, f.z + j - 2, FARMLAND);
     n.farms.push(f);
-    news('NEWS: The '+n.animal+' farmers of '+n.name+' used their new Hoe to make farmland. They are growing '+(f.crop === 'wheat' ? 'wheat' : 'carrots')+'.');
+    news('NEWS: The '+n.animal+' farmers of '+n.name+' used their new Hoe to make farmland. They are growing '+(window.__cropName ? window.__cropName(f.crop) : (f.crop === 'wheat' ? 'wheat' : 'carrots'))+'.');
     persist();
   }
 
@@ -20903,8 +20905,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         f.chk = (f.chk == null ? 30 + Math.random()*30 : f.chk) - dt;
         if(f.chk <= 0){ f.chk = 60;
           if(!f.wither){ const farmer = (n.pop || []).some(q=>q.job === 'Farmer');
-            if(Math.random() < (farmer ? .12 : .3)) witherFarm(n, f, farmer ? 'The farmer of '+n.name+' forgot to water the '+(f.crop === 'wheat' ? 'wheat' : 'carrots')+'. All the crops died!' : 'Nobody in '+n.name+' looked after the farm. The crops dried up and died.'); } }
-        if(f.wither){ f.wither -= dt; f.grow = 0; if(f.wither <= 0){ f.wither = 0; if(d < 60) toast('The farmers of '+n.name+' planted new '+(f.crop === 'wheat' ? 'wheat' : 'carrots')+'. Do not forget them this time!'); } }
+            if(Math.random() < (farmer ? .12 : .3)) witherFarm(n, f, farmer ? 'The farmer of '+n.name+' forgot to water the '+(window.__cropName ? window.__cropName(f.crop) : (f.crop === 'wheat' ? 'wheat' : 'carrots'))+'. All the crops died!' : 'Nobody in '+n.name+' looked after the farm. The crops dried up and died.'); } }
+        if(f.wither){ f.wither -= dt; f.grow = 0; if(f.wither <= 0){ f.wither = 0; if(d < 60) toast('The farmers of '+n.name+' planted new '+(window.__cropName ? window.__cropName(f.crop) : (f.crop === 'wheat' ? 'wheat' : 'carrots'))+'. Do not forget them this time!'); } }
         // how the crops look
         for(let k=0;k<24;k++){
           const p = tileMesh(n, fi, k); if(!p) break;
@@ -25171,6 +25173,393 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__mars = {tr:dt=>tickRocket(dt), dbg:()=>({launch:launch ? {t:launch.t, up:launch.up} : null, picked, goMars, x:P.x}), MARS, MARS_EDGE, mcol, marsBase, ML, MO, mIds, oIds, MB, openPick, go, unlock:()=>{ save.marsUnlocked = 1; persist(); }, MARS_D};
 })();
 /* LN-mars end */
+/* LN-world start: introduce things to towns (independence, religion, crops, animals, materials, a Tripod Gem), towns pick up new crops and animals on their own, residents tame animals with funny names, Adamantite and Mars Soul Stone, the Mars Base pick shop, the Too Tuff Rock at the bottom of Mars, hunger and stamina bars always on top (Irfan 2026-10-28 14:38) */
+(function(){
+  const rnd = a=>a[Math.floor(Math.random()*a.length)];
+  const news = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const money = v=>'$' + Math.round(v).toLocaleString('en-US');
+  const C = window.__city || {}, G = window.__gadgets || {}, S = window.__society || {}, L = window.__life || {}, M = window.__mars || null;
+  const towns = ()=>(save.nations || []).filter(n=>n && n.pop && n.pop.length);
+  const alive = a=>a && animals.indexOf(a) >= 0;
+  const onEarth = ()=>realm === 0 && P.x < UPPER_EDGE && !won;
+  function nearTown(r){ let b = null, bd = r || 70; for(const n of towns()){ const d = Math.hypot(n.x - P.x, n.z - P.z); if(d < bd){ bd = d; b = n; } } return b; }
+  const who = n=>(n.animal ? 'The ' + n.animal + 's of ' : 'The people of ') + n.name;
+
+  /* ------------------------------------------------ hunger and stamina bars: always on top of everything else, and always on the screen */
+  // on a narrow window (small laptop or zoomed in) they used to slide off the sides of the screen, so there they sit just above the carry slots
+  function fixBars(){
+    if(document.body.classList.contains('touchplay')) return;
+    const narrow = innerWidth < 1010, hb = document.getElementById('hotbar'), top = hb ? hb.getBoundingClientRect().top : innerHeight - 150;
+    const nb = Math.max(150, Math.round(innerHeight - top + 8)) + 'px';
+    for(const d of document.body.children){
+      if(!d.style) continue;
+      const t = (d.textContent || '').trim().slice(0, 8);
+      if(!/^(HUNGER|STAMINA)/.test(t)) continue;
+      d.style.zIndex = '17'; d.style.right = 'auto';
+      if(/^HUNGER/.test(t)){ d.style.left = narrow ? 'calc(50% - 200px)' : 'max(8px, calc(50% - 488px))'; d.style.bottom = narrow ? nb : '94px'; }
+      else { d.style.left = narrow ? 'calc(50% + 4px)' : 'min(calc(100% - 204px), calc(50% + 292px))'; d.style.bottom = narrow ? nb : '94px'; }
+    }
+  }
+  addEventListener('resize', fixBars); setInterval(fixBars, 2000);
+  fixBars(); setTimeout(fixBars, 1500); setTimeout(fixBars, 5000);
+
+  /* ------------------------------------------------ new crops */
+  const CROPS = {
+    pumpkin:      {name:'Pumpkins',            item:'Pumpkin',         leaf:0x3a8a30, c:[0xf08a20],                     shape:'ball', s:.42},
+    watermelon:   {name:'Watermelons',         item:'Watermelon',      leaf:0x3a8a30, c:[0x2a8a3a],                     shape:'long', s:.4},
+    corn:         {name:'Corn',                item:'Corn',            leaf:0x5ab040, c:[0xffd84a],                     shape:'tall', s:.2},
+    tomato:       {name:'Tomatoes',            item:'Tomato',          leaf:0x3a9a30, c:[0xe83a2a],                     shape:'dots', s:.16},
+    potato:       {name:'Potatoes',            item:'Potato',          leaf:0x4a9a3a, c:[0xb08a50],                     shape:'low',  s:.24},
+    blueberry:    {name:'Blueberries',         item:'Blueberries',     leaf:0x2a7a3a, c:[0x3a5aff],                     shape:'dots', s:.12},
+    cabbage:      {name:'Cabbages',            item:'Cabbage',         leaf:0x8ad06a, c:[0xb0f08a],                     shape:'ball', s:.36},
+    sunflower:    {name:'Sunflowers',          item:'Sunflower Seeds', leaf:0x3a9a30, c:[0xffd030],                     shape:'flower', s:.34},
+    chili:        {name:'Chili Peppers',       item:'Chili Pepper',    leaf:0x3a9a30, c:[0xff2a1a],                     shape:'long', s:.14},
+    rainbowcarrot:{name:'Rainbow Carrots',     item:'Rainbow Carrot',  leaf:0x4ab040, c:[0xff3a3a,0xffa020,0xffe040,0x40d040,0x3a8aff,0xa04aff], shape:'carrot', s:.14},
+    squaremelon:  {name:'Square Watermelons',  item:'Square Watermelon', leaf:0x3a8a30, c:[0x2a9a3a],                   shape:'cube', s:.4},
+    cottoncandy:  {name:'Cotton Candy Bushes', item:'Cotton Candy',    leaf:0x8a6a4a, c:[0xff9ad8,0x9ad8ff],            shape:'puff', s:.4},
+    spaghetti:    {name:'Spaghetti Plants',    item:'Spaghetti',       leaf:0x4a9a3a, c:[0xf0d890],                     shape:'tall', s:.12},
+    giantpea:     {name:'Giant Peas',          item:'Giant Pea',       leaf:0x3a9a30, c:[0x6ad04a],                     shape:'ball', s:.3}
+  };
+  const CK = Object.keys(CROPS);
+  window.__cropName = c=>c === 'wheat' ? 'wheat' : CROPS[c] ? CROPS[c].name.toLowerCase() : 'carrots';
+  window.__cropLook = function(f, p){
+    const k = CROPS[f.crop]; if(!k) return false;
+    const col = rnd(k.c), s = k.s;
+    if(k.shape === 'tall'){ sbox(.1,.9,.1,k.leaf,0,.45,0,p); sbox(s,s*2.2,s,col,0,.7,0,p); }
+    else if(k.shape === 'flower'){ sbox(.08,1,.08,k.leaf,0,.5,0,p); sbox(s,s,.08,col,0,1.05,0,p); sbox(s*.45,s*.45,.1,0x5a3a1a,0,1.05,0,p); }
+    else if(k.shape === 'dots'){ sbox(.12,.5,.12,k.leaf,0,.25,0,p); [[-.12,.35],[.12,.45],[0,.6],[.1,.25]].forEach(([x,y])=>sbox(s,s,s,col,x,y,.05,p)); }
+    else if(k.shape === 'low'){ sbox(.3,.12,.3,k.leaf,0,.1,0,p); sbox(s,s*.7,s,col,.1,.04,.1,p); }
+    else if(k.shape === 'long'){ sbox(.1,.25,.1,k.leaf,0,.12,0,p); sbox(s,s*.8,s*1.7,col,0,s*.4,0,p); }
+    else if(k.shape === 'cube'){ sbox(.1,.2,.1,k.leaf,0,.1,0,p); sbox(s,s,s,col,0,s/2,0,p); sbox(s*1.02,s*.12,s*1.02,0x1a5a2a,0,s*.7,0,p); }
+    else if(k.shape === 'puff'){ sbox(.08,.4,.08,k.leaf,0,.2,0,p); sbox(s,s*.9,s,col,0,.55,0,p); sbox(s*.6,s*.6,s*.6,rnd(k.c),.12,.75,.05,p); }
+    else if(k.shape === 'carrot'){ sbox(.3,.08,.08,k.leaf,0,.45,0,p); sbox(s,s,s,col,0,.05,0,p); }
+    else { sbox(.12,.25,.12,k.leaf,0,.12,0,p); sbox(s,s*.9,s,col,0,s*.45,0,p); }
+    return true;
+  };
+  function setCrop(n, crop){
+    if(!G.buildFarm) return false;
+    n.farms = n.farms || [];
+    if(!n.farms.length) G.buildFarm(n);
+    if(!n.farms.length) return false;
+    const i = n.farms.findIndex(f=>f.crop === crop) >= 0 ? -1 : (n.farms.length > 1 && Math.random() < .5 ? 1 : 0);
+    if(i < 0) return false;
+    const f = n.farms[i]; f.crop = crop; f.grow = 0; f.wither = 0; f.tr = [];
+    const id = n.id + 'f' + i; if(G.farmMesh && G.farmMesh[id]){ scene.remove(G.farmMesh[id]); delete G.farmMesh[id]; }
+    n.crops = (n.crops || []).filter(c=>c !== crop).concat(crop);
+    return true;
+  }
+
+  /* ------------------------------------------------ new animals in a region, and residents who tame them */
+  function tameKinds(){ const F = (window.__fierce && window.__fierce.FIERCE) || {}; return Object.keys(AD).filter(k=>{ const d = AD[k]; return d && !F[k] && !d.chaos && !d.boss && !d.fly && !d.fish && !d.swim && !d.enemy && !d.fierce && (d.r || 1) <= 1.15 && d.hp <= 160; }); }
+  const FIRST = ['Sir', 'Lady', 'Captain', 'Professor', 'Little', 'Big', 'Mister', 'Princess', 'Doctor', 'General', 'Baby', 'Old', 'King', 'Grandma', 'Count'];
+  const FUNNY = ['Wobblebottom', 'Fluffernutter', 'Snickerdoodle', 'Noodlehead', 'Sneezy McSneeze', 'Bonkers', 'Chonky', 'Waddles', 'Meatball', 'Tater Tot', 'Fuzzbucket', 'Squeakers',
+    'Burrito', 'Kevin', 'Gerald', 'Toothpaste', 'Cheeseball', 'Doorknob', 'Spaghetti', 'Mr. Wiggles', 'Crumpet', 'Grumbles', 'Puddles', 'Beans On Toast', 'Lord Fluffington',
+    'Pudding Face', 'Sausage Roll', 'Pancake Bob', 'Wiggly Steve', 'Dave The Brave', 'Sprinkles', 'Couch Potato', 'Hiccup', 'Tiny Tank', 'Snorlax Jr', 'Picklebutt', 'Bubble Wrap', 'Jellybean', 'Captain Crunch', 'Waffle Iron'];
+  const PLAIN = ['Max', 'Bella', 'Charlie', 'Luna', 'Rex', 'Daisy', 'Buddy', 'Coco', 'Milo', 'Rosie', 'Sam', 'Lucy'];
+  function petName(){ const r = Math.random(); if(r < .2) return rnd(PLAIN); if(r < .55) return rnd(FIRST) + ' ' + rnd(FUNNY); return rnd(FUNNY); }
+  const LOOKS = {funny:'looks really funny', unfunny:'looks not funny at all', normal:'looks normal'};
+  function tame(n, q, kind, quiet){
+    n = n || rnd(towns()); if(!n) return null;
+    q = q || rnd(n.pop.filter(p=>p && !p.zomb && !(p.petK && p.tamed))) || rnd(n.pop); if(!q) return null;
+    const ks = kind ? [kind] : (n.newAnimals && n.newAnimals.length && Math.random() < .6 ? n.newAnimals : tameKinds());
+    kind = rnd(ks.filter(k=>AD[k])); if(!kind) return null;
+    const r = Math.random(), look = r < .45 ? 'funny' : r < .7 ? 'unfunny' : 'normal';
+    const old = L.pets && L.pets[q.id]; if(alive(old)) removeAnimal(old); if(L.pets) delete L.pets[q.id];
+    q.petK = kind; q.petN = petName(); q.petLook = look; q.tamed = 1; q.petGone = 0;
+    const t = q.nm + ' of ' + n.name + ' tamed a wild ' + AD[kind].name + ' and named it ' + q.petN + '! It ' + LOOKS[look] + '.';
+    news('NEWS: ' + t);
+    if(!quiet && Math.hypot(n.x - P.x, n.z - P.z) < 90) toast(t);
+    persist();
+    return q;
+  }
+  function introduceAnimal(n, kind, byPlayer){
+    n.newAnimals = (n.newAnimals || []).filter(k=>k !== kind).concat(kind).slice(-6);
+    news('NEWS: ' + (byPlayer ? 'A miner brought ' : 'Travellers brought ') + AD[kind].name + 's to ' + n.name + '! Nobody there has ever seen one before.', byPlayer);
+    spawnNew(n, 3);
+    persist();
+  }
+  const newLive = [];
+  function spawnNew(n, k){
+    if(!n.newAnimals || !n.newAnimals.length || !onEarth() || Math.hypot(n.x - P.x, n.z - P.z) > 90) return;
+    for(let i=0;i<k;i++){
+      const kind = rnd(n.newAnimals); if(!AD[kind]) continue;
+      const ang = Math.random()*6.283, r = 8 + Math.random()*10;
+      try{ const a = spawnAnimal(kind, n.x + Math.cos(ang)*r, n.z + Math.sin(ang)*r); if(a){ a.newIn = n.id; newLive.push(a); } }catch(e){}
+    }
+  }
+  // pet looks: funny ones are squished, stretched or have a huge head; unfunny ones are grey and serious
+  function applyLook(a, look){
+    a.lookDone = look;
+    if(look === 'funny'){
+      const v = Math.floor(Math.random()*3);
+      if(v === 0) a.g.scale.set(.85, .38, .85); else if(v === 1) a.g.scale.set(.42, .95, .42); else a.g.scale.set(.75, .6, 1.1);
+      sbox(.3, .32, .3, rnd([0xff3aa0, 0x3ad0ff, 0xffd030, 0x7aff5a]), 0, (a.d.yo || 1)*1.6 + .2, 0, a.g);       // a little party hat
+    } else if(look === 'unfunny'){
+      a.g.traverse(m=>{ if(m.isMesh && m.material && m.material.color){ m.material = m.material.clone(); const c = m.material.color, g = (c.r + c.g + c.b)/3; c.setRGB(g*.8 + .1, g*.8 + .1, g*.8 + .12); } });
+    }
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 32; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = 'bold 18px system-ui,sans-serif'; x.lineWidth = 4; x.strokeStyle = 'rgba(0,0,0,.85)';
+    const txt = '(' + LOOKS[look] + ')'; x.strokeText(txt, 128, 16); x.fillStyle = look === 'funny' ? '#ffe06a' : look === 'unfunny' ? '#c8c8c8' : '#ffffff'; x.fillText(txt, 128, 16);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    sp.scale.set(2.2/a.g.scale.x, .28/a.g.scale.y, 1); sp.position.y = 1.85/a.g.scale.y; a.g.add(sp);
+  }
+
+  /* ------------------------------------------------ materials towns build with: a quarry and a growing monument */
+  function placeMat(n, name){
+    const id = blockIdOf(name); if(!id) return false;
+    const ox = Math.round(n.x) + 9, oz = Math.round(n.z) - 9;
+    n.mat = {name, id, x:ox, z:oz, h:1};
+    n.mats = (n.mats || []).filter(m=>m !== name).concat(name).slice(-5);
+    buildMat(n, true);
+    return true;
+  }
+  function buildMat(n, quarry){
+    const m = n.mat; if(!m) return;
+    const y0 = Math.round(groundTop(m.x, 3, m.z)), d0 = -y0 - 1;
+    if(quarry) for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){ if(i || j) setBlock(m.x + i + 3, -y0, m.z + j, m.id); }
+    for(let k=0;k<m.h;k++) setBlock(m.x, d0 - k, m.z, m.id);
+    if(m.h <= 2) for(const [i,j] of [[-1,0],[1,0],[0,-1],[0,1]]) setBlock(m.x + i, d0, m.z + j, m.id);
+    dirty = true;
+  }
+  const MAT_USE = ['now build all their roofs out of', 'made a giant statue out of', 'paved their main road with', 'built a fancy fountain out of', 'are making hats out of', 'built a school entirely out of', 'made their beds out of'];
+
+  /* ------------------------------------------------ the Tripod Gem becomes a Pristine Polished Tripod Gem, and the whole town wears jewelry */
+  let POLISHED = 0;
+  try{
+    let j = BLOCKS.findIndex(b=>b.name === 'Pristine Polished Tripod Gem');
+    if(j < 0 && BLOCKS.length < 252){
+      const B = specToBlock({name:'Pristine Polished Tripod Gem', h:900, v:5000000, c1:[255,140,240], c2:[200,255,255], glow:1, pattern:'tile'});
+      B.cat = 'crystal'; B.th = 0; B.max = 99999; B.amp = 10;
+      BLOCKS.push(B); meshes.push(createBlockMesh(B, BLOCKS.length - 1)); j = BLOCKS.length - 1;
+    }
+    POLISHED = j + 1;
+    try{ _blockIds = null; }catch(e){}
+  }catch(e){ console.warn('LN-world polished', e); }
+  const JOKES = [
+    'The mayor of TOWN wears a Tripod Gem crown so shiny that birds keep bumping into it.',
+    'Everyone in TOWN wears Pristine Polished Tripod Gem necklaces now. Even the babies. Even the pets.',
+    'TOWN opened a jewelry shop. Every ring costs one billion dollars. Nobody has bought one yet.',
+    'A resident of TOWN wore 14 Tripod Gem bracelets at once and now cannot lift their arms.',
+    'In TOWN, people now say "good morning" by flashing their Tripod Gem earrings at each other.',
+    'The police of TOWN have Tripod Gem badges. Robbers stop to look at them and get caught.',
+    'TOWN made a Tripod Gem toilet seat. It is the most expensive seat in the world.',
+    'A grandma in TOWN polished her Tripod Gem ring so much that it now glows at night like a lamp.'
+  ];
+  function giveGem(n){
+    if(!(save.inv && save.inv['Tripod Gem'] > 0)){ toast('You need a Tripod Gem first. They hide deep in the Upper World (take the rocket).'); return false; }
+    save.inv['Tripod Gem']--; if(save.inv['Tripod Gem'] <= 0) delete save.inv['Tripod Gem'];
+    n.gemT = 25; n.gemFrom = 1;
+    toast('You gave a Tripod Gem to ' + n.name + '. Their best crafters are polishing it. Come back in a bit!');
+    news('NEWS: A miner gave a rare Tripod Gem to ' + n.name + '! The crafters are polishing it day and night.', true);
+    persist(); return true;
+  }
+  function gemDone(n){
+    n.gemT = 0; n.jewel = true; n.gems = (n.gems || 0) + 1;
+    news('BREAKING: ' + n.name + ' turned the Tripod Gem into a PRISTINE POLISHED TRIPOD GEM worth ' + money(5000000) + '! ' + rnd(JOKES).replace(/TOWN/g, n.name), true);
+    if(n.gemFrom){
+      n.gemFrom = 0; save.coins += 1000000; if(POLISHED) addItem('Pristine Polished Tripod Gem', 1);
+      toast(n.name + ' polished your Tripod Gem into a Pristine Polished Tripod Gem! They use it for jewelry. As a thank-you they gave you a small one and ' + money(1000000) + '!');
+      blip(880, .15, .12, 'triangle'); setTimeout(()=>blip(1320, .2, .12, 'triangle'), 120); setTimeout(()=>blip(1760, .3, .1, 'sine'), 260);
+      try{ refreshShopIfOpen(); }catch(e){}
+    }
+    persist();
+  }
+  const jewelMat = new THREE.MeshBasicMaterial({color:0xff7ae8});
+  function jewelTick(){
+    for(const n of towns()){
+      if(!n.jewel || Math.hypot(n.x - P.x, n.z - P.z) > 80) continue;
+      for(const q of n.pop){
+        const a = C.live && C.live[q.id]; if(!alive(a) || a.jewel) continue;
+        a.jewel = true;
+        const yo = (a.d && a.d.yo) || 1, r = (a.d && a.d.r) || .8;
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(r*.35, .05, 6, 14), jewelMat); ring.rotation.x = Math.PI/2.3; ring.position.set(0, yo*.95, r*.15); a.g.add(ring);
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(.13), jewelMat); gem.position.set(0, yo*.8, r*.45); a.g.add(gem);
+      }
+    }
+  }
+
+  /* ------------------------------------------------ towns change over time on their own: new crops, new animals, tamed pets, materials spread */
+  let evT = 50;
+  function worldTick(){
+    const T = towns(); if(!T.length) return;
+    T.forEach(n=>{ if(n.gemT > 0){ n.gemT -= 2; if(n.gemT <= 0) gemDone(n); } });
+    // materials: the monument keeps growing
+    T.forEach(n=>{ if(n.mat && n.mat.h < 7 && Math.random() < .03){ n.mat.h++; if(Math.hypot(n.x - P.x, n.z - P.z) < 120) buildMat(n, false); } });
+    evT -= 2; if(evT > 0) return;
+    evT = 70 + Math.random()*80;
+    const n = rnd(T), r = Math.random();
+    if(r < .3){ const c = rnd(CK); if(setCrop(n, c)){ const from = rnd(T.filter(m=>m !== n)); news('NEWS: ' + who(n) + ' started growing ' + CROPS[c].name + (from ? ', with seeds from ' + from.name : '') + '!'); } }
+    else if(r < .55){ const k = rnd(tameKinds()); if(k) introduceAnimal(n, k, false); }
+    else if(r < .85) tame(n);
+    else {
+      const src = T.find(m=>m.mat && m !== n), m = src && src.mat;
+      if(m){ n.mats = (n.mats || []).filter(x=>x !== m.name).concat(m.name).slice(-5); news('NEWS: ' + src.name + ' traded some ' + m.name + ' to ' + n.name + '. ' + who(n) + ' ' + rnd(MAT_USE) + ' it.'); }
+      else tame(n);
+    }
+    persist();
+  }
+  setInterval(()=>{ try{ if(startEl.style.display !== 'flex') worldTick(); }catch(e){ console.warn('LN-world', e); } }, 2000);
+  setInterval(()=>{ try{
+    if(startEl.style.display === 'flex') return;
+    jewelTick();
+    if(L.pets) for(const id in L.pets){ const a = L.pets[id]; if(alive(a) && a.resPet && a.resPet.petLook && a.lookDone !== a.resPet.petLook) applyLook(a, a.resPet.petLook); }
+    for(let i=newLive.length-1;i>=0;i--){ const a = newLive[i]; if(!alive(a)) newLive.splice(i, 1); else if(Math.hypot(a.pos.x - P.x, a.pos.z - P.z) > 120){ removeAnimal(a); newLive.splice(i, 1); } }
+    if(onEarth() && newLive.length < 4){ const n = nearTown(80); if(n && n.newAnimals && n.newAnimals.length && Math.random() < .2) spawnNew(n, 1); }
+  }catch(e){ console.warn('LN-world tick', e); } }, 1000);
+
+  /* ------------------------------------------------ the Introduce panel (U, or the button on the main menu), with a close X */
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  panel.innerHTML = '<div style="position:relative;background:#16222a;color:#eef6f0;border:2px solid #6ad0a0;border-radius:10px;padding:18px 20px;max-width:640px;width:92vw;max-height:86vh;overflow:auto;font:15px system-ui,sans-serif">' +
+    '<button id="wiX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div id="wiT" style="font:900 22px system-ui;color:#8affc0;margin-bottom:4px;padding-right:40px"></div><div id="wiS" style="opacity:.8;margin-bottom:10px;font-size:13px"></div><div id="wiB"></div></div>';
+  document.body.appendChild(panel);
+  const pT = panel.querySelector('#wiT'), pS = panel.querySelector('#wiS'), pB = panel.querySelector('#wiB');
+  let town = null;
+  const btn = (txt, fn, sub, col)=>{ const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px 12px;font-size:15px;text-align:left;background:' + (col || '#2a5a4a') + ';color:#fff';
+    b.innerHTML = '<b>' + txt + '</b>' + (sub ? '<div style="font-size:12px;opacity:.8;font-weight:400">' + sub + '</div>' : ''); b.onclick = e=>{ e.stopPropagation(); fn(); }; pB.appendChild(b); return b; };
+  function mainView(){
+    const n = town; pB.innerHTML = '';
+    pT.textContent = 'Introduce something to ' + n.name;
+    pS.textContent = (n.animal ? 'A ' + n.animal + ' town' : 'A town') + ' with ' + n.pop.length + ' residents' + (n.colonyOf ? ', a colony right now' : '') + (n.jewel ? ', famous for Tripod Gem jewelry' : '') + '. Pick what to bring them.';
+    btn('Independence', ()=>{
+      if(n.colonyOf && S.independence){ S.independence(n, true); toast('You helped ' + n.name + ' become independent!'); }
+      else { news('NEWS: ' + n.name + ' declared independence from... nobody. They were already free. They had a parade anyway.', true); toast(n.name + ' was already free, so they just had a big parade.'); try{ (window.__wars || {}).setMood && window.__wars.setMood(n, 'Happy', 'loved the parade.'); }catch(e){} }
+      persist(); close();
+    }, n.colonyOf ? 'Help this colony become its own country.' : 'They are already free, but they love a parade.');
+    btn('A new religion', ()=>{ const R = window.__rich; if(R && R.found){ const r = R.found(n); if(r) toast('You told ' + n.name + ' about a new idea. ' + r.founder + ' started ' + r.name + '!'); } close(); }, 'A resident starts a brand new silly religion right here.');
+    btn('A new crop', cropView, 'Pick a crop. The town farm starts growing it.');
+    btn('A new animal', animalView, 'Bring a kind of animal they have never seen. Some residents will tame one.');
+    btn('A material', matView, 'Give them blocks from your bag. They build a quarry and a monument with it.');
+    const g = save.inv && save.inv['Tripod Gem'] || 0;
+    btn('A Tripod Gem (' + g + ' in your bag)', ()=>{ if(giveGem(n)) close(); }, 'Their crafters polish it into a Pristine Polished Tripod Gem and make jewelry.', g ? '#7a3a8a' : '#3a3a4a');
+  }
+  function backBtn(){ btn('Back', mainView, null, '#3a3a4a'); }
+  function cropView(){
+    const n = town; pB.innerHTML = ''; pS.textContent = 'Pick a crop for ' + n.name + '.';
+    CK.forEach(c=>{ const k = CROPS[c]; btn(k.name, ()=>{
+      if(setCrop(n, c)){ news('NEWS: A miner brought ' + k.name.toLowerCase() + ' seeds to ' + n.name + '. ' + who(n) + ' planted them right away!', true); toast(n.name + ' is growing ' + k.name + ' now!'); persist(); }
+      else toast(n.name + ' already grows ' + k.name + ', or has no room for a farm.');
+      close(); }, (n.crops || []).indexOf(c) >= 0 ? 'They already grow this.' : null); });
+    backBtn();
+  }
+  function animalView(){
+    const n = town; pB.innerHTML = ''; pS.textContent = 'Pick an animal to bring to ' + n.name + '.';
+    const ks = tameKinds().filter(k=>(n.newAnimals || []).indexOf(k) < 0).sort(()=>Math.random() - .5).slice(0, 8);
+    ks.forEach(k=>btn(AD[k].name, ()=>{ introduceAnimal(n, k, true); toast('You brought ' + AD[k].name + 's to ' + n.name + '!'); setTimeout(()=>{ if(towns().indexOf(n) >= 0) tame(n, null, k); }, 4000); close(); }));
+    backBtn();
+  }
+  function matView(){
+    const n = town; pB.innerHTML = ''; pS.textContent = 'Pick a block from your bag. You give them up to 5.';
+    const ks = Object.keys(save.inv || {}).filter(k=>save.inv[k] > 0 && blockIdOf(k) && BLOCKS[blockIdOf(k) - 1] && !BLOCKS[blockIdOf(k) - 1].upper).sort((a, b)=>save.inv[b] - save.inv[a]).slice(0, 12);
+    if(!ks.length) pS.textContent = 'You have no blocks in your bag. Mine some first!';
+    ks.forEach(k=>btn(k + '  (' + save.inv[k] + ')', ()=>{
+      const give = Math.min(5, save.inv[k]); save.inv[k] -= give; if(save.inv[k] <= 0) delete save.inv[k];
+      if(placeMat(n, k)){ news('NEWS: A miner gave ' + k + ' to ' + n.name + '. ' + who(n) + ' ' + rnd(MAT_USE) + ' it, and opened a ' + k + ' quarry!', true); toast(n.name + ' loves your ' + k + '! They built a quarry and started a monument.'); }
+      persist(); close(); }));
+    backBtn();
+  }
+  function open(){
+    if(!onEarth()){ toast('Introduce things to towns on the normal world surface.'); return; }
+    town = nearTown(70);
+    if(!town){ toast('Walk into a town first (an animal or Bob town), then press U to introduce something to it.'); return; }
+    mainView(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+  }
+  function close(){ panel.style.display = 'none'; }
+  panel.addEventListener('click', e=>{ if(e.target === panel || e.target.id === 'wiX') close(); });
+
+  /* ------------------------------------------------ MARS: Adamantite, Mars Soul Stone, the Too Tuff Rock, and the Mars Base pick shop */
+  let ADAM = 0, SOUL = 0, TUFF = 0;
+  const mk = (o)=>{ let j = BLOCKS.findIndex(b=>b.name === o.name); if(j < 0 && BLOCKS.length < 254){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length - 1)); j = BLOCKS.length - 1; } return j >= 0 ? j + 1 : 0; };
+  if(M){
+    ADAM = mk({name:'Adamantite', ore:true, mars:true, cat:'ore', oreName:'Adamantite', hostName:'deep Mars', host:0, th:0, max:1500, h:2600, v:3000000,
+      base:[62,52,58], amp:20, sp:[[90,60,255],[200,180,255]], p:.4, glow:.55, oreCol:[120,90,255]});
+    SOUL = mk({name:'Mars Soul Stone', ore:true, mars:true, cat:'crystal', oreName:'Mars Soul Stone', hostName:'the Mars Core', host:0, th:0, max:1500, h:5200, v:40000000,
+      base:[255,112,42], amp:18, sp:[[255,40,40],[255,230,160]], p:.45, glow:1, oreCol:[255,60,40]});
+    TUFF = mk({name:'Too Tuff Rock', mars:true, upper:true, ore:false, th:0, max:20000, h:1e12, v:0, base:[34,26,34], amp:10, sp:[[70,50,70],[16,12,16]], p:.3, glow:.08});
+    try{ _blockIds = null; }catch(e){}
+    const at = []; M.ML.forEach((l, i)=>{ for(let k=0;k<l.th;k++) at.push(i); });
+    const MD = M.MARS_D, last = M.ML.length - 1;
+    const _ub = upperBase;
+    upperBase = function(x, d, z){
+      if(x >= M.MARS_EDGE && d >= 0){
+        if(d >= MD) return d < MD + 3 && TUFF ? TUFF : 0;
+        const li = at[d];
+        if(li >= last - 1 && hash3(x>>1, d>>1, z>>1, 951) < .3){
+          if(SOUL && li === last && hash3(x, d, z, 957) < .025) return SOUL;
+          if(ADAM && hash3(x, d, z, 953) < .04) return ADAM;
+        }
+      }
+      return _ub(x, d, z);
+    };
+    // nothing breaks the Too Tuff Rock: not the strongest pickaxe, not Mine Anything, not explosions
+    let tuffT = 0;
+    const _sbT = setBlock;
+    setBlock = function(x, d, z, t){ if(TUFF && !t && d >= 0 && x >= M.MARS_EDGE && get(x, d, z) === TUFF) return; return _sbT.apply(this, arguments); };
+    const _bbT = breakBlock;
+    breakBlock = function(h){
+      if(TUFF && h && get(h.i, h.d, h.k) === TUFF){
+        prog = 0; setCrack(0);
+        if(performance.now() - tuffT > 2500){ tuffT = performance.now(); toast('BOINK! The Too Tuff Rock is TOO TUFF. Even the ' + PICKS[save.equipped].name + ' just bounces off. Nothing can mine it.'); blip(90, .25, .15, 'sawtooth'); shake = .1; }
+        return;
+      }
+      return _bbT.apply(this, arguments);
+    };
+    const _dt = digTime;
+    digTime = function(li){ if(TUFF && li === TUFF - 1){ if(performance.now() - tuffT > 2500 && mouseDown){ tuffT = performance.now(); toast('The Too Tuff Rock is the bottom of Mars. It is too tuff for ANY pickaxe, even the Mars Soul Pickaxe.'); } return 1e9; } return _dt(li); };
+  }
+  // the Mars Base pick shop (H near the base)
+  const marsPicks = ()=>PICKS.map((p, i)=>({p, i})).filter(o=>o.p.tag === 'marsA' || o.p.tag === 'marsS');
+  const shop = document.createElement('div');
+  shop.style.cssText = 'position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  shop.innerHTML = '<div style="position:relative;background:#22140e;color:#f6e6d6;border:2px solid #ff8a4a;border-radius:10px;padding:18px 20px;width:min(520px,92vw);font:15px system-ui,sans-serif">' +
+    '<button id="msX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 22px system-ui;color:#ffb07a;margin-bottom:4px">Mars Base Pick Shop</div>' +
+    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">The strongest pickaxes in the game. You need one for Mars Soul Stone. Even these can not break the Too Tuff Rock at the bottom of Mars.</div>' +
+    '<div id="msC" style="font-weight:900;color:#ffd86a;margin-bottom:6px"></div><div id="msL"></div></div>';
+  document.body.appendChild(shop);
+  const msL = shop.querySelector('#msL'), msC = shop.querySelector('#msC');
+  function renderMS(){
+    msC.textContent = 'Your money: ' + money(save.coins); msL.innerHTML = '';
+    marsPicks().forEach(({p, i})=>{
+      const own = !!save.owned[i], eq = save.equipped === i;
+      const row = document.createElement('div'); row.style.cssText = 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);border-radius:8px;padding:8px 10px;margin:6px 0';
+      row.innerHTML = '<div style="width:26px;height:26px;border-radius:6px;background:#' + p.col.toString(16).padStart(6, '0') + ';box-shadow:0 0 12px #' + p.col.toString(16).padStart(6, '0') + '"></div><div style="flex:1"><b>' + p.name + '</b><div style="font-size:12px;opacity:.8">Power ' + p.power.toLocaleString() + '</div></div>';
+      const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'padding:8px 14px';
+      if(eq){ b.textContent = 'Equipped'; b.disabled = true; }
+      else if(own){ b.textContent = 'Equip'; b.onclick = e=>{ e.stopPropagation(); save.equipped = i; equipGun(null); persist(); updatePickModel(); updatePickInfo(); renderMS(); }; }
+      else { b.textContent = 'Buy ' + money(p.price); b.disabled = save.coins < p.price;
+        b.onclick = e=>{ e.stopPropagation(); if(save.coins < p.price) return; save.coins -= p.price; save.owned[i] = true; save.equipped = i; equipGun(null); persist(); updatePickModel(); updatePickInfo(); renderMS(); blip(660, .15, .15, 'triangle');
+          news('NEWS: A miner bought the ' + p.name + ' at the Mars Base. The Martians are very impressed.', true); }; }
+      row.appendChild(b); msL.appendChild(row);
+    });
+  }
+  const nearBase = ()=>M && realm === 0 && P.x >= M.MARS_EDGE && Math.hypot(P.x - M.MARS.x, P.z - M.MARS.z) < 22 && P.y > -3;
+  function openShop(){ renderMS(); shop.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closeShop(){ shop.style.display = 'none'; }
+  shop.addEventListener('click', e=>{ if(e.target === shop || e.target.id === 'msX') closeShop(); });
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:30;background:rgba(40,14,6,.8);color:#ffd8b0;border:1px solid #ff8a4a;border-radius:8px;padding:6px 12px;font:700 14px system-ui,sans-serif;display:none;pointer-events:none';
+  hint.textContent = 'MARS BASE: press H for the Mars Base Pick Shop';
+  document.body.appendChild(hint);
+  setInterval(()=>{ hint.style.display = nearBase() && locked && shop.style.display !== 'flex' ? 'block' : 'none'; }, 400);
+
+  addEventListener('keydown', e=>{
+    if(e.target && e.target.tagName === 'INPUT') return;
+    if(e.code === 'Escape'){ if(panel.style.display === 'flex') close(); if(shop.style.display === 'flex') closeShop(); return; }
+    if(e.repeat) return;
+    if(e.code === 'KeyU'){ if(panel.style.display === 'flex') close(); else if(locked) open(); }
+    if(e.code === 'KeyH'){ if(shop.style.display === 'flex') closeShop(); else if(locked && nearBase()) openShop(); }
+  });
+  { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Introduce (U)'; b.style.cssText = 'margin:6px 6px 0;padding:8px 18px;font-size:14px;color:#fff;background:#2a6a4a';
+    b.onclick = e=>{ e.stopPropagation(); toast('Walk into a town and press U to introduce crops, animals, materials, religions, independence or a Tripod Gem.'); };
+    const anchor = document.getElementById('lnEggs') || document.getElementById('btnTouch');
+    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(b, anchor.nextSibling); }
+
+  window.__world = {CROPS, setCrop, tame, introduceAnimal, placeMat, buildMat, giveGem, gemDone, worldTick, open, close, openShop, closeShop, renderMS, nearBase, fixBars, applyLook, tameKinds,
+    ids:()=>({ADAM, SOUL, TUFF, POLISHED}), sb:(x,d,z,t)=>setBlock(x,d,z,t), ub:(x,d,z)=>upperBase(x,d,z), brk:h=>breakBlock(h), towns, get town(){ return town; }, set town(v){ town = v; }, mainView};
+})();
+/* LN-world end */
 
 
 
