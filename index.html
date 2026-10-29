@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 97 (Oct 29)';
+  window.__BUILD = 'Build 98 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27396,6 +27396,103 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__alienTowns = {RELIG, refreshTag, buildTemple, tags, temples, religNow:()=>{ rT = 0; religTick(.01); }};
 })();
 /* LN-alientowns end */
+/* LN-bandits start: Novaria aliens and Bob citizens sometimes turn into BANDITS who steal your coins and run (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni, BC = window.__bobciv, T3 = U && U.town3D;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  function banditTag(){
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64; const x = cv.getContext('2d');
+    x.fillStyle = 'rgba(160,0,0,.85)'; x.fillRect(8, 8, 240, 48); x.strokeStyle = '#fff'; x.lineWidth = 3; x.strokeRect(8, 8, 240, 48);
+    x.font = 'bold 36px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('BANDIT', 128, 33);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
+    s.scale.set(1.8, .45, 1); return s;
+  }
+  function mask(){ // a black bandit mask over the eyes
+    const m = new THREE.Mesh(new THREE.BoxGeometry(.75, .16, .1), new THREE.MeshLambertMaterial({color:0x111111})); return m;
+  }
+  let B = null;           // the current bandit
+  let nextT = 60 + Math.random()*60;
+  const v = new THREE.Vector3();
+  function pos(){ if(B.kind === 'alien'){ B.a.g.getWorldPosition(v); return v; } return v.set(B.p.x, 0, B.p.z); }
+  function name(){ return B.kind === 'alien' ? (B.a.nm || 'An alien') + ' of ' + U.TOWNS[B.i].n : B.p.job.j + ' Bob of ' + B.p.c.name; }
+  function start(force){
+    const cand = [];
+    if(T3 && U.onUni && U.onUni()) T3.forEach((o, i)=>{ if(o.g.visible) o.aliens.forEach(a=>{ if(!a.dead){ a.g.getWorldPosition(v); const d = Math.hypot(v.x - P.x, v.z - P.z); if(d < 70) cand.push({kind:'alien', i, a, d}); } }); });
+    if(BC && realm === 0) BC.people.forEach(p=>{ const d = Math.hypot(p.x - P.x, p.z - P.z); if(d < 70) cand.push({kind:'cit', p, d}); });
+    if(!cand.length) return false;
+    B = pick(cand); B.mode = 'chase'; B.t = 0; B.stolen = 0;
+    B.tag = banditTag(); B.tag.position.y = B.kind === 'alien' ? 3.1 : 3.3; B.mask = mask(); B.mask.position.set(0, B.kind === 'alien' ? 1.5 : 1.75, .32);
+    const g = B.kind === 'alien' ? B.a.g : B.p.b.g; g.add(B.tag); g.add(B.mask);
+    if(B.kind === 'alien'){ B.sp0 = B.a.sp; B.a.sp = 0; }
+    toast('Watch out! ' + name() + ' turned into a BANDIT and is coming for your coins! Hit them to stop them.');
+    blip(220, .25, .12, 'sawtooth');
+    return true;
+  }
+  function stop(){
+    if(!B) return;
+    const g = B.kind === 'alien' ? B.a.g : B.p.b.g; g.remove(B.tag); g.remove(B.mask);
+    if(B.kind === 'alien' && !B.a.dead) B.a.sp = B.sp0 || .3;
+    B = null; nextT = 60 + Math.random()*60;
+  }
+  function move(tx, tz, speed, dt){
+    if(B.kind === 'alien'){
+      const o = T3[B.i].g, lx = Math.cos(B.a.a)*B.a.r, lz = Math.sin(B.a.a)*B.a.r;
+      let dx = tx - o.position.x - lx, dz = tz - o.position.z - lz; const d = Math.hypot(dx, dz) || 1, s = Math.min(d, speed*dt);
+      let nx = lx + dx/d*s, nz = lz + dz/d*s; const r = Math.hypot(nx, nz);
+      if(r > 60){ nx *= 60/r; nz *= 60/r; }       // stay near their town
+      B.a.a = Math.atan2(nz, nx); B.a.r = Math.max(.5, Math.hypot(nx, nz));
+      B.a.g.position.set(Math.cos(B.a.a)*B.a.r, 0, Math.sin(B.a.a)*B.a.r); B.a.g.rotation.y = Math.atan2(dx, dz);
+    } else {
+      const p = B.p, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz) || 1, s = Math.min(d, speed*dt);
+      p.x += dx/d*s; p.z += dz/d*s; p.wx = p.x + dx/d; p.wz = p.z + dz/d; p.wait = 0; p.sayT = 5;
+    }
+  }
+  function caught(){
+    const back = B.stolen, bonus = B.stolen ? 150 : 100;
+    save.coins += back + bonus; save.banditsCaught = (save.banditsCaught || 0) + 1; persist();
+    toast('You stopped the bandit ' + name() + '!' + (back ? '  Got back your $' + back.toLocaleString() + '.' : '') + '  Reward +$' + bonus + '.');
+    blip(900, .15, .1, 'triangle'); setTimeout(()=>blip(1300, .2, .1, 'triangle'), 120);
+    newsQ((B.kind === 'alien' ? 'SPACE NEWS: ' : 'NEWS: ') + 'A brave miner stopped the bandit ' + name() + '. ' + pick(['The town threw a small party.', 'The stolen coins smelled a bit funny.', 'The bandit says they were just "borrowing" it.']));
+    stop();
+  }
+  function tick(dt){
+    if(!B){
+      nextT -= dt; if(nextT <= 0){ if(!start()) nextT = 20; }
+      return;
+    }
+    // the bandit got defeated by your normal attacks
+    if(B.kind === 'alien' ? B.a.dead : BC.people.indexOf(B.p) < 0) return caught();
+    // you left the place
+    if(B.kind === 'alien' ? !(U.onUni && U.onUni()) : realm !== 0){ stop(); return; }
+    B.t += dt; const bp = pos(), d = Math.hypot(bp.x - P.x, bp.z - P.z);
+    if(B.mode === 'chase'){
+      move(P.x, P.z, 4.2, dt);
+      if(d < 1.7){
+        const amt = Math.min(500, Math.floor((save.coins || 0)*.05));
+        if(amt > 0){ save.coins -= amt; B.stolen = amt; persist(); toast(name() + ' STOLE $' + amt.toLocaleString() + ' and is running away! Catch them to get it back.'); }
+        else toast(name() + ': "No coins?! Being a bandit is hard." The bandit runs off.');
+        blip(160, .3, .12, 'square'); B.mode = 'run'; B.t = 0;
+      } else if(B.t > 60 || d > 120){ toast(name() + ' gave up being a bandit.'); stop(); }
+    } else {
+      const dx = bp.x - P.x, dz = bp.z - P.z, n = Math.hypot(dx, dz) || 1;
+      move(bp.x + dx/n*5, bp.z + dz/n*5, 3.6, dt);
+      if(B.t > 40){
+        if(B.stolen){ toast(name() + ' got away with your $' + B.stolen.toLocaleString() + '. Next time, be faster!'); newsQ((B.kind === 'alien' ? 'SPACE NEWS: ' : 'NEWS: ') + 'The bandit ' + name() + ' escaped with $' + B.stolen.toLocaleString() + '. Police are looking under every rock.'); }
+        stop();
+      }
+    }
+  }
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ if(startEl.style.display !== 'flex' && !won) tick(dt); }catch(e){ console.warn('LN-bandits', e); }
+  })(last);
+  window.__bandits = {now:()=>{ if(B) stop(); return start(); }, get cur(){ return B; }, caught:()=>B && caught(), stop};
+})();
+/* LN-bandits end */
+
 
 
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
