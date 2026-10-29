@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 98 (Oct 29)';
+  window.__BUILD = 'Build 99 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3425,7 +3425,7 @@ function rebuild(){
     const t = wblk[(d*WIN+lz)*WIN+lx]; if(!t) continue;
     if(W(lx-1,d,lz) && W(lx+1,d,lz) && W(lx,d,lz-1) && W(lx,d,lz+1) && W(lx,d-1,lz) && W(lx,d+1,lz)) continue;   // buried
     const li = t-1, m = meshes[li];
-    if(counts[li] >= m.userData.max) continue;
+    if(!m || counts[li] >= m.userData.max) continue;   /* LN-meshfix: block type not registered yet */
     const c = counts[li]++;
     _m4.makeTranslation(wox+lx+.5, -d-.5, woz+lz+.5);
     m.setMatrixAt(c, _m4);
@@ -27492,6 +27492,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__bandits = {now:()=>{ if(B) stop(); return start(); }, get cur(){ return B; }, caught:()=>B && caught(), stop};
 })();
 /* LN-bandits end */
+/* LN-meshfix: once every block type is registered, forget saved blocks whose type no longer exists, then redraw */ try{ let bad = 0; edits.forEach((v,k)=>{ if(v > BLOCKS.length){ edits.delete(k); skyEdits.delete(k); bad++; } }); if(bad){ editsDirty = true; console.warn('LN-meshfix removed', bad); } fillWindow(wox + WIN/2, woz + WIN/2); rebuild(); }catch(e){ console.warn('LN-meshfix', e); }
 
 
 
