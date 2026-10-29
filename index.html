@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 102 (Oct 29)';
+  window.__BUILD = 'Build 103 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27802,7 +27802,268 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__animalHouse = {houses, outA, tick, place:(x, d, z)=>spawnPlaced(NAME, 'animalhouse', 0xb07040, null, {t:'i', key:NAME}, x, d, z, 0), scanNow:()=>{ scanT = 0; }, giftNow:()=>{ giftT = 0; }};
 })();
 /* LN-animalhouse end */
+/* LN-blockhomes start: build a house out of ANY blocks (walls + roof) or a pen (walls, no roof) and animals move in; animals build their own block houses and wear paths between homes (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const night = ()=>{ const t = ((tod % 1) + 1) % 1; return t > .58 && t < .92; };
+  const solid = (x, d, z)=>get(x, d, z) > 0;
+  const PATH = ()=>blockIdOf('Animal Path');
+  save.bHomes = save.bHomes || {};          // id -> {res:[{type,name}], kind, by}
+  let homes = [];                            // found this scan: {id, kind, cells:[[x,d,z]], cx, cz, cd, cap}
+  const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+  function wallDirs(x, d, z, far){
+    let n = 0;
+    for(const [dx, dz] of DIRS){ for(let s=1; s<=far; s++){ if(solid(x + dx*s, d, z + dz*s) || solid(x + dx*s, d - 1, z + dz*s)){ n++; break; } } }
+    return n;
+  }
+  function roofed(x, d, z){ for(let h=1; h<=4; h++) if(solid(x, d - h, z)) return true; return false; }
+  // find houses and pens made of blocks you (or the animals) placed
+  function scan(){
+    const near = [];
+    skyEdits.forEach(v=>{ if(Math.abs(v.x - P.x) < 45 && Math.abs(v.z - P.z) < 45 && v.d >= -24) near.push(v); });
+    const found = new Map(), seen = new Set();
+    // house cells: air with a floor under it, a roof over it and walls on at least 3 sides
+    for(const v of near){
+      for(let h=1; h<=4; h++){
+        const d = v.d + h; if(d >= 0) break;
+        if(solid(v.x, d, v.z)) break;
+        if(!solid(v.x, d + 1, v.z)) continue;          // needs a floor
+        const k = v.x + ',' + d + ',' + v.z; if(seen.has(k)) break; seen.add(k);
+        if(wallDirs(v.x, d, v.z, 5) >= 3) found.set(k, [v.x, d, v.z, 'house']);
+        break;
+      }
+    }
+    // pen cells: ground cells with no roof but fenced in on all 4 sides (fence = blocks you placed)
+    const ground = near.filter(v=>{ const below = v.d + 1; return below <= 0 && solid(v.x, below, v.z) && !solid(v.x, v.d - 3, v.z); });
+    // split the fence blocks into connected groups, then look inside each group
+    const gset = new Map(); ground.forEach(v=>gset.set(v.x + ',' + v.z, v));
+    const gdone = new Set();
+    for(const v0 of ground){
+      const k0 = v0.x + ',' + v0.z; if(gdone.has(k0)) continue;
+      const comp = [], q = [v0]; gdone.add(k0);
+      while(q.length){ const v = q.pop(); comp.push(v); for(let dx=-1; dx<=1; dx++) for(let dz=-1; dz<=1; dz++){ const kk = (v.x + dx) + ',' + (v.z + dz), n = gset.get(kk); if(n && !gdone.has(kk)){ gdone.add(kk); q.push(n); } } }
+      if(comp.length < 8) continue;
+      let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9; comp.forEach(v=>{ x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); z0 = Math.min(z0, v.z); z1 = Math.max(z1, v.z); });
+      if((x1 - x0) > 26 || (z1 - z0) > 26 || x1 - x0 < 2 || z1 - z0 < 2) continue;
+      for(let x=x0+1; x<x1; x++) for(let z=z0+1; z<z1; z++){
+        let d = -1; while(d > -12 && solid(x, d, z)) d--;       // stand on top of whatever is there
+        if(!solid(x, d + 1, z) || roofed(x, d, z)) continue;
+        let ok = 0; for(const [dx, dz] of DIRS){ for(let s=1; s<=26; s++){ const xx = x + dx*s, zz = z + dz*s; if(xx < x0 || xx > x1 || zz < z0 || zz > z1) break; const e = skyEdits.get(ek(xx, d, zz)); if(e && e.t > 0){ ok++; break; } } }
+        const k = x + ',' + d + ',' + z; if(ok === 4 && !found.has(k)) found.set(k, [x, d, z, 'pen']);
+      }
+    }
+    // join neighbouring cells into homes
+    const out = [], used = new Set();
+    for(const [k, c] of found){
+      if(used.has(k)) continue;
+      const cells = [], q = [c]; used.add(k);
+      while(q.length){ const [x, d, z, kind] = q.pop(); cells.push([x, d, z]);
+        for(const [dx, dz] of DIRS) for(const dd of [0, 1, -1]){ const kk = (x + dx) + ',' + (d + dd) + ',' + (z + dz); const n = found.get(kk); if(n && n[3] === kind && !used.has(kk)){ used.add(kk); q.push(n); } } }
+      if(c[3] === 'pen' && cells.length < 4) continue;
+      cells.sort((a, b)=>a[0] - b[0] || a[2] - b[2]);
+      const cx = cells.reduce((s, q)=>s + q[0], 0)/cells.length + .5, cz = cells.reduce((s, q)=>s + q[2], 0)/cells.length + .5;
+      const cap = c[3] === 'house' ? Math.max(1, Math.min(4, Math.floor(cells.length/2) || 1)) : Math.max(2, Math.min(6, Math.floor(cells.length/4)));
+      out.push({kind:c[3], cells, cx, cz, cd:cells[0][1], cap});
+    }
+    // keep the same id (and residents) when a home is found again in the same spot
+    const old = homes; homes = out.map(h=>{
+      const m = old.find(o=>o.kind === h.kind && Math.hypot(o.cx - h.cx, o.cz - h.cz) < 3);
+      h.id = m ? m.id : Object.keys(save.bHomes).find(id=>{ const s = save.bHomes[id]; return s.kind === h.kind && Math.hypot(s.cx - h.cx, s.cz - h.cz) < 3; }) || ('h' + Math.round(h.cx) + '_' + Math.round(h.cz) + '_' + h.kind);
+      const s = save.bHomes[h.id] = save.bHomes[h.id] || {res:[], kind:h.kind};
+      s.cx = h.cx; s.cz = h.cz; if(s.res.length > h.cap) s.res.length = h.cap;
+      if(!m && !s.told){ s.told = true; persist(); if(!h.by) toast(h.kind === 'house' ? 'The animals noticed your block house! It has room for ' + h.cap + '. They will move in soon.' : 'The animals noticed your fenced pen! ' + h.cap + ' animals can live in it.'); }
+      return h;
+    });
+    // homes that were broken: residents go back to the wild
+    old.forEach(o=>{ if(!homes.some(h=>h.id === o.id)){ const s = save.bHomes[o.id]; if(s && s.res.length && Math.hypot(P.x - o.cx, P.z - o.cz) < 60) toast('Your ' + (o.kind === 'house' ? 'block house' : 'pen') + ' was broken, so the animals moved out.'); free(o.id); delete save.bHomes[o.id]; } });
+  }
+  // residents are real animals that live at their home
+  const live = new Map();     // resident key -> animal
+  function free(id){ for(const [k, a] of live) if(k.startsWith(id + '#')){ a.homeOf = null; live.delete(k); } }
+  function walk(a, tx, tz, speed, dt){
+    const dx = tx - a.pos.x, dz = tz - a.pos.z, d = Math.hypot(dx, dz); if(d < .4) return true;
+    const s = Math.min(d, speed*dt); a.pos.x += dx/d*s; a.pos.z += dz/d*s; a.fleeT = 0; a.ang = a.dir = Math.atan2(dx, dz);
+    a.g.position.copy(a.pos); a.g.rotation.y = a.ang; return false;
+  }
+  const tags = new Map();
+  function retag(h){
+    const s = save.bHomes[h.id], key = h.kind + h.cap + s.res.map(r=>r.name).join(',');
+    let t = tags.get(h.id); if(t && t.key === key){ t.sp.position.set(h.cx, -h.cd + 2.6, h.cz); return; }
+    if(t) scene.remove(t.sp);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.85)';
+    const l1 = (h.kind === 'house' ? (s.by ? 'Animal-Built House  ' : 'Animal Home  ') : 'Animal Pen  ') + s.res.length + '/' + h.cap, l2 = s.res.length ? s.res.map(r=>r.name).join(', ') : 'Empty: animals will move in';
+    x.font = 'bold 36px system-ui,sans-serif'; x.strokeText(l1, 256, 32); x.fillStyle = '#ffe080'; x.fillText(l1, 256, 32);
+    x.font = 'bold 25px system-ui,sans-serif'; x.strokeText(l2, 256, 80); x.fillStyle = '#ffffff'; x.fillText(l2, 256, 80);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
+    sp.scale.set(3.6, .79, 1); sp.position.set(h.cx, -h.cd + 2.6, h.cz); scene.add(sp); tags.set(h.id, {sp, key});
+  }
+  const movers = new Map();     // home id -> {a, h}
+  function homeTick(dt){
+    const nt = night();
+    for(const h of homes){
+      const s = save.bHomes[h.id], near = Math.hypot(P.x - h.cx, P.z - h.cz) < 90;
+      // somebody new moves in
+      if(near && !movers.has(h.id) && s.res.length < h.cap){
+        let best = null, bd = 30;
+        for(const a of animals){ if(!a.g || a.popRef || a.homeOf || a.goingHome || a.d.boss || a.angry || a.isPet) continue; const dd = Math.hypot(a.pos.x - h.cx, a.pos.z - h.cz); if(dd < bd){ bd = dd; best = a; } }
+        if(best){ movers.set(h.id, {a:best, h}); best.goingHome = h.id; }
+      }
+      // residents: out and about in the day, inside at night (in a pen they always stay inside the fence)
+      s.res.forEach((r, n)=>{
+        const key = h.id + '#' + n; let a = live.get(key);
+        if(a && animals.indexOf(a) < 0){ live.delete(key); a = null; if(r.lost){ } }
+        if(!near){ if(a){ removeAnimal(a); live.delete(key); } return; }
+        if(!a){ const c = h.cells[n % h.cells.length]; a = spawnAnimal(r.type, c[0] + .5, c[2] + .5); a.homeOf = h.id; a.pos.y = -c[1] - 1; a.g.position.copy(a.pos); live.set(key, a); return; }
+        const c = h.cells[(n*3) % h.cells.length];
+        if(h.kind === 'pen' || nt){
+          const inside = h.cells.some(q=>Math.floor(a.pos.x) === q[0] && Math.floor(a.pos.z) === q[2]);
+          if(!inside || nt) walk(a, c[0] + .5, c[2] + .5, 2.2, dt);
+        } else if(Math.hypot(a.pos.x - h.cx, a.pos.z - h.cz) > 12) walk(a, h.cx, h.cz, 1.8, dt);
+      });
+      retag(h);
+    }
+    for(const [id, t] of tags) if(!homes.some(h=>h.id === id)){ scene.remove(t.sp); tags.delete(id); }
+    for(const [id, mv] of movers){
+      const {a} = mv, s = save.bHomes[id], hh = homes.find(q=>q.id === id);
+      if(animals.indexOf(a) < 0 || !hh || !s){ if(animals.indexOf(a) >= 0) a.goingHome = null; movers.delete(id); continue; }
+      if(walk(a, hh.cells[0][0] + .5, hh.cells[0][2] + .5, 2.4, dt)){
+        s.res.push({type:a.type, name:a.d.name}); removeAnimal(a); movers.delete(id); persist();
+        if(Math.hypot(P.x - hh.cx, P.z - hh.cz) < 50){ toast('A ' + a.d.name + ' moved into your ' + (hh.kind === 'house' ? 'block house' : 'pen') + '! (' + s.res.length + '/' + hh.cap + ')'); blip(880, .1, .08, 'triangle'); }
+      }
+    }
+  }
+  // the animals build their own little block houses
+  const WALLS = ['Wood Floor', 'City Brick', 'Clay', 'Hard Rock', 'Soil'];
+  let job = null, buildT = 90;
+  function startBuild(){
+    if(job || realm !== 0) return false;
+    const mine = Object.values(save.bHomes).filter(s=>s.by && Math.hypot(s.cx - P.x, s.cz - P.z) < 90).length; if(mine >= 3) return false;
+    const cand = animals.filter(a=>a.g && !a.popRef && !a.homeOf && !a.goingHome && !a.d.boss && !a.angry && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) < 40);
+    if(!cand.length) return false;
+    const a = pick(cand);
+    for(let t=0;t<20;t++){
+      const x0 = Math.floor(a.pos.x + (Math.random() - .5)*16), z0 = Math.floor(a.pos.z + (Math.random() - .5)*16);
+      if(Math.hypot(x0 + 2.5 - P.x, z0 + 2.5 - P.z) < 5) continue;
+      let ok = true;
+      for(let x=x0; x<x0+5 && ok; x++) for(let z=z0; z<z0+5 && ok; z++){ if(!solid(x, 0, z) || solid(x, -1, z) || solid(x, -2, z) || solid(x, -3, z) || solid(x, -4, z)) ok = false; }
+      if(!ok) continue;
+      if(homes.some(h=>Math.hypot(h.cx - x0, h.cz - z0) < 9)) continue;
+      const wn = WALLS.filter(n=>blockIdOf(n)), wall = blockIdOf(pick(wn.length ? wn : ['Dirt'])), roof = blockIdOf('Wood Floor') || wall;
+      const plan = [], door = pick([[2, 0], [2, 4], [0, 2], [4, 2]]);
+      for(let d=-1; d>=-3; d--) for(let x=0; x<5; x++) for(let z=0; z<5; z++){ const edge = x === 0 || x === 4 || z === 0 || z === 4; if(!edge) continue; if(x === door[0] && z === door[1] && d >= -2) continue; plan.push([x0 + x, d, z0 + z, wall]); }
+      for(let x=0; x<5; x++) for(let z=0; z<5; z++) plan.push([x0 + x, -4, z0 + z, roof]);
+      job = {a, plan, i:0, t:0, x0, z0};
+      a.goingHome = 'build';
+      if(Math.hypot(P.x - x0, P.z - z0) < 60) toast('A ' + a.d.name + ' started building its own house out of blocks!');
+      return true;
+    }
+    return false;
+  }
+  function buildTick(dt){
+    buildT -= dt; if(buildT <= 0){ buildT = 150 + Math.random()*120; startBuild(); }
+    if(!job) return;
+    const {a} = job;
+    if(animals.indexOf(a) < 0){ job = null; return; }
+    const p = job.plan[job.i]; if(!p){ return; }
+    walk(a, p[0] + .5 + (p[0] === job.x0 ? -1 : p[0] === job.x0 + 4 ? 1 : 0), p[2] + .5 + (p[2] === job.z0 ? -1 : p[2] === job.z0 + 4 ? 1 : 0), 3, dt);
+    job.t -= dt; if(job.t > 0) return; job.t = .5;
+    if(!solid(p[0], p[1], p[2])){ setBlock(p[0], p[1], p[2], p[3]); try{ burst(p[0] + .5, -p[1] - .5, p[2] + .5, p[3] - 1, 4); }catch(e){} }
+    job.i++;
+    if(job.i >= job.plan.length){
+      const cx = job.x0 + 2.5, cz = job.z0 + 2.5, id = 'h' + Math.round(cx) + '_' + Math.round(cz) + '_house';
+      save.bHomes[id] = {res:[{type:a.type, name:a.d.name}], kind:'house', by:true, cx, cz, told:true};
+      removeAnimal(a); job = null; persist(); scanT = 0;
+      if(Math.hypot(P.x - cx, P.z - cz) < 60) toast('The ' + a.d.name + ' finished its block house and moved in!');
+      newsQ('NEWS: A ' + a.d.name + ' built its own house out of blocks. ' + pick(['Its friends say the door is a bit small.', 'It has a lovely view of a tree.', 'Builders everywhere are impressed.']));
+    }
+  }
+  // paths: the animals wear a path into the grass between homes that are close together
+  let pathJob = null, pathT = 20;
+  function pathTick(dt){
+    pathT -= dt; if(pathT > 0) return; pathT = 1;
+    const pid = PATH(); if(!pid) return;
+    if(!pathJob){
+      save.bPaths = save.bPaths || {};
+      const H = homes.filter(h=>save.bHomes[h.id] && save.bHomes[h.id].res.length);
+      for(let i=0;i<H.length && !pathJob;i++) for(let j=i+1;j<H.length && !pathJob;j++){
+        const A = H[i], B = H[j], dd = Math.hypot(A.cx - B.cx, A.cz - B.cz), key = [A.id, B.id].sort().join('~');
+        if(dd < 6 || dd > 45 || save.bPaths[key]) continue;
+        const pts = []; const n = Math.ceil(dd);
+        for(let s=0; s<=n; s++){ const x = Math.floor(A.cx + (B.cx - A.cx)*s/n), z = Math.floor(A.cz + (B.cz - A.cz)*s/n); if(!pts.some(q=>q[0] === x && q[1] === z)) pts.push([x, z]); }
+        pathJob = {pts, i:0, key}; if(Math.hypot(P.x - A.cx, P.z - A.cz) < 60) toast('The animals are making a path between their homes.');
+      }
+      if(!pathJob){ pathT = 15; return; }
+    }
+    // a few blocks every second
+    for(let k=0; k<2 && pathJob.i < pathJob.pts.length; k++, pathJob.i++){
+      const [x, z] = pathJob.pts[pathJob.i]; const t = get(x, 0, z), B = t > 0 && BLOCKS[t - 1];
+      if(B && /grass|soil|dirt/i.test(B.name) && !solid(x, -1, z)) setBlock(x, 0, z, pid);
+    }
+    if(pathJob.i >= pathJob.pts.length){ save.bPaths[pathJob.key] = 1; pathJob = null; persist(); }
+  }
+  // F inside or next to a home: who lives here
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !locked || realm !== 0) return;
+    for(const h of homes){ if(Math.hypot(P.x - h.cx, P.z - h.cz) < 3.5){ const s = save.bHomes[h.id];
+      setTimeout(()=>toast((h.kind === 'house' ? 'Animal home' : 'Animal pen') + ': ' + (s.res.length ? s.res.map(r=>r.name).join(', ') : 'nobody yet') + '. Room for ' + h.cap + '.'), 40); return; } }
+  });
+  let scanT = 4, last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won || realm !== 0) return;
+      scanT -= dt; if(scanT <= 0){ scanT = 4; scan(); }
+      homeTick(dt); buildTick(dt); pathTick(dt);
+    }catch(e){ console.warn('LN-blockhomes', e); }
+  })(last);
+  window.__blockHomes = {get movin(){ return [...movers.values()].map(m=>m.a.d.name).join(','); }, dbgPen:()=>{ const near = []; skyEdits.forEach(v=>{ if(Math.abs(v.x - P.x) < 45 && Math.abs(v.z - P.z) < 45 && v.d >= -24) near.push(v); }); const ground = near.filter(v=>{ const below = v.d + 1; return below <= 0 && solid(v.x, below, v.z) && !solid(v.x, v.d - 3, v.z); }); return near.length + ' ' + ground.length; }, setBlock:(x,d,z,t)=>setBlock(x,d,z,t), get:(x,d,z)=>get(x,d,z), bid:n=>blockIdOf(n), scan, get homes(){ return homes; }, live, startBuild, get job(){ return job; }, buildNow:()=>{ buildT = 0; }, pathNow:()=>{ pathT = 0; }, finishBuild:()=>{ if(job){ while(job && job.i < job.plan.length){ const p = job.plan[job.i]; if(!solid(p[0], p[1], p[2])) setBlock(p[0], p[1], p[2], p[3]); job.i++; } job.t = 0; } }};
+})();
+/* LN-blockhomes end */
 
+
+
+/* LN-blockfix start: blocks you mined on another planet or in another mode stay real blocks (they used to turn into shapes), plus the Animal Path block (Irfan 2026-10-29) */
+(function(){
+  save.blkSnap = save.blkSnap || {};      // name -> a copy of the block as it was when you got it
+  save.extraBlocks = save.extraBlocks || [];
+  function regBlock(spec){
+    const j = BLOCKS.findIndex(b=>b.name === spec.name); if(j >= 0) return j + 1;
+    const o = Object.assign({}, spec); BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length - 1)); _blockIds = null; return BLOCKS.length;
+  }
+  function snapOf(b){ const o = {}; for(const k in b){ const v = b[k]; if(typeof v !== 'function' && !(v && v.isTexture) && !(v && v.isMaterial)) o[k] = v; } return o; }
+  // blocks rescued in earlier sessions come back first, in the same order, so saved worlds keep their ids
+  save.extraBlocks.forEach(n=>{ const s = save.blkSnap[n]; if(s) regBlock(s); });
+  // the Animal Path block (animals wear paths into the grass)
+  { const dirt = BLOCKS.find(b=>b.name === 'Dirt') || BLOCKS[2];
+    regBlock(Object.assign(snapOf(dirt), {name:'Animal Path', base:[176,146,96], amp:14, sp:[[200,170,120],[150,120,80]], p:.25, ore:false, glow:0})); }
+  // remember what every block item looked like when you got it
+  const _ai = addItem;
+  addItem = function(name, n, silent){
+    try{ const id = blockIdOf(name); if(id && !save.blkSnap[name] && Object.keys(save.blkSnap).length < 400) save.blkSnap[name] = snapOf(BLOCKS[id - 1]); }catch(e){}
+    return _ai.apply(this, arguments);
+  };
+  // a name that is not a block right now (the planet or mode renamed it) becomes its own block again
+  const _bi = blockIdOf;
+  blockIdOf = function(name){
+    const r = _bi(name); if(r || !name) return r;
+    const s = save.blkSnap && save.blkSnap[name]; if(!s) return r;
+    const id = regBlock(s); if(save.extraBlocks.indexOf(name) < 0){ save.extraBlocks.push(name); persist(); }
+    return id;
+  };
+  // grass under a block turns into dirt
+  const DIRT = ()=>_bi('Dirt') || 3;
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    const r = _sb.apply(this, arguments);
+    try{ if(t > 0){ const u = get(x, d + 1, z), B = u > 0 && BLOCKS[u - 1]; if(B && /grass/i.test(B.name) && !/glass/i.test(B.name)) _sb(x, d + 1, z, DIRT()); } }catch(e){}
+    return r;
+  };
+  window.__blockfix = {regBlock, snapOf};
+})();
+/* LN-blockfix end */
 
 /* LN-meshfix: once every block type is registered, forget saved blocks whose type no longer exists, then redraw */ try{ let bad = 0; edits.forEach((v,k)=>{ if(v > BLOCKS.length){ edits.delete(k); skyEdits.delete(k); bad++; } }); if(bad){ editsDirty = true; console.warn('LN-meshfix removed', bad); } fillWindow(wox + WIN/2, woz + WIN/2); rebuild(); }catch(e){ console.warn('LN-meshfix', e); }
 
