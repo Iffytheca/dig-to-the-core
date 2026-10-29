@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 107 (Oct 29)';
+  window.__BUILD = 'Build 109 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -26170,7 +26170,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _bbC = baseBlock;
   baseBlock = function(x, d, z){
     const t = _bbC(x, d, z);
-    if(t && x < UPPER_EDGE && d >= D - 14 && d < D && hash3(x>>1, d>>1, z>>1, 3301) < .05 && hash3(x, d, z, 3303) < .35 && !(BLOCKS[t-1] && BLOCKS[t-1].ore)) return CARB || t;
+    if(t && x < UPPER_EDGE && d >= D - 14 && d < D && hash3(x>>1, d>>1, z>>1, 3301) < .05 && hash3(x, d, z, 3303) < .012 && !(BLOCKS[t-1] && BLOCKS[t-1].ore)) return CARB || t;
     return t;
   };
 
@@ -27132,7 +27132,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   /* ================================================ ANIMATED BLOCKS: each one gets a moving canvas texture */
   const NEW = [
-    {name:'Glow Crystal',     ore:true,  cat:'crystal', h:900,  v:2500000,  base:[230,240,255], glow:1,  dmin:30, dmax:60, seed:4101, ch:.05},
+    {name:'Glow Crystal',     ore:true,  cat:'crystal', h:900,  v:2500000,  base:[230,240,255], glow:1,  dmin:30, dmax:60, seed:4101, ch:.025},
     {name:'Zebra Flow Block', ore:false,                h:400,  v:800000,   base:[240,240,240], glow:.3, dmin:12, dmax:30, seed:4103, ch:.03},
     {name:'Lava Lamp Block',  ore:false,                h:600,  v:1200000,  base:[120,40,160],  glow:.6, dmin:20, dmax:45, seed:4105, ch:.03},
     {name:'Matrix Block',     ore:false,                h:700,  v:1500000,  base:[10,40,10],    glow:.7, dmin:25, dmax:55, seed:4107, ch:.03},
@@ -27152,7 +27152,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const t = _bb(x, d, z);
     if(!t || x >= UPPER_EDGE || d < 0 || (BLOCKS[t-1] && BLOCKS[t-1].ore)) return t;
     for(const o of NEW){
-      if(d >= o.dmin && d < Math.min(o.dmax, D - 1) && hash3(x>>1, d>>1, z>>1, o.seed) < o.ch && hash3(x, d, z, o.seed + 1) < .4) return ids[o.name] || t;
+      if(d >= o.dmin && d < Math.min(o.dmax, D - 1) && hash3(x>>1, d>>1, z>>1, o.seed) < o.ch && hash3(x, d, z, o.seed + 1) < .02) return ids[o.name] || t;
     }
     return t;
   };
@@ -28409,6 +28409,93 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__natl = {fill, line, fillAll};
 })();
 /* LN-national end */
+/* LN-alliance start: countries form alliances; allies send soldiers to help in wars, and an alliance breaks if two members go to war (Irfan 2026-10-29) */
+(function(){
+  const W = window.__wars; if(!W) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const NA = ['Pancake','Sock','Banana','Friendship','Sandwich','Rubber Duck','Pillow','Biscuit','Moon','Thunder','Cheese','Bubble','Waffle','Golden Spoon','Sleepy','Mighty Pickle'];
+  const NB = ['Pact','Alliance','Union','League','Club','Team','Treaty','Squad','Brotherhood','Friendship Circle'];
+  const A = save.alliances = save.alliances || {list:[], next:1, formT:90};
+  const towns = ()=>(save.nations || []).filter(n=>n && n.pop && n.pop.length);
+  const byId = id=>(save.nations || []).find(n=>n && n.id === id);
+  const allyOf = n=>A.list.find(a=>a.members.indexOf(n.id) >= 0);
+  const COLS = [0x40c040, 0xe0a020, 0xa040e0, 0x20c0c0, 0xe04090, 0xffffff];
+  function name(){ for(let k=0;k<20;k++){ const nm = 'The ' + pick(NA) + ' ' + pick(NB); if(!A.list.some(a=>a.name === nm)) return nm; } return 'The Alliance Number ' + A.next; }
+  function form(){
+    const T = towns().filter(n=>!n.war); if(T.length < 2) return null;
+    const loners = T.filter(n=>!allyOf(n));
+    // join an existing alliance, or start a new one with another country
+    if(loners.length && A.list.length && Math.random() < .45){
+      const al = pick(A.list), n = pick(loners); if(al.members.length < 4){ al.members.push(n.id); persist();
+        newsQ('NEWS: ' + n.name + ' joined ' + al.name + '! ' + pick(['They brought snacks.', 'The welcome party had a bouncy castle.', 'Everyone signed a very long piece of paper.']), true);
+        if(Math.hypot(P.x - n.x, P.z - n.z) < 120) toast(n.name + ' joined ' + al.name + '!'); return al; }
+    }
+    if(loners.length < 2) return null;
+    const a = pick(loners); let b = pick(loners); for(let k=0;k<10 && b === a;k++) b = pick(loners); if(a === b) return null;
+    const al = {id:A.next++, name:name(), members:[a.id, b.id], col:pick(COLS), born:Date.now()};
+    A.list.push(al); persist();
+    newsQ('BREAKING: ' + a.name + ' and ' + b.name + ' formed an alliance: ' + al.name + '! ' + pick(['They promised to help each other in every war.', 'They shook hands. Then paws. Then hooves.', 'They swapped national foods. ' + ((a.natl && a.natl.food) || 'Soup') + ' for ' + ((b.natl && b.natl.food) || 'cake') + '.']), true);
+    if(Math.hypot(P.x - a.x, P.z - a.z) < 120 || Math.hypot(P.x - b.x, P.z - b.z) < 120) toast('ALLIANCE! ' + a.name + ' and ' + b.name + ' formed ' + al.name + '.');
+    return al;
+  }
+  function breakUp(al, why){
+    A.list = A.list.filter(x=>x !== al); persist();
+    newsQ('BREAKING: ' + al.name + ' has broken up! ' + why, true);
+  }
+  function cleanup(){
+    A.list.forEach(al=>{ al.members = al.members.filter(id=>{ const n = byId(id); return n && n.pop && n.pop.length; }); });
+    const dead = A.list.filter(al=>al.members.length < 2); dead.forEach(al=>A.list = A.list.filter(x=>x !== al));
+  }
+  // allies join wars
+  let lastWar = null;
+  function helmet(a, col){ try{ const top = window.__headTop ? window.__headTop(a) : null; const h = sbox(.5, .14, .5, col, 0, 0, 0, a.g); if(top){ h.position.copy(top); h.position.y += .08; } else h.position.y = 1.4; }catch(e){} }
+  function warCheck(){
+    const w = W.war;
+    if(w && w !== lastWar){
+      lastWar = w; w.allies = {A:[], B:[]};
+      const aA = allyOf(w.A), aB = allyOf(w.B);
+      if(aA && aA === aB){ breakUp(aA, w.A.name + ' and ' + w.B.name + ' went to war with each other. Friendship over!'); return; }
+      [['A', aA, w.A], ['B', aB, w.B]].forEach(([side, al, n])=>{ if(!al) return;
+        al.members.forEach(id=>{ if(id === n.id) return; const m = byId(id); if(m && !m.war){ w.allies[side].push(m.id); } });
+        if(w.allies[side].length){ const names = w.allies[side].map(id=>byId(id).name).join(' and ');
+          newsQ('WAR NEWS: ' + names + ' joined the war to help their ally ' + n.name + '! ' + al.name + ' sticks together.', true);
+          if(realm === 0) toast(names + ' came to help ' + n.name + ' in the war! (' + al.name + ')'); }
+      });
+    }
+    if(!w){ lastWar = null; return; }
+    // allied soldiers march in with every wave
+    const mx = (w.A.x + w.B.x)/2, mz = (w.A.z + w.B.z)/2, watching = realm === 0 && Math.hypot(mx - P.x, mz - P.z) < 120;
+    if(!watching || !w.allies) return;
+    w.allyT = (w.allyT || 0) - 1; if(w.allyT > 0) return; w.allyT = 12;
+    ['A', 'B'].forEach(side=>{
+      w.allies[side].forEach(id=>{ const m = byId(id); if(!m || !m.type) return;
+        const live = W.soldiers.filter(a=>a.allyOf === id && animals.indexOf(a) >= 0).length; if(live >= 2) return;
+        const home = side === 'A' ? w.A : w.B, ang = Math.atan2(mz - home.z, mx - home.x), d = Math.min(22, Math.hypot(mx - home.x, mz - home.z)*.6);
+        for(let k=0;k<2;k++){ const x = mx - Math.cos(ang)*d + (Math.random() - .5)*6, z = mz - Math.sin(ang)*d + (Math.random() - .5)*6;
+          const a = spawnAnimal(m.type, x, z); a.soldier = side; a.nation = null; a.shp = 30; a.allyOf = id; helmet(a, side === 'A' ? 0xd03030 : 0x3060d0); W.soldiers.push(a); }
+      });
+    });
+  }
+  // the alliance shows on each country's sign
+  const N = window.__natl;
+  if(N && N.line){ const _l = N.line; N.line = function(n){ const al = allyOf(n); return _l.apply(this, arguments) + (al ? '   Alliance: ' + al.name : ''); }; }
+  setInterval(()=>{
+    try{
+      if(won) return;
+      cleanup(); warCheck();
+      A.formT -= 1;
+      if(A.formT <= 0){ A.formT = 150 + Math.random()*150; form(); }
+      // now and then an alliance throws a party, or breaks up over something silly
+      if(Math.random() < 1/240 && A.list.length){ const al = pick(A.list);
+        if(Math.random() < .25 && al.members.length >= 2) breakUp(al, pick(['They could not agree on the best pizza topping.', 'Somebody forgot somebody\'s birthday.', 'They argued about whose national animal is cuter.']));
+        else newsQ('NEWS: ' + al.name + ' held a big party. ' + pick(['All ' + al.members.length + ' countries danced.', 'There was a cake shaped like a handshake.', 'Nobody declared war for a whole day.'])); }
+    }catch(e){ console.warn('LN-alliance', e); }
+  }, 1000);
+  window.__alliance = {A, form, breakUp, allyOf, formNow:()=>{ A.formT = 0; }};
+})();
+/* LN-alliance end */
+
 
 
 
