@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 95 (Oct 29)';
+  window.__BUILD = 'Build 96 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -5427,7 +5427,7 @@ function fightAttack(dt){
     hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
     const pw = PICKS[save.equipped].power; let dmg = (pw >= 1e6 || mineAny) ? 1e12 : (pw*1.4 + 8)*dt*(1 + gear.dmg);   // the world-breaking pickaxes one-shot anything
     dmg = maBossDmg(t, dmg);
-    if(t.k === 'zomb' || (t.k === 'baba' && Math.random() < dt*2.5)){ gunTargetHit(t, dmg); } else if(t.k === 'bob'){ window.__bobs && window.__bobs.hit(t.bob, Math.min(dmg, 1e6)); } else if(t.k === 'mzc'){ window.__mzHit && window.__mzHit(t.ch, Math.min(dmg, 1e6)); } else if(t.k === 'bguy'){ window.__bguy && window.__bguy.hurtGuy(Math.min(dmg, 1e6)); }
+    if(t.custom){ gunTargetHit(t, dmg); } else if(t.k === 'zomb' || (t.k === 'baba' && Math.random() < dt*2.5)){ gunTargetHit(t, dmg); } else if(t.k === 'bob'){ window.__bobs && window.__bobs.hit(t.bob, Math.min(dmg, 1e6)); } else if(t.k === 'mzc'){ window.__mzHit && window.__mzHit(t.ch, Math.min(dmg, 1e6)); } else if(t.k === 'bguy'){ window.__bguy && window.__bguy.hurtGuy(Math.min(dmg, 1e6)); }
     else if(t.k === 'c') mineCorpse(t.corpse, dmg); else if(t.k === 'n') nw.hp -= dmg; else if(t.k === 's') sk.hp -= dmg; else if(t.k === 'e') damageEnemy(t.e, dmg); else if(t.k === 'a') damageAnimal(t.a, dmg); else if(t.k === 'p') pt.hp -= dmg; else beast.hp -= dmg;
     if(Math.random() < dt*10){ blip(180+Math.random()*80,.06,.07,'square'); burst(t.c.x, t.c.y, t.c.z, 9, 1); }
     return true;
@@ -26901,7 +26901,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   /* ================================================ the animated blocks: Carbyne shimmers through every colour */
   const animMats = [];
-  [CARB, CARBB].forEach((id, k)=>{ const m = id && meshes[id-1]; if(m && m.material && !Array.isArray(m.material)){ m.material.emissive = m.material.emissive || new THREE.Color(); animMats.push({m:m.material, k}); } });
+  /* LN-alive: Carbyne animation moved to LN-alive (moving textures) */
   const _hsl = new THREE.Color();
 
   /* ================================================ every frame */
@@ -26970,7 +26970,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
   }catch(e){ console.warn('LN-universe gift', e); }
 
-  window.__uni = {NU, UZ, UL, UO, UB, uIds, oIds, sIds, CARB, CARBB, ucol, uniBase, UNI_D, onUni, goUni, goHome, openShop, closeShop, nearSt, civ, TOWNS, startDis:k=>{ if(dis) endDis(); const d = DIS.find(q=>q.k === k); if(d){ DIS.unshift(DIS.splice(DIS.indexOf(d), 1)[0]); dis = null; const r = Math.random; Math.random = ()=>0; try{ startDis(); }finally{ Math.random = r; } } },
+  window.__uni = {NU, UZ, UL, UO, UB, uIds, oIds, sIds, CARB, CARBB, ucol, uniBase, UNI_D, onUni, goUni, goHome, openShop, closeShop, nearSt, civ, TOWNS, town3D, startDis:k=>{ if(dis) endDis(); const d = DIS.find(q=>q.k === k); if(d){ DIS.unshift(DIS.splice(DIS.indexOf(d), 1)[0]); dis = null; const r = Math.random; Math.random = ()=>0; try{ startDis(); }finally{ Math.random = r; } } },
     get dis(){ return dis; }, addTouch, MP, HP, buildTown, craftTest:(slots, want)=>{ craftSlots = slots; craftWant = want; const pv = craftPreview(); craftGo(); return pv; }, editsN:()=>edits.size, boom:(x,z)=>boom(x, surfY(x, z), z), disTick:dt=>disTick(dt)};
 })();
 /* LN-universe end */
@@ -27117,6 +27117,204 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__neonTrees = {fell, falling, regrow, WOOD, LEAF, get:(x,d,z)=>get(x,d,z)};
 })();
 /* LN-neontrees end */
+/* LN-alive start: animated blocks that really move, Bob citizens and Novaria aliens can be killed, alien towns invent gadgets (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  function addB(o){
+    let j = BLOCKS.findIndex(b=>b.name === o.name);
+    if(j < 0 && BLOCKS.length < 1000){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length-1)); j = BLOCKS.length-1; }
+    return j >= 0 ? j + 1 : 0;
+  }
+
+  /* ================================================ ANIMATED BLOCKS: each one gets a moving canvas texture */
+  const NEW = [
+    {name:'Glow Crystal',     ore:true,  cat:'crystal', h:900,  v:2500000,  base:[230,240,255], glow:1,  dmin:30, dmax:60, seed:4101, ch:.05},
+    {name:'Zebra Flow Block', ore:false,                h:400,  v:800000,   base:[240,240,240], glow:.3, dmin:12, dmax:30, seed:4103, ch:.03},
+    {name:'Lava Lamp Block',  ore:false,                h:600,  v:1200000,  base:[120,40,160],  glow:.6, dmin:20, dmax:45, seed:4105, ch:.03},
+    {name:'Matrix Block',     ore:false,                h:700,  v:1500000,  base:[10,40,10],    glow:.7, dmin:25, dmax:55, seed:4107, ch:.03},
+    {name:'Disco Block',      ore:false,                h:500,  v:1000000,  base:[200,60,200],  glow:.8, dmin:8,  dmax:25, seed:4109, ch:.03},
+    {name:'Ocean Wave Block', ore:false,                h:450,  v:900000,   base:[30,110,200],  glow:.4, dmin:5,  dmax:20, seed:4111, ch:.03}
+  ];
+  const ids = {};
+  NEW.forEach(o=>{
+    const b = {name:o.name, ore:o.ore, th:0, max:9000, h:o.h, v:o.v, base:o.base, amp:12, sp:[[255,255,255],[0,0,0]], p:.3, glow:o.glow, anim:true};
+    if(o.ore) Object.assign(b, {cat:o.cat, oreName:o.name, hostName:'deep caves', host:0, oreCol:o.base});
+    ids[o.name] = addB(b);
+  });
+  try{ _blockIds = null; }catch(e){}
+  // they turn up deep on Earth (normal universe), each at its own depth band
+  const _bb = baseBlock;
+  baseBlock = function(x, d, z){
+    const t = _bb(x, d, z);
+    if(!t || x >= UPPER_EDGE || d < 0 || (BLOCKS[t-1] && BLOCKS[t-1].ore)) return t;
+    for(const o of NEW){
+      if(d >= o.dmin && d < Math.min(o.dmax, D - 1) && hash3(x>>1, d>>1, z>>1, o.seed) < o.ch && hash3(x, d, z, o.seed + 1) < .4) return ids[o.name] || t;
+    }
+    return t;
+  };
+  // drawing: t = seconds
+  const S = 32;
+  const DRAW = {
+    'Carbyne Ore': (c, t)=>{ c.fillStyle = '#1c1c24'; c.fillRect(0, 0, S, S);
+      for(let i=0;i<7;i++){ const y = (i*5 + t*6) % (S + 8) - 4, h = (t*60 + i*50) % 360; c.strokeStyle = 'hsl(' + h + ',100%,60%)'; c.lineWidth = 2; c.beginPath(); c.moveTo(0, y); c.lineTo(S*.4, y + 4); c.lineTo(S*.7, y - 2); c.lineTo(S, y + 3); c.stroke(); }
+      for(let i=0;i<6;i++){ const a = (Math.sin(t*3 + i*1.7) + 1)/2; c.fillStyle = 'rgba(255,255,255,' + a + ')'; c.fillRect((i*11) % 29, (i*17 + 5) % 29, 2, 2); } },
+    'Carbyne Block': (c, t)=>{ for(let k=-S; k<S*2; k+=4){ const h = (k*6 + t*120) % 360; c.fillStyle = 'hsl(' + h + ',100%,58%)'; c.beginPath(); c.moveTo(k, 0); c.lineTo(k + 4, 0); c.lineTo(k + 4 - S, S); c.lineTo(k - S, S); c.fill(); }
+      c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 2; c.strokeRect(1, 1, S - 2, S - 2); },
+    'Glow Crystal': (c, t)=>{ const p = .6 + .4*Math.sin(t*2.5); c.fillStyle = '#9aa8c0'; c.fillRect(0, 0, S, S);
+      c.fillStyle = 'rgba(255,255,255,' + p + ')'; [[16,2,24,16,16,30,8,16],[6,6,12,14,6,24,1,14],[26,8,31,16,26,26,21,16]].forEach(q=>{ c.beginPath(); c.moveTo(q[0],q[1]); c.lineTo(q[2],q[3]); c.lineTo(q[4],q[5]); c.lineTo(q[6],q[7]); c.fill(); });
+      for(let i=0;i<5;i++){ const a = Math.max(0, Math.sin(t*4 + i*2.1)); c.fillStyle = 'rgba(200,240,255,' + a + ')'; const x = (i*7 + 3) % 30, y = (i*13 + 4) % 30; c.fillRect(x - 1, y, 3, 1); c.fillRect(x, y - 1, 1, 3); } },
+    'Zebra Flow Block': (c, t)=>{ c.fillStyle = '#ffffff'; c.fillRect(0, 0, S, S); c.fillStyle = '#000000'; const o = (t*12) % 8;
+      for(let k=-S; k<S*2; k+=8){ c.beginPath(); c.moveTo(k + o, 0); c.lineTo(k + o + 4, 0); c.lineTo(k + o + 4 - S, S); c.lineTo(k + o - S, S); c.fill(); } },
+    'Lava Lamp Block': (c, t)=>{ c.fillStyle = '#4a1060'; c.fillRect(0, 0, S, S);
+      for(let i=0;i<4;i++){ const y = S - ((t*5 + i*9) % (S + 10)) + 5, x = 8 + i*6 + Math.sin(t + i)*3, r = 3 + (i%2)*2; c.fillStyle = i%2 ? '#ff7a20' : '#ffb030'; c.beginPath(); c.arc(x, y, r, 0, 6.283); c.fill(); } },
+    'Matrix Block': (c, t)=>{ c.fillStyle = 'rgba(0,10,0,1)'; c.fillRect(0, 0, S, S); c.font = 'bold 6px monospace';
+      for(let col=0; col<8; col++){ const head = (t*(8 + col*2) + col*7) % (S + 12); for(let r=0; r<5; r++){ const y = head - r*5; if(y < 0 || y > S + 4) continue; c.fillStyle = r ? 'rgba(40,255,80,' + (1 - r*.18) + ')' : '#d0ffd0'; c.fillText(String.fromCharCode(48 + ((col*7 + r*3 + Math.floor(t*6)) % 42)), col*4, y); } } },
+    'Disco Block': (c, t)=>{ const f = Math.floor(t*4); for(let i=0;i<4;i++) for(let j=0;j<4;j++){ c.fillStyle = 'hsl(' + (((i*4 + j)*53 + f*67) % 360) + ',100%,55%)'; c.fillRect(i*8, j*8, 8, 8); }
+      c.strokeStyle = '#111'; c.lineWidth = 1; for(let k=0;k<=S;k+=8){ c.beginPath(); c.moveTo(k, 0); c.lineTo(k, S); c.moveTo(0, k); c.lineTo(S, k); c.stroke(); } },
+    'Ocean Wave Block': (c, t)=>{ c.fillStyle = '#1a5ab0'; c.fillRect(0, 0, S, S);
+      for(let r=0;r<5;r++){ c.strokeStyle = r%2 ? '#7ad0ff' : '#ffffff'; c.lineWidth = 1.5; c.beginPath(); for(let x=0;x<=S;x+=2){ const y = 4 + r*7 + Math.sin(x*.35 + t*3 + r)*2; if(x) c.lineTo(x, y); else c.moveTo(x, y); } c.stroke(); } }
+  };
+  const anim = [];
+  function hookup(name, id){
+    const m = id && meshes[id-1]; if(!m || !m.material || Array.isArray(m.material)) return;
+    const cv = document.createElement('canvas'); cv.width = cv.height = S; const ctx = cv.getContext('2d');
+    const tex = new THREE.CanvasTexture(cv); tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter;
+    const mat = m.material; mat.map = tex; mat.emissiveMap = tex; mat.color = new THREE.Color(1, 1, 1);
+    const gl = name === 'Glow Crystal' ? .55 : name === 'Zebra Flow Block' ? .12 : .28;
+    mat.emissive = new THREE.Color(gl, gl, gl); mat.needsUpdate = true;
+    anim.push({name, ctx, tex, mat, draw:DRAW[name]});
+  }
+  if(U){ hookup('Carbyne Ore', U.CARB); hookup('Carbyne Block', U.CARBB); }
+  NEW.forEach(o=>hookup(o.name, ids[o.name]));
+  let animT = 0;
+  function animTick(now){
+    if(now - animT < 66) return; animT = now; const t = now/1000;
+    for(const a of anim){ try{ a.draw(a.ctx, t); a.tex.needsUpdate = true; }catch(e){} }
+  }
+  // one-time gift so they can be seen right away
+  try{ if(!localStorage.getItem('digcore_gift_anim')){ localStorage.setItem('digcore_gift_anim', '1'); NEW.forEach(o=>{ if(ids[o.name]) addItem(o.name, 10, true); }); if(U && U.CARBB) addItem('Carbyne Block', 5, true); persist(); } }catch(e){}
+
+  /* ================================================ BOB CITIZENS can be hit and killed */
+  const BC = window.__bobciv;
+  const dead = [];                      // falling bodies
+  function fallBody(g, msg){
+    const ax = new THREE.Vector3(g.position.z - P.z, 0, -(g.position.x - P.x)); if(ax.lengthSq() < .01) ax.set(1, 0, 0); ax.normalize();
+    dead.push({g, ax, t:0, q0:g.quaternion.clone()});
+  }
+  function hitCitizen(p, dmg){
+    if(!BC || BC.people.indexOf(p) < 0) return;
+    p.hp = (p.hp == null ? 60 : p.hp) - dmg; p.flee = 4;
+    if(p.hp > 0){ if(Math.random() < .25) toast(p.job.j + ' Bob: "' + pick(['Ow! What was that for?', 'Hey! I am a GOOD Bob!', 'I am telling the Mayor!', 'Help! Guards!']) + '"'); return; }
+    const i = BC.people.indexOf(p); if(i >= 0) BC.people.splice(i, 1);
+    const g = p.b.g; burst(g.position.x, g.position.y + 1, g.position.z, 0, 20); fallBody(g);
+    save.coins += 25; save.bobCitKills = (save.bobCitKills || 0) + 1; if(Math.random() < .5) addItem("Bob's Propeller Hat", 1); persist();
+    blip(300, .2, .12, 'square'); toast('You defeated ' + p.job.j + ' Bob of ' + p.c.name + '.  +$25');
+    if(save.bobCitKills % 3 === 1) newsQ('NEWS: A ' + p.job.j + ' Bob of ' + p.c.name + ' was defeated by a miner. The other Bobs are very upset and a bit scared.');
+  }
+
+  /* ================================================ NOVARIA ALIENS can be killed, and their towns INVENT things */
+  const T3 = U && U.town3D;
+  function alienPos(i, a){ const v = a.g.getWorldPosition(new THREE.Vector3()); v.y += 1.1; return v; }
+  function hitAlien(i, a, dmg){
+    if(a.dead) return;
+    a.hp = (a.hp == null ? 80 : a.hp) - dmg; a.sp = Math.min(1.6, (a.sp || .3) + .4);
+    if(a.hp > 0){ if(Math.random() < .25) toast(U.TOWNS[i].n + ' alien: "' + pick(['Glorp! That hurt!', 'Why are Earth miners so bonky?', 'I will tell my three mums!', 'My antenna! MY ANTENNA!']) + '"'); return; }
+    a.dead = true; a.deadAt = performance.now();
+    const p = alienPos(i, a); burst(p.x, p.y, p.z, 0, 24);
+    const body = a.g.clone(); body.position.copy(p).y -= 1.1; body.rotation.copy(a.g.rotation); scene.add(body); fallBody(body); body.userData.rm = true;
+    a.g.visible = false;
+    const c = U.civ[i]; if(c){ c.pop = Math.max(0, (c.pop || 0) - 1); }
+    save.coins += 100; addItem('Glorp Goo', 1 + Math.floor(Math.random()*2)); save.alienKills = (save.alienKills || 0) + 1; persist();
+    blip(1200, .15, .1, 'square'); setTimeout(()=>blip(500, .3, .1, 'sawtooth'), 120);
+    toast('You defeated an alien of ' + U.TOWNS[i].n + '.  +$100  +Glorp Goo. New aliens come in 60 seconds.');
+    if(save.alienKills % 3 === 1) newsQ('SPACE NEWS: An Earth miner defeated an alien in ' + U.TOWNS[i].n + '. The aliens have put up "Please be nice" signs.');
+  }
+  // alien INVENTIONS
+  const GAD = [
+    {k:'oven',   n:'Star Oven',         col:0xffa020, use:()=>{ addItem('Star Fruit', 2); return 'The Star Oven baked you 2 glowing Star Fruit.'; }},
+    {k:'pad',    n:'Teleport Pad',      col:0x40e0ff, use:(i)=>{ const j = (i + 1 + Math.floor(Math.random()*(U.TOWNS.length - 1))) % U.TOWNS.length, t = U.TOWNS[j]; P.x = t.x + 3; P.z = t.z + 3; return 'ZAP! The Teleport Pad sent you to ' + t.n + '.'; }},
+    {k:'cannon', n:'Glorp Confetti Cannon', col:0xff40c0, use:()=>{ for(let k=0;k<6;k++) setTimeout(()=>{ try{ burst(P.x + (Math.random()-.5)*6, P.y + 3 + Math.random()*3, P.z + (Math.random()-.5)*6, Math.floor(Math.random()*20), 20); blip(600 + Math.random()*600, .1, .08, 'triangle'); }catch(e){} }, k*150); return 'BOOM! Alien confetti everywhere. It smells like grape.'; }},
+    {k:'robot',  n:'Robot Butler',      col:0xc0c0d0, use:()=>{ save.coins += 1000; persist(); return 'The Robot Butler found $1,000 under the alien sofa and gave it to you.'; }},
+    {k:'jelly',  n:'Moon Jelly Maker',  col:0x9a60ff, use:()=>{ addItem('Moon Jelly Snack', 2); return 'The Moon Jelly Maker made you 2 wobbly Moon Jelly Snacks.'; }},
+    {k:'printer',n:'Crystal Printer',   col:0xe0f0ff, use:()=>{ if(ids['Glow Crystal']) addItem('Glow Crystal', 2); return 'The Crystal Printer printed you 2 Glow Crystals.'; }},
+    {k:'clock',  n:'Day-Night Clock',   col:0x30ffa0, use:()=>{ try{ const h = window.__dig && window.__dig.setTod; if(h) h(Math.random() < .5 ? .25 : .75); }catch(e){} return 'TICK TOCK! The alien clock spun the sky around.'; }},
+    {k:'grav',   n:'Gravity Flipper',   col:0xffff60, use:()=>{ P.vy = 14; shake = .15; return 'WHEE! The Gravity Flipper threw you into the sky.'; }}
+  ];
+  const FLOPS = ['It turned into a very confused toaster.', 'It exploded into purple glitter.', 'It only plays elevator music.', 'It floated away and nobody saw it again.'];
+  const gadMeshes = [];
+  function gadModel(i, inv){
+    const G = GAD.find(g=>g.k === inv.k); if(!G || !T3) return;
+    const g = new THREE.Group(); g.position.set(inv.x, 0, inv.z); T3[i].g.add(g);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(.9, 1.1, .5, 10), new THREE.MeshLambertMaterial({color:0x303048})); base.position.y = .25; g.add(base);
+    const core = new THREE.Mesh(new THREE.BoxGeometry(.9, .9, .9), new THREE.MeshLambertMaterial({color:G.col, emissive:G.col, emissiveIntensity:.5})); core.position.y = 1.05; g.add(core);
+    const orb = new THREE.Mesh(new THREE.SphereGeometry(.25, 10, 8), new THREE.MeshBasicMaterial({color:0xffffff})); orb.position.y = 1.85; g.add(orb);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; const x = cv.getContext('2d'); x.textAlign = 'center'; x.font = 'bold 34px system-ui'; x.lineWidth = 7; x.strokeStyle = '#000'; x.strokeText(G.n + ' (F)', 256, 56); x.fillStyle = '#ffe080'; x.fillText(G.n + ' (F)', 256, 56);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); sp.scale.set(4, .75, 1); sp.position.y = 2.6; g.add(sp);
+    gadMeshes.push({i, inv, G, g, core});
+  }
+  if(U && U.civ && T3){
+    U.civ.forEach((c, i)=>{ c.inv = c.inv || []; c.inv.forEach(inv=>gadModel(i, inv)); });
+  }
+  let invT = 45;
+  function inventTick(dt){
+    if(!U || !U.civ || !T3) return;
+    invT -= dt; if(invT > 0) return; invT = 60 + Math.random()*60;
+    const i = Math.floor(Math.random()*U.TOWNS.length), c = U.civ[i]; c.inv = c.inv || [];
+    if(c.inv.length >= 4) return;
+    const G = pick(GAD.filter(g=>!c.inv.some(v=>v.k === g.k)));
+    if(Math.random() < .3){ newsQ('SPACE NEWS: The inventors of ' + U.TOWNS[i].n + ' tried to build a ' + G.n + '. ' + pick(FLOPS) + ' Flop!'); return; }
+    const a = c.inv.length*1.6 + 1.2, inv = {k:G.k, x:Math.cos(a)*5, z:Math.sin(a)*5};
+    c.inv.push(inv); gadModel(i, inv); persist();
+    newsQ('SPACE NEWS: ' + U.TOWNS[i].n + ' invented a ' + G.n + '! Visit and press F to try it.');
+    if(Math.hypot(P.x - U.TOWNS[i].x, P.z - U.TOWNS[i].z) < 60) toast(U.TOWNS[i].n + ' just invented a ' + G.n + '!');
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || !locked || !U || !U.onUni || !U.onUni()) return;
+    const v = new THREE.Vector3();
+    for(const m of gadMeshes){ m.g.getWorldPosition(v); if(Math.hypot(v.x - P.x, v.z - P.z) < 2.6){ const msg = m.G.use(m.i); setTimeout(()=>toast(m.G.n + ': ' + msg), 30); blip(700, .12, .1, 'triangle'); return; } }
+  });
+
+  /* ================================================ hook into fighting (melee and guns) */
+  const _ft = fightTargets;
+  fightTargets = function(){
+    const l = _ft();
+    try{
+      if(BC && realm === 0) for(const p of BC.people){ const g = p.b.g; if(Math.hypot(g.position.x - P.x, g.position.z - P.z) < 80) l.push({k:'cit', cit:p, custom:true, c:new THREE.Vector3(g.position.x, g.position.y + 1, g.position.z), r:.7}); }
+      if(T3 && U.onUni && U.onUni()) T3.forEach((o, i)=>{ if(!o.g.visible) return; o.aliens.forEach(a=>{ if(!a.dead) l.push({k:'alien', town:i, alien:a, custom:true, c:alienPos(i, a), r:.75}); }); });
+    }catch(e){}
+    return l;
+  };
+  const _gh = gunTargetHit;
+  gunTargetHit = function(t, d){
+    if(t && t.k === 'cit'){ hitCitizen(t.cit, Math.min(d, 1e6)); return; }
+    if(t && t.k === 'alien'){ hitAlien(t.town, t.alien, Math.min(d, 1e6)); return; }
+    return _gh(t, d);
+  };
+
+  /* ================================================ every frame */
+  let last = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      animTick(now);
+      for(let i = dead.length - 1; i >= 0; i--){
+        const f = dead[i]; f.t += dt;
+        const q = new THREE.Quaternion().setFromAxisAngle(f.ax, Math.min(Math.PI/2, f.t*f.t*5)); f.g.quaternion.copy(q).multiply(f.q0);
+        if(f.t > 1.6){ scene.remove(f.g); dead.splice(i, 1); }
+      }
+      if(T3) T3.forEach(o=>o.aliens.forEach(a=>{ if(a.dead && now - a.deadAt > 60000){ a.dead = false; a.hp = 80; a.sp = .2 + Math.random()*.3; a.g.visible = true; } }));
+      for(const m of gadMeshes){ m.core.rotation.y += dt*1.5; }
+      if(startEl.style.display !== 'flex' && !won) inventTick(dt);
+    }catch(e){ console.warn('LN-alive', e); }
+  })(last);
+
+  window.__alive = {ids, anim, NEW, GAD, gadMeshes, hitCitizen, hitAlien, inventNow:()=>{ invT = 0; inventTick(.01); }, dead};
+})();
+/* LN-alive end */
+
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
   let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
   if(!pend || !BLOCKS.some(b=>b.name === 'Too Tuff Rock')) return;
