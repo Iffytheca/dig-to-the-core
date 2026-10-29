@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 105 (Oct 29)';
+  window.__BUILD = 'Build 106 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28128,6 +28128,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     ['k1','Baba Caka','The Night Baboon','When the sun goes down, Baba Caka wakes up. He is a big baboon with a red face. He cannot be beaten. He has never lost a game of hide and seek. He has also never won one, because nobody dares to look for him.','night'],
     ['k2','Baba Caka','What Baba Caka Wants','Many have asked what Baba Caka wants. The answer is simple: bananas, a good nap, and for you to go to bed on time.','scroll'],
     ['k3','Baba Caka','The Nightlight','Baba Caka was once seen buying a nightlight. When asked, he said it was for a friend. He does not have friends. He has a nightlight.','scroll'],
+    ['k4','Baba Caka','Baba Caka the Teacher','Before he was the night baboon, Baba Caka was a maths teacher. He still checks homework every night. If it is done, he is happy. If it is not done... OOH OOH. Run.','night'],
     ['n1','Newton','Newton and the Apple','Sir Isaac Newton discovered gravity when an apple hit his head. He has been angry at apples, and at anything that floats, ever since.','scroll'],
     ['n2','Newton','The Laws of Newton','Law 1: things fall down. Law 2: things that do not fall down are cheating. Law 3: Newton will find you.','scroll'],
     ['n3','Newton','The Floating Fish Incident','A fish once built a tower so tall it floated. Newton praised the tower. Then he remembered the rules. The fish has learned its lesson.','scroll'],
@@ -28244,6 +28245,110 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__lore = {LORE, unlock, open:openL, close:closeL, got};
 })();
 /* LN-lore end */
+/* LN-babahw start: Baba Caka gives you homework every morning. Do it before night and he goes home happy. Skip it and he is MAD (Irfan 2026-10-29) */
+(function(){
+  const BB = window.__baba; if(!BB) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
+  const TASKS = [
+    {k:'mine',  n:[30, 50, 80], txt:n=>'Mine ' + n + ' blocks'},
+    {k:'deep',  n:[10, 20],     txt:n=>'Mine ' + n + ' blocks deeper than 20 m'},
+    {k:'eat',   n:[2, 3],       txt:n=>'Eat ' + n + ' snacks (Baba Caka says growing miners need food)'},
+    {k:'place', n:[10, 20],     txt:n=>'Place ' + n + ' blocks (practise your building)'},
+    {k:'coins', n:[500, 2000],  txt:n=>'Earn $' + n.toLocaleString()},
+    {k:'lore',  n:[1],          txt:n=>'Find ' + n + ' Lore Scroll (reading is important)'}
+  ];
+  const H = save.babaHW = save.babaHW || {};
+  function newHW(){
+    const a = pick(TASKS); let b = pick(TASKS); while(b === a) b = pick(TASKS);
+    H.tasks = [a, b].map(t=>({k:t.k, n:pick(t.n), have:0}));
+    H.coins0 = save.coins || 0; H.placed0 = save.placed || 0; H.lore0 = Object.keys(save.lore || {}).length;
+    H.active = true; H.hide = false; persist();
+    toast('Baba Caka left a note: "HOMEWORK! ' + H.tasks.map(t=>TASKS.find(q=>q.k === t.k).txt(t.n)).join(', and ') + '. Due tonight. OOH OOH!"');
+    draw();
+  }
+  const done = ()=>H.tasks && H.tasks.every(t=>t.have >= t.n);
+  // ---- progress
+  const _bb = breakBlock;
+  breakBlock = function(h){ const r = _bb.apply(this, arguments); try{ if(H.active && H.tasks){ H.tasks.forEach(t=>{ if(t.k === 'mine') t.have++; if(t.k === 'deep' && h && h.d >= 20) t.have++; }); draw(); } }catch(e){} return r; };
+  const _er = eatRef;
+  eatRef = function(ref){ const nm = typeof ref === 'string' && ref.slice(0, 2) === 'i:' ? ref.slice(2) : null, had = nm && save.inv ? save.inv[nm] || 0 : 0; const r = _er.apply(this, arguments);
+    try{ if(nm && H.active && H.tasks && (save.inv[nm] || 0) < had) H.tasks.forEach(t=>{ if(t.k === 'eat') t.have++; }); draw(); }catch(e){} return r; };
+  function poll(){
+    if(!H.active || !H.tasks) return;
+    H.tasks.forEach(t=>{
+      if(t.k === 'coins') t.have = Math.max(t.have, (save.coins || 0) - H.coins0);
+      if(t.k === 'place') t.have = Math.max(0, (save.placed || 0) - H.placed0);
+      if(t.k === 'lore') t.have = Math.max(0, Object.keys(save.lore || {}).length - H.lore0);
+    });
+    if(done() && !H.toldDone){ H.toldDone = true; persist(); toast('HOMEWORK DONE! Baba Caka will be so proud tonight.'); blip(880, .1, .08, 'triangle'); setTimeout(()=>blip(1320, .15, .08, 'triangle'), 120); }
+  }
+  // ---- the homework card (top left, under the buttons)
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;top:356px;right:14px;z-index:29;max-width:300px;padding:8px 30px 8px 10px;background:rgba(60,20,20,.82);color:#fff;border:2px solid #ff6a6a;border-radius:10px;font:13px/1.35 system-ui,sans-serif;pointer-events:auto;display:none';
+  document.body.appendChild(box);
+  let mini = null;
+  function draw(){
+    const show = H.active && H.tasks && !H.hide && realm === 0 && startEl.style.display !== 'flex';
+    box.style.display = show ? 'block' : 'none';
+    if(mini) mini.style.display = H.active && H.tasks && H.hide && startEl.style.display !== 'flex' ? 'block' : 'none';
+    if(!show) return;
+    const html = '<b style="color:#ff9a9a">HOMEWORK from Baba Caka</b> <span style="opacity:.75">(due tonight)</span>' +
+      H.tasks.map(t=>{ const ok = t.have >= t.n; return '<div style="' + (ok ? 'color:#8aff8a' : '') + '">' + (ok ? '[done] ' : '[ ] ') + TASKS.find(q=>q.k === t.k).txt(t.n) + '  ' + (t.k === 'coins' ? '$' + Math.min(t.have, t.n).toLocaleString() + '/$' + t.n.toLocaleString() : Math.min(t.have, t.n) + '/' + t.n) + '</div>'; }).join('') +
+      (H.mad ? '<div style="color:#ffd040;margin-top:3px">Baba Caka is MAD about yesterday!</div>' : '') +
+      '<button id="hwX" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:5px;background:#8a2a2a;color:#fff;font:900 12px system-ui;cursor:pointer">X</button>';
+    if(box.innerHTML !== html) box.innerHTML = html;
+  }
+  box.addEventListener('click', e=>{ if(e.target.id === 'hwX'){ e.stopPropagation(); H.hide = true; persist(); draw(); } });
+  mini = document.createElement('button'); mini.textContent = 'HOMEWORK';
+  mini.style.cssText = 'position:absolute;top:356px;right:14px;z-index:29;padding:4px 10px;font:700 12px system-ui,sans-serif;color:#fff;background:rgba(140,40,40,.85);border:2px solid rgba(255,255,255,.4);border-radius:8px;cursor:pointer;display:none;pointer-events:auto';
+  mini.onclick = e=>{ e.stopPropagation(); H.hide = false; persist(); draw(); };
+  document.body.appendChild(mini);
+  // ---- the MAD sign over Baba Caka
+  let madSign = null;
+  function setMad(on){
+    if(on && !madSign){
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 80; const x = cv.getContext('2d');
+      x.fillStyle = 'rgba(200,0,0,.9)'; x.fillRect(6, 6, 500, 68); x.font = 'bold 36px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('MAD: NO HOMEWORK!', 256, 41);
+      madSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); madSign.scale.set(3.4, .53, 1); madSign.position.y = 3.85; BB.g.add(madSign);
+    }
+    if(madSign) madSign.visible = !!on;
+  }
+  // ---- day and night
+  let wasNight = BB.isNight(), happyNight = false, madTries = 99;
+  if(!H.tasks && !wasNight) setTimeout(newHW, 8000);
+  function tick(){
+    if(realm !== 0) { draw(); return; }
+    poll();
+    const nt = BB.isNight();
+    if(nt && !wasNight){                       // night falls: homework is due
+      if(H.active && H.tasks){
+        if(done()){
+          happyNight = true; H.mad = false; save.coins += 2000; persist();
+          toast('Baba Caka checked your homework: ALL DONE! "OOH OOH, good miner!" He gives you $2,000 and stays home tonight.');
+          newsQ('NEWS: Baba Caka was seen smiling for the first time ever. A miner did all their homework.');
+          try{ window.__lore && window.__lore.unlock && window.__lore.unlock('k4', 'Lore of the night'); }catch(e){}
+        } else {
+          happyNight = false; H.mad = true; persist();
+          toast('BABA CAKA IS MAD! You did not do your homework! He is coming RIGHT NOW!');
+          newsQ('SPOOKY NEWS: Baba Caka is very mad tonight. Somebody did not do their homework. Everybody hide your pencils.');
+          madTries = 0;
+        }
+        H.active = false; H.toldDone = false; persist();
+      }
+    }
+    if(!nt && wasNight){ setMad(false); H.mad = false; happyNight = false; newHW(); }
+    wasNight = nt;
+    if(nt && happyNight && BB.B.on) BB.leave('Baba Caka waves at you, remembers your finished homework, and goes back to sleep.');
+    if(nt && H.mad && !BB.B.on && madTries < 20){ madTries++; try{ BB.arrive(); }catch(e){} }
+    setMad(nt && H.mad && BB.B.on);
+    draw();
+  }
+  setInterval(()=>{ try{ if(!won) tick(); }catch(e){ console.warn('LN-babahw', e); } }, 1000);
+  window.__babaHW = {H, newHW, tick, done};
+})();
+/* LN-babahw end */
+
 
 
 
