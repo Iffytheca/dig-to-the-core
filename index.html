@@ -26985,6 +26985,29 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   if(!told) setTimeout(()=>{ try{ localStorage.setItem('digcore_tip_rag', '1'); toast('TIP: Press X to go ragdoll (press X again to get up). Falling 7+ blocks ragdolls you too. Do not stomp on farmland or the farmer gets mad!'); }catch(e){} }, 20000);
 })();
 /* LN-farmsnow end */
+/* LN-planetsbtn start: PLANETS button + key P, every planet open (Irfan 2026-10-29) */
+(function(){
+  const MR = window.__mars; if(!MR || !MR.openPick) return;
+  function unlockAll(){ save.rocket = save.rocket || 1; save.marsUnlocked = 1; save.toiUnlocked = 1; if((save.marsCores || 0) < 5) save.marsCores = 5; persist(); }
+  unlockAll();
+  function openPlanets(){
+    if(typeof launch !== 'undefined' && launch) return;
+    unlockAll();
+    const onEarth = realm === 0 && P.x < UPPER_EDGE && P.z > -10000 && P.y > -2;
+    if(!onEarth){ try{ toSurface(); }catch(e){} }
+    setTimeout(()=>{ try{ MR.openPick(); if(window.__toi && window.__toi.refreshC) window.__toi.refreshC(); }catch(e){ console.warn('LN-planetsbtn', e); } }, onEarth ? 0 : 400);
+  }
+  const st = document.createElement('style');
+  st.textContent = '#planetsBtn{position:absolute;top:174px;left:132px;z-index:30;padding:6px 14px;font:700 14px system-ui,sans-serif;color:#fff;background:rgba(90,42,208,.85);border:2px solid rgba(255,255,255,.45);border-radius:10px;cursor:pointer;letter-spacing:.5px;pointer-events:auto}'+
+    'body.touchplay #planetsBtn{top:8px;left:auto;right:8px;display:block!important}';
+  document.head.appendChild(st);
+  const btn = document.createElement('button'); btn.id = 'planetsBtn'; btn.title = 'Planets (P)'; btn.textContent = 'PLANETS (P)';
+  btn.onclick = e=>{ e.stopPropagation(); openPlanets(); };
+  document.body.appendChild(btn);
+  addEventListener('keydown', e=>{ if(e.code === 'KeyP' && !e.repeat && locked && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) openPlanets(); });
+  window.__planets = {open:openPlanets};
+})();
+/* LN-planetsbtn end */
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
   let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
   if(!pend || !BLOCKS.some(b=>b.name === 'Too Tuff Rock')) return;
