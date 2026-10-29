@@ -17028,14 +17028,27 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     if(save.badges && save.badges.worldrecord) L.push('BREAKING: New world record set for eating a world record.');
     return L;
   }
+  const FAKE_NEWS = [   /* LN-fakenews2: 100% made up */
+    'Scientists confirm the Moon is just a very shy cheese.', 'Mars has a secret pizza shop. It only delivers to Martians.', 'A Glorp from Planet Novaria won a dance contest on Earth.',
+    'TOI-1853b is so hot it now sells ice cream for one billion dollars a scoop.', 'Experts say dirt is just tired rock.', 'The Too Tuff Rock has started lifting weights.',
+    'A Bob was elected president of a sandwich.', 'Baba Caka was seen buying a nightlight.', 'The shopkeeper has been a fish all along.',
+    'Carbyne asked to be called "Carby" by its friends.', 'A black hole on Novaria returned everything it ate, saying it was "too crunchy".', 'Gravity filed a complaint about being ignored on Planet Novaria.',
+    'A Moon Bunny jumped so high it is now a moon.', 'Scientists discover that pickaxes are actually very small hammers with dreams.', 'The Universe Core is just a very old gumball.',
+    'Rockets now run on lemonade. They are slower but smell nice.', 'A cow mooed in Morse code. It said "more grass please".', 'The Earth is round. Except on Tuesdays.',
+    'Lava announces it is "just warm water with an attitude".', 'A penguin opened a beach resort in the desert. Business is slow.', 'The Blue Whale Pickaxe sneezed and dug a new ocean.',
+    'Meteor storm cancelled because the meteors overslept.', 'A UFO got lost and asked a duck for directions.', 'Diamonds are just coal that went to the gym.',
+    'The Omniverse Pickaxe is scared of spiders.', 'A Crystal Deer was named the shiniest animal in two universes.', 'Sky Jellies are now officially clouds that learned to wave.',
+    'Every block of dirt in the world has signed a petition to stop being mined. Nobody read it.', 'Water declared itself "not wet". Scientists are confused.', 'Two-Headed Llama argues with itself, both heads win.'
+  ];
   function headline(){
     const r = Math.random(), lv = live();
     if(lv.length && r < .15) return lv[Math.floor(Math.random()*lv.length)];
     const pick = a=>a[Math.floor(Math.random()*a.length)];
-    if(window.__newsQ && window.__newsQ.length) return window.__newsQ.shift();
-    if(r < .5) return 'BREAKING: '+pick(FUNNY);
-    if(r < .75) return 'NEWS: '+pick(NORMAL);
-    return 'IMPOSSIBLE NEWS: '+pick(IMPOSSIBLE);
+    if(window.__newsQ && window.__newsQ.length && (headline.alt = !headline.alt)) return window.__newsQ.shift();   /* LN-fakenews2 */
+    if(r < .3) return 'BREAKING: '+pick(FUNNY);
+    if(r < .45) return 'NEWS: '+pick(NORMAL);
+    if(r < .6) return 'IMPOSSIBLE NEWS: '+pick(IMPOSSIBLE);
+    return 'FAKE NEWS: '+pick(FAKE_NEWS);
   }
   const st = document.createElement('style');
   st.textContent = '#newsbar{position:absolute;top:6px;left:256px;right:220px;height:24px;overflow:hidden;background:rgba(140,20,20,.82);border:1px solid rgba(255,255,255,.35);border-radius:6px;color:#fff;font:700 13px/24px system-ui,sans-serif;z-index:15;pointer-events:none}'+
