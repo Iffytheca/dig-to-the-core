@@ -17030,7 +17030,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   }
   const FAKE_NEWS = [   /* LN-fakenews2: 100% made up */
     'Scientists confirm the Moon is just a very shy cheese.', 'Mars has a secret pizza shop. It only delivers to Martians.', 'A Glorp from Planet Novaria won a dance contest on Earth.',
-    'TOI-1853b is so hot it now sells ice cream for one billion dollars a scoop.', 'Experts say dirt is just tired rock.', 'The Too Tuff Rock has started lifting weights.',
+    'TOI-1853b is so hot it now sells ice cream for one billion dollars a scoop.', 'Experts say dirt is just tired rock.', 'The Too Tuff Rock has retired and moved to a beach.',
     'A Bob was elected president of a sandwich.', 'Baba Caka was seen buying a nightlight.', 'The shopkeeper has been a fish all along.',
     'Carbyne asked to be called "Carby" by its friends.', 'A black hole on Novaria returned everything it ate, saying it was "too crunchy".', 'Gravity filed a complaint about being ignored on Planet Novaria.',
     'A Moon Bunny jumped so high it is now a moon.', 'Scientists discover that pickaxes are actually very small hammers with dreams.', 'The Universe Core is just a very old gumball.',
@@ -25513,14 +25513,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       base:[62,52,58], amp:20, sp:[[90,60,255],[200,180,255]], p:.4, glow:.55, oreCol:[120,90,255]});
     SOUL = mk({name:'Mars Soul Stone', ore:true, mars:true, cat:'crystal', oreName:'Mars Soul Stone', hostName:'the Mars Core', host:0, th:0, max:1500, h:110000, v:40000000,
       base:[255,112,42], amp:18, sp:[[255,40,40],[255,230,160]], p:.45, glow:1, oreCol:[255,60,40]});
-    TUFF = mk({name:'Too Tuff Rock', mars:true, upper:true, ore:false, th:0, max:20000, h:1e12, v:0, base:[34,26,34], amp:10, sp:[[70,50,70],[16,12,16]], p:.3, glow:.08});
+    TUFF = mk({name:'Too Tuff Rock', mars:true, upper:true, ore:false, th:0, max:20000, h:200000, v:0, base:[34,26,34], amp:10, sp:[[70,50,70],[16,12,16]], p:.3, glow:.08});
     try{ _blockIds = null; }catch(e){}
     const at = []; M.ML.forEach((l, i)=>{ for(let k=0;k<l.th;k++) at.push(i); });
     const MD = M.MARS_D, last = M.ML.length - 1;
     const _ub = upperBase;
     upperBase = function(x, d, z){
       if(x >= M.MARS_EDGE && d >= 0){
-        if(d >= MD) return d < MD + 3 && TUFF ? TUFF : 0;
+        if(d >= MD) return d < MD + 3 ? upperBase(x, MD - 1, z) : 0;   /* LN-notuff: no Too Tuff Rock, the core goes to the bottom */
         const li = at[d];
         if(li >= last - 1 && hash3(x>>1, d>>1, z>>1, 951) < .3){
           if(SOUL && li === last && hash3(x, d, z, 957) < .025) return SOUL;
@@ -25532,10 +25532,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     // nothing breaks the Too Tuff Rock: not the strongest pickaxe, not Mine Anything, not explosions
     let tuffT = 0;
     const _sbT = setBlock;
-    setBlock = function(x, d, z, t){ if(TUFF && !t && d >= 0 && x >= M.MARS_EDGE && get(x, d, z) === TUFF) return; return _sbT.apply(this, arguments); };
+    setBlock = function(x, d, z, t){ if(false && TUFF && !t && d >= 0 && x >= M.MARS_EDGE && get(x, d, z) === TUFF) return; return _sbT.apply(this, arguments); };
     const _bbT = breakBlock;
     breakBlock = function(h){
-      if(TUFF && h && get(h.i, h.d, h.k) === TUFF){
+      if(false && TUFF && h && get(h.i, h.d, h.k) === TUFF){
         prog = 0; setCrack(0);
         if(performance.now() - tuffT > 2500){ tuffT = performance.now(); toast('BOINK! The Too Tuff Rock is TOO TUFF. Even the ' + PICKS[save.equipped].name + ' just bounces off. Nothing can mine it.'); blip(90, .25, .15, 'sawtooth'); shake = .1; }
         return;
@@ -25543,7 +25543,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       return _bbT.apply(this, arguments);
     };
     const _dt = digTime;
-    digTime = function(li){ if(TUFF && li === TUFF - 1){ if(performance.now() - tuffT > 2500 && mouseDown){ tuffT = performance.now(); toast('The Too Tuff Rock is the bottom of Mars. It is too tuff for ANY pickaxe, even the Mars Soul Pickaxe.'); } return 1e9; } return _dt(li); };
+    digTime = function(li){ if(false && TUFF && li === TUFF - 1){ if(performance.now() - tuffT > 2500 && mouseDown){ tuffT = performance.now(); toast('The Too Tuff Rock is the bottom of Mars. It is too tuff for ANY pickaxe, even the Mars Soul Pickaxe.'); } return 1e9; } return _dt(li); };
   }
   // the Mars Base pick shop (H near the base)
   const marsPicks = ()=>PICKS.map((p, i)=>({p, i})).filter(o=>/^mars/.test(o.p.tag || '')).sort((a, b)=>a.p.power - b.p.power);
@@ -25552,7 +25552,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   shop.innerHTML = '<div style="position:relative;background:#22140e;color:#f6e6d6;border:2px solid #ff8a4a;border-radius:10px;padding:18px 20px;width:min(560px,92vw);max-height:88vh;overflow:auto;font:15px system-ui,sans-serif">' +
     '<button id="msX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
     '<div style="font:900 22px system-ui;color:#ffb07a;margin-bottom:4px">Mars Base Pick Shop</div>' +
-    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">Mars rock is much tougher than Earth rock. Each Mars pickaxe digs one step deeper. You need the Mars Soul Pickaxe for the Mars Core and Mars Soul Stone. Nothing breaks the Too Tuff Rock at the bottom of Mars.</div>' +
+    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">Mars rock is much tougher than Earth rock. Each Mars pickaxe digs one step deeper. You need the Mars Soul Pickaxe for the Mars Core and Mars Soul Stone.</div>' +
     '<div id="msC" style="font-weight:900;color:#ffd86a;margin-bottom:6px"></div><div id="msL"></div></div>';
   document.body.appendChild(shop);
   const msL = shop.querySelector('#msL'), msC = shop.querySelector('#msC');
@@ -25752,7 +25752,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function skyT(c, d){ const j = -d; return j > c.h ? 0 : topId(c); }
   function toiBase(x, d, z){
     if(d < 0) return 0;
-    if(d >= TOI_D){ const T = TUFF(); return d < TOI_D + 3 && T ? T : 0; }     // the Too Tuff Rock under the core: nothing goes deeper
+    if(d >= TOI_D) return d < TOI_D + 3 ? toiBase(x, TOI_D - 1, z) : 0;     /* LN-notuff: core all the way down */
     const c = tcol(x, z);
     if(c.h < 0 && d < -c.h) return 0;                          // the lava seas are open pits
     if(c.h > 0 && d < 2) return tIds[0];
@@ -26289,7 +26289,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   function uniBase(x, d, z){
     if(d < 0) return 0;
-    if(d >= UNI_D){ const Tf = TUFF(); return d < UNI_D + 3 && Tf ? Tf : 0; }
+    if(d >= UNI_D) return d < UNI_D + 3 ? uniBase(x, UNI_D - 1, z) : 0;   /* LN-notuff */
     const c = ucol(x, z);
     if(c.h < 0 && d < -c.h) return 0;
     if(d === Math.max(0, -c.h)) return topId(c);
