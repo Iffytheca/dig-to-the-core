@@ -26970,6 +26970,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 500);
 })();
 /* LN-unireadd end */
+/* LN-farmsnow start: every town has farmland right away (Irfan 2026-10-29) */
+(function(){
+  const G = window.__gadgets; if(!G || !G.buildFarm) return;
+  setInterval(()=>{
+    if(typeof realm !== 'undefined' && realm !== 0) return;
+    (save.nations || []).forEach(n=>{
+      if(n.farms && n.farms.length) return;
+      if(n.x == null || Math.hypot(n.x - P.x, n.z - P.z) > 150) return;
+      try{ G.buildFarm(n); }catch(e){ console.warn('LN-farmsnow', e); }
+    });
+  }, 4000);
+  let told = false; try{ told = !!localStorage.getItem('digcore_tip_rag'); }catch(e){}
+  if(!told) setTimeout(()=>{ try{ localStorage.setItem('digcore_tip_rag', '1'); toast('TIP: Press X to go ragdoll (press X again to get up). Falling 7+ blocks ragdolls you too. Do not stomp on farmland or the farmer gets mad!'); }catch(e){} }, 20000);
+})();
+/* LN-farmsnow end */
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
   let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
   if(!pend || !BLOCKS.some(b=>b.name === 'Too Tuff Rock')) return;
