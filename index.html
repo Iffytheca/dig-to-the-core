@@ -211,6 +211,33 @@
   </div>
 </div>
 
+<script>/* LN-buildtag */(function(){
+  window.__BUILD = 'Build 91 (Oct 29)';
+  function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
+    b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
+    const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
+    x.onclick = ()=>{ b.style.display = 'none'; }; b.appendChild(x); (document.body || document.documentElement).appendChild(b); return b; }
+  let n = 0;
+  addEventListener('error', e=>{ if(n++ > 2) return; try{ const b = box(); const d = document.createElement('div');
+    d.textContent = 'GAME ERROR (tell Claude this): ' + (e.message || 'unknown') + ' @ line ' + (e.lineno || '?'); b.appendChild(d); }catch(_){} });
+  addEventListener('DOMContentLoaded', ()=>{ const t = document.createElement('div'); t.id = 'buildTag'; t.textContent = window.__BUILD;
+    t.style.cssText = 'position:fixed;left:6px;bottom:2px;z-index:99998;font:700 11px system-ui,sans-serif;color:#fff;opacity:.75;text-shadow:0 1px 2px #000;pointer-events:none';
+    document.body.appendChild(t);
+    // website only: if the server has a newer build than this page, drop old saved copies and reload once
+    if(/^https?:/.test(location.protocol)){
+      fetch('./index.html?check=' + Date.now(), {cache:'no-store'}).then(r=>r.ok ? r.text() : '').then(txt=>{
+        const m = txt.match(/window\.__BUILD = '([^']+)'/);
+        if(!m || m[1] === window.__BUILD) return;
+        let done = false; try{ done = sessionStorage.getItem('digcore_reloaded') === m[1]; sessionStorage.setItem('digcore_reloaded', m[1]); }catch(_){}
+        if(done) return;
+        const jobs = [];
+        try{ if(navigator.serviceWorker) jobs.push(navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.map(x=>x.unregister())))); }catch(_){}
+        try{ if(window.caches) jobs.push(caches.keys().then(ks=>Promise.all(ks.map(k=>caches.delete(k))))); }catch(_){}
+        Promise.all(jobs).catch(()=>{}).then(()=>location.reload());
+      }).catch(()=>{});
+    }
+  });
+})();</script>
 <script>/* three.min.js (built in, works offline) */
 /**
  * @license
