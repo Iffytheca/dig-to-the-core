@@ -26927,6 +26927,42 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     get dis(){ return dis; }, addTouch, MP, HP, buildTown, craftTest:(slots, want)=>{ craftSlots = slots; craftWant = want; const pv = craftPreview(); craftGo(); return pv; }, editsN:()=>edits.size, boom:(x,z)=>boom(x, surfY(x, z), z), disTick:dt=>disTick(dt)};
 })();
 /* LN-universe end */
+/* LN-unireadd start: the Next Universe and Planet Novaria are open right away, with a 4th rocket choice and a one-time trip (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni; if(!U) return;
+  if((save.marsCores || 0) < 5){ save.marsCores = 5; persist(); }       // the Mars portal is open too
+  const pB = document.getElementById('mrsB'); if(!pB) return;
+  const anchor = document.getElementById('mrsC') || pB;
+  const panel = pB.closest('div[style*="inset:0"]') || pB.parentNode.parentNode;
+  const bD = document.createElement('button'); bD.id = 'mrsD'; bD.className = 'btn';
+  bD.style.cssText = 'display:block;width:100%;margin:6px 0;padding:12px;font-size:16px;background:#5a2ad0';
+  bD.textContent = '4   NEXT UNIVERSE (Planet Novaria)';
+  const hD = document.createElement('div'); hD.style.cssText = 'opacity:.8;font-size:13px;margin-top:4px';
+  hD.textContent = 'Through the portal to another universe: Planet Novaria with alien cities, wild disasters and animal pickaxes.';
+  anchor.parentNode.insertBefore(bD, anchor.nextSibling);
+  { const h = document.getElementById('mrsHint'); if(h && h.parentNode) h.parentNode.appendChild(hD); }
+  function goD(){
+    if(panel) panel.style.display = 'none';
+    try{ U.goUni(); }catch(e){ console.warn('LN-unireadd', e); }
+    try{ renderer.domElement.requestPointerLock(); }catch(e){}
+  }
+  bD.onclick = e=>{ e.stopPropagation(); goD(); };
+  addEventListener('keydown', e=>{ if(panel && panel.style.display === 'flex' && e.code === 'Digit4') goD(); });
+  // one-time trip so the new universe is easy to find
+  let pend = false;
+  try{ pend = !localStorage.getItem('digcore_gift_uni'); }catch(e){}
+  if(!pend) return;
+  const t = setInterval(()=>{
+    if(startEl.style.display === 'flex' || !locked || won) return;
+    if(typeof launch !== 'undefined' && launch) return;                 // let other gift rides finish first
+    clearInterval(t);
+    try{ localStorage.setItem('digcore_gift_uni', '1'); }catch(e){}
+    if(U.onUni && U.onUni()) return;
+    toast('The Next Universe is back! Going through the portal to Planet Novaria. To go home, use the home portal behind you. On Earth, the rocket now has choice 4 for the Next Universe.');
+    setTimeout(()=>{ try{ U.goUni(); }catch(e){ console.warn('LN-unireadd', e); } }, 1500);
+  }, 500);
+})();
+/* LN-unireadd end */
 
 
 
