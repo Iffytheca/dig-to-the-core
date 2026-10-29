@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 101 (Oct 29)';
+  window.__BUILD = 'Build 102 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27675,6 +27675,134 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__alienHomes = {introduce, STYLES, houseG, builders, startHouse, buildNow:()=>{ hT = 0; homeTick(.01); }, finish:i=>{ const h = C[i].homes.find(q=>!q.done); if(h) h.p = .999; }};
 })();
 /* LN-alienhomes end */
+/* LN-animalhouse start: you can build an Animal House and nearby animals move in, go out in the day and sleep inside at night (Irfan 2026-10-29) */
+(function(){
+  const NAME = 'Animal House', CAP = 3;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const night = ()=>{ const t = ((tod % 1) + 1) % 1; return t > .58 && t < .92; };
+  save.furnItems = save.furnItems || {};
+  save.furnItems[NAME] = {kind:'animalhouse', col:0xb07040};
+  try{
+    if(FURN_KINDS.indexOf('animalhouse') < 0) FURN_KINDS.push('animalhouse');
+    ['barn','kennel','doghouse','stable','coop','henhouse','hutch','animalhouse','pethouse'].forEach(w=>{ if(WANT.furniture.indexOf(w) < 0) WANT.furniture.push(w); FURN_ALIAS[w] = 'animalhouse'; });
+  }catch(e){ console.warn('LN-animalhouse craft words', e); }
+  // 3 to start with (once); craft more by asking for a "barn", "kennel" or "doghouse"
+  try{ if(!localStorage.getItem('digcore_gift_ahouse')){ localStorage.setItem('digcore_gift_ahouse', '1'); addItem(NAME, 3, true); persist(); setTimeout(()=>toast('NEW: you got 3 Animal Houses! Put one in a carry slot, right-click to place it, and nearby animals will move in.'), 6000); } }catch(e){}
+
+  // the model: a little wooden house with a red roof, a round door and a sign
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind !== 'animalhouse') return _bf.apply(this, arguments);
+    const g = new THREE.Group(), b = (w,h,d,c,x,y,z)=>sbox(w,h,d,c,x,y,z,g);
+    b(2.4, .15, 2.4, 0x6a4a2a, 0, .07, 0);                                   // floor
+    b(2.2, 1.5, .15, col, 0, .9, -1.05); b(.15, 1.5, 2.2, col, -1.05, .9, 0); b(.15, 1.5, 2.2, col, 1.05, .9, 0);   // back + side walls
+    b(.75, 1.5, .15, col, -.72, .9, 1.05); b(.75, 1.5, .15, col, .72, .9, 1.05); b(.7, .45, .15, col, 0, 1.43, 1.05);   // front with a door hole
+    const r1 = b(2.6, .12, 1.6, 0xc03030, 0, 2.0, -.55); r1.rotation.x = .62; const r2 = b(2.6, .12, 1.6, 0xc03030, 0, 2.0, .55); r2.rotation.x = -.62;
+    b(.5, .35, .05, 0xf0e0b0, .72, 1.9, 1.15);                               // little sign
+    [-1.05, 1.05].forEach(x=>{ const w = b(.05, .35, .35, 0xfff0a0, x*1.04, 1.1, 0); w.userData.win = true; });
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  };
+
+  const v = new THREE.Vector3();
+  const houses = ()=>furnObjs.filter(f=>f.d && f.d.kind === 'animalhouse');
+  const doorOf = f=>({x:f.d.x + Math.sin(f.d.rot || 0)*1.6, z:f.d.z + Math.cos(f.d.rot || 0)*1.6});
+  // a tag over each house: who lives there
+  function retag(f){
+    const d = f.d, res = d.res || [], key = res.map(r=>r.name + (r.out ? '' : '*')).join('|');
+    if(f.tagKey === key && f.tag) return; f.tagKey = key;
+    if(f.tag) f.g.remove(f.tag);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.85)';
+    const l1 = 'Animal House  ' + res.length + '/' + CAP, l2 = res.length ? res.map(r=>r.name).join(', ') : 'Nobody lives here yet';
+    x.font = 'bold 38px system-ui,sans-serif'; x.strokeText(l1, 256, 32); x.fillStyle = '#ffe080'; x.fillText(l1, 256, 32);
+    x.font = 'bold 26px system-ui,sans-serif'; x.strokeText(l2, 256, 80); x.fillStyle = '#ffffff'; x.fillText(l2, 256, 80);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
+    s.scale.set(3.6, .79, 1); s.position.y = 3.2; f.g.add(s); f.tag = s;
+  }
+  const outA = new Map();        // resident id -> live animal while it is outside
+  let rid = Date.now() % 100000;
+  function walk(a, tx, tz, speed, dt){
+    const dx = tx - a.pos.x, dz = tz - a.pos.z, d = Math.hypot(dx, dz); if(d < .5) return true;
+    const s = Math.min(d, speed*dt); a.pos.x += dx/d*s; a.pos.z += dz/d*s; a.fleeT = 0; a.ang = Math.atan2(dx, dz); a.dir = a.ang;
+    try{ a.pos.y = groundTop(Math.floor(a.pos.x), 3, Math.floor(a.pos.z)); }catch(e){}
+    a.g.position.copy(a.pos); a.g.rotation.y = a.ang; return false;
+  }
+  let scanT = 3, giftT = 120;
+  function tick(dt){
+    if(realm !== 0) return;
+    const nt = night(), H = houses();
+    scanT -= dt; const scan = scanT <= 0; if(scan) scanT = 5;
+    for(const f of H){
+      const d = f.d; d.res = d.res || [];
+      const near = Math.hypot(d.x - P.x, d.z - P.z) < 90, door = doorOf(f);
+      // 1) new animals move in
+      if(scan && near && d.res.length < CAP + (d.coming ? -1 : 0) && !d.coming){
+        let best = null, bd = 26;
+        for(const a of animals){ if(!a.g || a.popRef || a.homeOf || a.d.boss || a.d.foe || a.angry || a.isPet || a.goingHome) continue; const dd = Math.hypot(a.pos.x - d.x, a.pos.z - d.z); if(dd < bd){ bd = dd; best = a; } }
+        if(best){ best.goingHome = d.id; d.coming = true; f.comer = best; if(bd < 40 && Math.hypot(P.x - d.x, P.z - d.z) < 40) toast('A ' + best.d.name + ' saw your Animal House and is walking over to move in!'); }
+      }
+      if(f.comer){
+        const a = f.comer;
+        if(animals.indexOf(a) < 0){ f.comer = null; d.coming = false; }
+        else if(walk(a, door.x, door.z, 2.2, dt)){
+          const r = {id:++rid, type:a.type, name:a.d.name, out:false}; d.res.push(r); removeAnimal(a); f.comer = null; d.coming = false; persist();
+          if(Math.hypot(P.x - d.x, P.z - d.z) < 50){ toast('A ' + r.name + ' moved into your Animal House! (' + d.res.length + '/' + CAP + ')'); blip(880, .1, .08, 'triangle'); try{ burst(d.x, d.y + 1.5, d.z, 0, 14); }catch(e){} }
+          if(d.res.length === CAP) newsQ('NEWS: A miner\'s Animal House is full! ' + d.res.map(q=>q.name).join(', ') + ' are now neighbours. ' + pick(['They share one tiny bathroom.', 'They argue about who gets the top bunk.', 'Their house party was very loud.']));
+        }
+      }
+      // 2) residents go out in the day and come home at night
+      for(const r of d.res){
+        const a = outA.get(r.id);
+        if(!nt && !r.out && near){ const q = spawnAnimal(r.type, door.x + (Math.random() - .5), door.z + (Math.random() - .5)); q.homeOf = d.id; q.rid = r.id; outA.set(r.id, q); r.out = true; }
+        else if(r.out && (!a || animals.indexOf(a) < 0)){        // it got lost (too far, or defeated): it is home again
+          outA.delete(r.id); r.out = false;
+          if(a && a.hp <= 0){ d.res = d.res.filter(q=>q !== r); toast('Your Animal House lost its ' + r.name + '. So sad.'); persist(); }
+        }
+        else if(r.out && a){
+          const dist = Math.hypot(a.pos.x - d.x, a.pos.z - d.z);
+          if(nt){ if(walk(a, door.x, door.z, 2.4, dt)){ removeAnimal(a); outA.delete(r.id); r.out = false; } }
+          else if(dist > 14) walk(a, d.x, d.z, 1.8, dt);       // stays near home
+          if(!near){ removeAnimal(a); outA.delete(r.id); r.out = false; }
+        }
+      }
+      // lights on when somebody is home
+      const home = d.res.some(r=>!r.out);
+      if(f.lit !== home){ f.lit = home; f.g.traverse(m=>{ if(m.isMesh && m.userData.win){ m.material = m.material.clone(); m.material.color.setHex(home ? 0xfff0a0 : 0x303038); if(m.material.emissive) m.material.emissive.setHex(home ? 0x605020 : 0); } }); }
+      retag(f);
+    }
+    // 3) residents give you little presents
+    giftT -= dt;
+    if(giftT <= 0){ giftT = 120;
+      const all = []; H.forEach(f=>(f.d.res || []).forEach(r=>all.push(r)));
+      if(all.length){ const r = pick(all), n = 25*all.length; save.coins += n; persist(); toast('Your ' + r.name + ' from the Animal House left you a present: ' + pick(['a shiny pebble', 'a nice stick', 'a flower', 'a drawing of you', 'some coins it found']) + '. +$' + n); }
+    }
+  }
+  // F next to an Animal House: who lives here
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !locked || realm !== 0) return;
+    for(const f of houses()){ if(Math.hypot(f.d.x - P.x, f.d.z - P.z) < 2.8){ const res = f.d.res || [];
+      setTimeout(()=>toast(res.length ? 'Animal House: ' + res.map(r=>r.name + (r.out ? ' (out playing)' : ' (home)')).join(', ') + '.' + (res.length < CAP ? ' Room for ' + (CAP - res.length) + ' more.' : ' Full!') : 'Nobody lives here yet. Animals nearby will move in soon.'), 40); return; } }
+  });
+  // breaking the house sends everyone back to the wild
+  const _rf = removeFurniture;
+  removeFurniture = function(d){
+    if(d && d.kind === 'animalhouse' && d.res){ d.res.forEach(r=>{ const a = outA.get(r.id); if(a){ a.homeOf = null; outA.delete(r.id); } else if(realm === 0){ try{ const q = spawnAnimal(r.type, d.x, d.z); } catch(e){} } }); if(d.res.length) toast('The animals moved out of the Animal House.'); d.res = []; }
+    return _rf.apply(this, arguments);
+  };
+  // after loading a save every resident starts at home
+  (save.furn || []).forEach(d=>{ if(d.kind === 'animalhouse' && d.res) d.res.forEach(r=>{ r.out = false; }); });
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ if(startEl.style.display !== 'flex' && !won) tick(dt); }catch(e){ console.warn('LN-animalhouse', e); }
+  })(last);
+  window.__animalHouse = {houses, outA, tick, place:(x, d, z)=>spawnPlaced(NAME, 'animalhouse', 0xb07040, null, {t:'i', key:NAME}, x, d, z, 0), scanNow:()=>{ scanT = 0; }, giftNow:()=>{ giftT = 0; }};
+})();
+/* LN-animalhouse end */
+
 
 /* LN-meshfix: once every block type is registered, forget saved blocks whose type no longer exists, then redraw */ try{ let bad = 0; edits.forEach((v,k)=>{ if(v > BLOCKS.length){ edits.delete(k); skyEdits.delete(k); bad++; } }); if(bad){ editsDirty = true; console.warn('LN-meshfix removed', bad); } fillWindow(wox + WIN/2, woz + WIN/2); rebuild(); }catch(e){ console.warn('LN-meshfix', e); }
 
