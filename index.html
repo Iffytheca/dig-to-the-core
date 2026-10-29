@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 93 (Oct 29)';
+  window.__BUILD = 'Build 94 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27036,6 +27036,75 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__planets = {open:openPlanets};
 })();
 /* LN-planetsbtn end */
+/* LN-neontrees start (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni; if(!U || !U.sIds) return;
+  const WOOD = U.sIds.neonwood, LEAF = U.sIds.neonleaf; if(!WOOD || !LEAF) return;
+  const falling = [], regrow = [];
+  function fell(x, d0, z, hitId){
+    // the trunk: every Neon Wood block above (smaller d) and below the spot, in this column
+    let top = d0, bot = d0;
+    while(get(x, top - 1, z) === WOOD) top--;
+    while(get(x, bot + 1, z) === WOOD) bot++;
+    const gone = hitId ? [[x, d0, z, hitId]] : [];
+    for(let d = top; d <= bot; d++) if(get(x, d, z) === WOOD){ gone.push([x, d, z, WOOD]); setBlock(x, d, z, 0); }
+    let leaves = 0;
+    for(let dx=-1; dx<=1; dx++) for(let dz=-1; dz<=1; dz++) for(let d = top - 2; d <= top + 1; d++){
+      if(get(x+dx, d, z+dz) === LEAF){ gone.push([x+dx, d, z+dz, LEAF]); setBlock(x+dx, d, z+dz, 0); leaves++; } }
+    const trunk = gone.filter(g=>g[3] === WOOD).length + (hitId ? 0 : 1);
+    // falling glowing tree
+    const g = new THREE.Group(), h = trunk;
+    const tm = new THREE.Mesh(new THREE.BoxGeometry(.8, h, .8), new THREE.MeshStandardMaterial({color:0x50207a, emissive:0xff00dc, emissiveIntensity:.6}));
+    tm.position.y = h/2; g.add(tm);
+    const lm = new THREE.Mesh(new THREE.BoxGeometry(2.8, 2.2, 2.8), new THREE.MeshStandardMaterial({color:0x00c8a0, emissive:0x40ffe0, emissiveIntensity:.7, transparent:true, opacity:.9}));
+    lm.position.y = h + .9; g.add(lm);
+    g.position.set(x + .5, -bot - 1 + 1, z + .5);
+    const ax = new THREE.Vector3(z + .5 - P.z, 0, -(x + .5 - P.x)); if(ax.lengthSq() < .01) ax.set(1, 0, 0); ax.normalize();
+    scene.add(g); falling.push({g, ax, t:0, h});
+    addItem('Neon Wood', trunk + 2); if(leaves) addItem('Neon Leaves', Math.max(1, Math.round(leaves/3)));
+    let fruit = Math.random() < .35; if(fruit) addItem('Star Fruit', 1);
+    save.coins += 50; save.neonTrees = (save.neonTrees || 0) + 1; persist();
+    blip(880, .15, .12, 'triangle'); setTimeout(()=>blip(220, .4, .14, 'sawtooth'), 500);
+    toast('Timber! The neon tree fell over with a ZAP.  +$50  +' + (trunk + 2) + ' Neon Wood' + (fruit ? ', a glowing Star Fruit' : '') + '. Alien trees grow back by themselves.');
+    regrow.push({at:performance.now() + 120000, gone});
+  }
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    const on = h && U.onUni && U.onUni();
+    const id = on ? get(h.i, h.d, h.k) : 0, above = on ? get(h.i, h.d - 1, h.k) : 0;
+    const r = _bb.apply(this, arguments);
+    try{
+      if(on && get(h.i, h.d, h.k) === 0){
+        if(id === WOOD) fell(h.i, h.d, h.k, WOOD);
+        else if(above === WOOD) fell(h.i, h.d - 1, h.k);      // dug out from under it
+      }
+    }catch(e){ console.warn('LN-neontrees', e); }
+    return r;
+  };
+  let last = performance.now();
+  (function tick(now){
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    for(let i = falling.length - 1; i >= 0; i--){
+      const f = falling[i]; f.t += dt;
+      const a = Math.min(Math.PI/2, f.t*f.t*2.4); f.g.quaternion.setFromAxisAngle(f.ax, a);
+      if(f.t > 1.1){
+        const tip = new THREE.Vector3(0, f.h, 0).applyQuaternion(f.g.quaternion).add(f.g.position);
+        try{ burst(tip.x, tip.y, tip.z, LEAF - 1, 30); burst(f.g.position.x, f.g.position.y + .5, f.g.position.z, WOOD - 1, 15); }catch(e){}
+        scene.remove(f.g); falling.splice(i, 1); shake = .08; blip(1320, .2, .08, 'sine');
+      }
+    }
+    for(let i = regrow.length - 1; i >= 0; i--){
+      if(now < regrow[i].at) continue;
+      const near = regrow[i].gone.some(([x,d,z])=>Math.abs(x + .5 - P.x) < 1.2 && Math.abs(z + .5 - P.z) < 1.2);
+      if(near){ regrow[i].at = now + 5000; continue; }
+      regrow[i].gone.forEach(([x,d,z,t])=>{ if(get(x, d, z) === 0) setBlock(x, d, z, t); });
+      regrow.splice(i, 1);
+    }
+    requestAnimationFrame(tick);
+  })(last);
+  window.__neonTrees = {fell, falling, regrow, WOOD, LEAF, get:(x,d,z)=>get(x,d,z)};
+})();
+/* LN-neontrees end */
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
   let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
   if(!pend || !BLOCKS.some(b=>b.name === 'Too Tuff Rock')) return;
