@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 91 (Oct 29)';
+  window.__BUILD = 'Build 92 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27028,10 +27028,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   st.textContent = '#planetsBtn{position:absolute;top:174px;left:132px;z-index:30;padding:6px 14px;font:700 14px system-ui,sans-serif;color:#fff;background:rgba(90,42,208,.85);border:2px solid rgba(255,255,255,.45);border-radius:10px;cursor:pointer;letter-spacing:.5px;pointer-events:auto}'+
     'body.touchplay #planetsBtn{top:8px;left:auto;right:8px;display:block!important}';
   document.head.appendChild(st);
-  const btn = document.createElement('button'); btn.id = 'planetsBtn'; btn.title = 'Planets (P)'; btn.textContent = 'PLANETS (P)';
+  const btn = document.createElement('button'); btn.id = 'planetsBtn'; btn.title = 'Planets (O)'; btn.textContent = 'PLANETS (O)';
   btn.onclick = e=>{ e.stopPropagation(); openPlanets(); };
   document.body.appendChild(btn);
-  addEventListener('keydown', e=>{ if(e.code === 'KeyP' && !e.repeat && locked && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) openPlanets(); });
+  addEventListener('keydown', e=>{ if(e.code === 'KeyO' && !e.repeat && locked && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) openPlanets(); });
   window.__planets = {open:openPlanets};
 })();
 /* LN-planetsbtn end */
