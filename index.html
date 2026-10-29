@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 100 (Oct 29)';
+  window.__BUILD = 'Build 101 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27492,6 +27492,190 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__bandits = {now:()=>{ if(B) stop(); return start(); }, get cur(){ return B; }, caught:()=>B && caught(), stop};
 })();
 /* LN-bandits end */
+/* LN-alienhomes start: Novaria aliens build their own houses, and every alien shows HP / Food / Energy bars like normal animals (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni; if(!U || !U.town3D || !U.civ) return;
+  const T = U.TOWNS, C = U.civ, T3 = U.town3D;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const onUni = ()=>U.onUni && U.onUni();
+
+  /* ================================================ STAT BARS: HP, Food, Energy (same look as animal bars) */
+  function barSprite(){
+    const cv = document.createElement('canvas'); cv.width = 128; cv.height = 58;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    sp.scale.set(1.1, .5, 1); sp.renderOrder = 5; return {sp, cv, k:''};
+  }
+  function drawBar(B, hp, h, s){
+    const key = Math.round(hp) + '|' + Math.round(h) + '|' + Math.round(s); if(key === B.k) return; B.k = key;
+    const x = B.cv.getContext('2d'); x.clearRect(0, 0, 128, 58);
+    x.fillStyle = 'rgba(0,0,0,.6)'; x.fillRect(0, 0, 128, 58);
+    x.font = 'bold 13px system-ui,sans-serif'; x.textBaseline = 'middle'; x.fillStyle = '#fff';
+    x.fillText('HP', 4, 11); x.fillText('Food', 4, 29); x.fillText('Energy', 4, 47);
+    x.fillStyle = '#333'; x.fillRect(50, 5, 74, 12); x.fillRect(50, 23, 74, 12); x.fillRect(50, 41, 74, 12);
+    x.fillStyle = hp > 50 ? '#ff4a5a' : hp > 25 ? '#ff8a20' : '#a01020'; x.fillRect(50, 5, 74*hp/100, 12);
+    x.fillStyle = h > 50 ? '#5ad04a' : h > 25 ? '#ffb020' : '#ff4040'; x.fillRect(50, 23, 74*h/100, 12);
+    x.fillStyle = s > 30 ? '#40b8ff' : '#8a7aff'; x.fillRect(50, 41, 74*s/100, 12);
+    B.sp.material.map.needsUpdate = true;
+  }
+  T3.forEach(o=>o.aliens.forEach(a=>{ a.hng = 50 + Math.random()*50; a.en = 60 + Math.random()*40; }));
+  const v = new THREE.Vector3();
+  function statTick(dt){
+    const B = window.__bandits && window.__bandits.cur;
+    T3.forEach((o, i)=>o.aliens.forEach(a=>{
+      // food goes down, they eat glowing space snacks when hungry; energy goes down when they rush about (bandits, builders) and comes back when they stroll
+      a.hng = Math.max(0, a.hng - dt*.3); if(a.hng < 25 && Math.random() < dt*.12) a.hng = 100;
+      const busy = (B && B.a === a) || a.building || (a.sp || 0) > .8;
+      a.en = busy ? Math.max(0, a.en - dt*12) : Math.min(100, a.en + dt*6);
+      if(a.hp != null && a.hp > 0 && a.hp < 80) a.hp = Math.min(80, a.hp + dt*1.5);   // they heal slowly
+      let show = false;
+      if(onUni() && o.g.visible && !a.dead){ a.g.getWorldPosition(v); show = Math.hypot(v.x - P.x, v.z - P.z) < 16; }
+      if(show && !a.bar){ a.bar = barSprite(); a.bar.sp.position.y = 2.95; a.g.add(a.bar.sp); }
+      if(a.bar){ a.bar.sp.visible = show; if(show) drawBar(a.bar, 100*Math.max(0, a.hp == null ? 80 : a.hp)/80, a.hng, a.en); }
+      if(B && B.a === a && B.tag) B.tag.position.y = 3.6;   // keep the BANDIT sign above the bars
+    }));
+  }
+
+  /* ================================================ ALIEN HOUSES: towns build round pod houses, one step at a time */
+  const STYLES = [
+    {n:'Pod House',      body:0xd8d8f0},
+    {n:'Mushroom House', body:0xf0e0c0},
+    {n:'Bubble House',   body:0xa0f0ff},
+    {n:'Crystal House',  body:0xc0a0ff}
+  ];
+  const houseG = T3.map(()=>[]);   // [{g, h, parts}]
+  function makeHouse(i, h){
+    const S = STYLES[h.s], col = T[i].col, g = new THREE.Group(); g.position.set(h.x, 0, h.z); g.rotation.y = h.ry;
+    const parts = [];
+    const add = m=>{ g.add(m); parts.push(m); return m; };
+    // 1 floor
+    add(new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.8, .3, 16), new THREE.MeshLambertMaterial({color:0x3a3a50}))).position.y = .15;
+    // 2 walls
+    const w = add(new THREE.Mesh(new THREE.CylinderGeometry(2.3, 2.4, 2.2, 16), new THREE.MeshLambertMaterial({color:h.col != null ? h.col : S.body}))); w.position.y = 1.4;
+    // 3 roof
+    let roof;
+    if(h.s === 1) roof = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshLambertMaterial({color:col}));
+    else if(h.s === 3) roof = new THREE.Mesh(new THREE.ConeGeometry(2.6, 2.6, 6), new THREE.MeshLambertMaterial({color:col, emissive:col, emissiveIntensity:.35}));
+    else roof = new THREE.Mesh(new THREE.SphereGeometry(2.35, 16, 8, 0, Math.PI*2, 0, Math.PI/2), new THREE.MeshLambertMaterial({color:col, transparent:h.s === 2, opacity:h.s === 2 ? .7 : 1}));
+    roof.position.y = h.s === 3 ? 3.8 : 2.5; add(roof);
+    // 4 door, glowing windows, antenna
+    const det = new THREE.Group(); add(det);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(.9, 1.5, .2), new THREE.MeshLambertMaterial({color:0x201830})); door.position.set(0, 1.05, 2.35); det.add(door);
+    [-1.2, 1.2].forEach(x=>{ const wn = new THREE.Mesh(new THREE.CircleGeometry(.35, 12), new THREE.MeshBasicMaterial({color:0xfff0a0})); wn.position.set(x, 1.7, 2.12); wn.rotation.y = x*.45; det.add(wn); });
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(.05, .05, 1.2, 6), new THREE.MeshLambertMaterial({color:0x888888})); ant.position.y = (h.s === 3 ? 5.1 : 4.2); det.add(ant);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(.15, 8, 6), new THREE.MeshBasicMaterial({color:col})); tip.position.y = ant.position.y + .65; det.add(tip);
+    // scaffold shown while building
+    const sc = new THREE.Mesh(new THREE.CylinderGeometry(2.9, 2.9, 4.4, 8, 1, true), new THREE.MeshBasicMaterial({color:0xffd040, wireframe:true})); sc.position.y = 2.2; g.add(sc);
+    T3[i].g.add(g);
+    const o = {g, h, parts, sc}; showStep(o); return o;
+  }
+  function showStep(o){
+    const step = o.h.done ? 4 : Math.floor(o.h.p*4);   // 0..4 parts visible
+    o.parts.forEach((m, k)=>{ m.visible = k < Math.max(1, step); });
+    if(!o.h.done){ const f = (o.h.p*4) % 1; const m = o.parts[Math.min(3, step)]; if(m && step < 4){ m.visible = true; m.scale.set(1, Math.max(.05, f), 1); } }
+    else o.parts.forEach(m=>m.scale.set(1, 1, 1));
+    o.parts.forEach((m, k)=>{ if(k < step) m.scale.set(1, 1, 1); });
+    o.sc.visible = !o.h.done;
+  }
+  C.forEach((c, i)=>{ c.homes = c.homes || []; c.homes.forEach(h=>houseG[i].push(makeHouse(i, h))); });
+  function freeSpot(i){
+    for(let t=0;t<30;t++){
+      const a = Math.random()*6.283, r = 26 + Math.random()*12, x = Math.cos(a)*r, z = Math.sin(a)*r;
+      if(C[i].homes.every(h=>Math.hypot(h.x - x, h.z - z) > 7)) return {x, z, ry:Math.atan2(-x, -z)};   // door faces the town
+    }
+    return null;
+  }
+  const MAXH = 8, BUILD_TIME = 40;
+  const builders = T3.map(()=>null);
+  function startHouse(i){
+    const c = C[i]; if(c.homes.length >= MAXH || c.homes.some(h=>!h.done)) return false;
+    const s = freeSpot(i); if(!s) return false;
+    const h = {x:s.x, z:s.z, ry:s.ry, s:Math.floor(Math.random()*STYLES.length), p:0, done:false, col:c.wallCol != null ? c.wallCol : null};
+    c.homes.push(h); houseG[i].push(makeHouse(i, h)); persist();
+    if(onUni() && Math.hypot(P.x - T[i].x, P.z - T[i].z) < 80) toast('The aliens of ' + T[i].n + ' started building a ' + STYLES[h.s].n + '!');
+    return true;
+  }
+  function moveTo(i, a, tx, tz, speed, dt){       // walk an alien to a spot (town-local), works with the circle-walk code
+    const lx = Math.cos(a.a)*a.r, lz = Math.sin(a.a)*a.r, dx = tx - lx, dz = tz - lz, d = Math.hypot(dx, dz);
+    if(d < .3) return true;
+    const s = Math.min(d, speed*dt), nx = lx + dx/d*s, nz = lz + dz/d*s;
+    a.a = Math.atan2(nz, nx); a.r = Math.max(.5, Math.hypot(nx, nz));
+    a.g.position.set(Math.cos(a.a)*a.r, 0, Math.sin(a.a)*a.r); a.g.rotation.y = Math.atan2(dx, dz);
+    return false;
+  }
+  let hT = 30;
+  function homeTick(dt){
+    hT -= dt;
+    if(hT <= 0){ hT = 50 + Math.random()*60;
+      // the nearest town builds first, so you can watch it
+      const order = T.map((t, i)=>i).sort((x, y)=>Math.hypot(P.x - T[x].x, P.z - T[x].z) - Math.hypot(P.x - T[y].x, P.z - T[y].z));
+      for(const i of order) if(startHouse(i)) break;
+    }
+    const B = window.__bandits && window.__bandits.cur;
+    C.forEach((c, i)=>{
+      const k = c.homes.findIndex(h=>!h.done); if(k < 0) return;
+      const h = c.homes[k], o = houseG[i][k];
+      // a builder alien walks over and works; without one the house still grows, just slowly
+      let b = builders[i];
+      if(!b || b.dead || (B && B.a === b)){ if(b){ b.building = false; b.sp = b.sp0 || .3; } b = builders[i] = T3[i].aliens.find(a=>!a.dead && !(B && B.a === a)) || null; if(b){ b.sp0 = b.sp; b.sp = 0; b.building = true; } }
+      let rate = .25;
+      if(b){
+        const tx = h.x + Math.sin(h.ry)*3.4, tz = h.z + Math.cos(h.ry)*3.4;
+        if(T3[i].g.visible){ if(moveTo(i, b, tx, tz, 3, dt)){ rate = 1; b.g.rotation.y = Math.atan2(h.x - tx, h.z - tz); b.g.children.forEach((m, q)=>{ if(q === 0) m.rotation.x = Math.sin(performance.now()/120)*.3; }); } }
+        else rate = 1;
+      }
+      h.p = Math.min(1, h.p + dt*rate/BUILD_TIME);
+      if(h.p >= 1){
+        h.done = true; c.pop = (c.pop || 0) + 5; c.houses = c.homes.filter(q=>q.done).length;
+        if(b){ b.building = false; b.sp = b.sp0 || .3; builders[i] = null; }
+        if(onUni() && Math.hypot(P.x - T[i].x, P.z - T[i].z) < 80){ toast((b && b.nm ? b.nm : 'The aliens') + ' finished a new ' + STYLES[h.s].n + ' in ' + T[i].n + '! 5 more aliens moved in.'); try{ const p = o.g.getWorldPosition(new THREE.Vector3()); burst(p.x, p.y + 3, p.z, 0, 24); }catch(e){} blip(900, .15, .1, 'triangle'); }
+        newsQ('SPACE NEWS: ' + T[i].n + ' built a new ' + STYLES[h.s].n + '. ' + pick(['The neighbours brought glowing cookies.', 'It has a hot tub full of jelly.', 'The front door is on the roof. On purpose.', 'It is very round. Everyone loves it.']));
+        persist();
+      }
+      showStep(o);
+    });
+  }
+
+  /* ================================================ INTRODUCE Earth stuff: hold something and press F next to an alien */
+  const OOH = ['WOW! What is THAT?', 'Glorp! We have never seen one of these!', 'Amazing! Earth is so weird!', 'Can we keep the idea? Please?', 'My antenna is tingling!'];
+  function introduce(i, a, hi){
+    const c = C[i]; c.learned = c.learned || [];
+    const name = hi.name, isNew = c.learned.indexOf(name) < 0;
+    let what;
+    if(hi.kind === 'gun') what = 'They copied it, but their version only shoots bubbles.';
+    else if(blockIdOf(name)){ const b = BLOCKS[blockIdOf(name) - 1], col = b && b.base ? (b.base[0] << 16) | (b.base[1] << 8) | b.base[2] : null; if(col != null) c.wallCol = col; what = 'Their next houses will be built out of ' + name + '!'; }
+    else if(/food|fruit|cake|pie|bread|apple|cookie|soup|burger|pizza|meat|fish|carrot|potato|berry/i.test(name)){ a.hng = 100; what = 'They tasted it. Now the whole town wants ' + name + ' for dinner.'; }
+    else if(/pickaxe|drill/i.test(name)) what = 'They made a tiny alien version and started digging holes everywhere.';
+    else if(/hat|crown|cape|mask|boots|shirt/i.test(name)) what = 'Now everyone in town wants to wear one.';
+    else what = pick(['They made their own glowing version of it.', 'They put it in their museum.', 'They wrote a song about it.', 'They think it is a new kind of pet.']);
+    const who = (a.nm || 'An alien') + ' of ' + T[i].n;
+    if(isNew){
+      c.learned.push(name); if(c.learned.length > 40) c.learned.shift();
+      const gift = 150*(c.lvl || 1); save.coins += gift; c.pop = (c.pop || 0) + 1;
+      if(c.learned.length % 5 === 0 && c.lvl < 8){ c.lvl++; newsQ('SPACE NEWS: ' + T[i].n + ' learned so many Earth things from a miner that it grew to level ' + c.lvl + '!'); }
+      toast(who + ': "' + pick(OOH) + '" You introduced ' + name + '. ' + what + '  Thank you gift +$' + gift.toLocaleString() + '.');
+      newsQ('SPACE NEWS: An Earth miner showed ' + T[i].n + ' a ' + name + '. ' + what);
+      blip(1000, .1, .08, 'triangle'); setTimeout(()=>blip(1400, .12, .08, 'triangle'), 110);
+      persist();
+    } else toast(who + ': "We already know ' + name + '! Show us something new."');
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !locked || !onUni()) return;
+    const hi = hotInfo(hotArr()[save.hotSel]); if(!hi) return;
+    for(let i=0;i<T3.length;i++){ if(!T3[i].g.visible) continue; for(const a of T3[i].aliens){ if(a.dead) continue; a.g.getWorldPosition(v); if(Math.hypot(v.x - P.x, v.z - P.z) < 3){
+      e.stopImmediatePropagation(); const I = i, A = a; setTimeout(()=>introduce(I, A, hi), 40); return; } } }
+  }, true);
+
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ if(startEl.style.display !== 'flex' && !won){ statTick(dt); homeTick(dt); } }catch(e){ console.warn('LN-alienhomes', e); }
+  })(last);
+  window.__alienHomes = {introduce, STYLES, houseG, builders, startHouse, buildNow:()=>{ hT = 0; homeTick(.01); }, finish:i=>{ const h = C[i].homes.find(q=>!q.done); if(h) h.p = .999; }};
+})();
+/* LN-alienhomes end */
+
 /* LN-meshfix: once every block type is registered, forget saved blocks whose type no longer exists, then redraw */ try{ let bad = 0; edits.forEach((v,k)=>{ if(v > BLOCKS.length){ edits.delete(k); skyEdits.delete(k); bad++; } }); if(bad){ editsDirty = true; console.warn('LN-meshfix removed', bad); } fillWindow(wox + WIN/2, woz + WIN/2); rebuild(); }catch(e){ console.warn('LN-meshfix', e); }
 
 
