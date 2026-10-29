@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 103 (Oct 29)';
+  window.__BUILD = 'Build 104 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -24867,7 +24867,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const L = R.list.slice().sort((a, b)=>(a.status === 'flopped') - (b.status === 'flopped') || (b.followers || 0) - (a.followers || 0));
     list.innerHTML = L.map(r=>'<div style="border-left:6px solid ' + r.col + ';background:rgba(255,255,255,.05);border-radius:6px;padding:8px 10px;margin-bottom:8px;' + (r.status === 'flopped' ? 'opacity:.5' : '') + '">' +
       '<div style="font-weight:900;font-size:16px;color:' + r.col + '">' + r.name + '  <span style="font-size:12px;color:#fff;background:rgba(0,0,0,.4);padding:2px 6px;border-radius:4px">' + ST[r.status] + '</span></div>' +
-      '<div>Rule: ' + r.rule + '</div>' +
+      (window.__religRules ? window.__religRules.html(r) : '<div>Rule: ' + r.rule + '</div>') +
       '<div style="opacity:.8;font-size:13px">Started by ' + r.founder + ' in ' + r.town + '. Followers: ' + (r.followers || 0) + ' in ' + (r.townN || 0) + ' town' + ((r.townN || 0) === 1 ? '' : 's') + '. Biggest ever: ' + (r.peak || 1) + '.</div></div>').join('');
   }
   function openP(){ panel.style.display = 'flex'; refresh(); try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
@@ -27343,7 +27343,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const hex = c=>'#' + c.toString(16).padStart(6, '0');
   // the big town tag
   const tags = T3.map(()=>null), tagKey = T3.map(()=>'');
-  function townLines(i){ const c = C[i], R = RELIG[c.relig]; return [T[i].n, 'Religion: ' + R.n, 'Level ' + c.lvl + '  -  ' + (c.pop || 0).toLocaleString() + ' aliens  -  ' + ((c.inv || []).length) + ' inventions']; }
+  function townLines(i){ const c = C[i], R = RELIG[c.relig]; return [T[i].n, 'Religion: ' + R.n + (window.__religRules ? window.__religRules.alienShort(R) : ''), 'Level ' + c.lvl + '  -  ' + (c.pop || 0).toLocaleString() + ' aliens  -  ' + ((c.inv || []).length) + ' inventions']; }
   function refreshTag(i){
     const L = townLines(i), key = L.join('|'); if(key === tagKey[i]) return; tagKey[i] = key;
     if(tags[i]) T3[i].g.remove(tags[i]);
@@ -27644,7 +27644,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     let what;
     if(hi.kind === 'gun') what = 'They copied it, but their version only shoots bubbles.';
     else if(blockIdOf(name)){ const b = BLOCKS[blockIdOf(name) - 1], col = b && b.base ? (b.base[0] << 16) | (b.base[1] << 8) | b.base[2] : null; if(col != null) c.wallCol = col; what = 'Their next houses will be built out of ' + name + '!'; }
-    else if(/food|fruit|cake|pie|bread|apple|cookie|soup|burger|pizza|meat|fish|carrot|potato|berry/i.test(name)){ a.hng = 100; what = 'They tasted it. Now the whole town wants ' + name + ' for dinner.'; }
+    else if(/food|fruit|cake|pie|bread|apple|cookie|soup|burger|pizza|meat|fish|carrot|potato|berry/i.test(name)){ const ban = window.__religRules && window.__religRules.alienBan(i, name); if(ban){ toast((a.nm || 'An alien') + ': "Sorry, we can not eat ' + name + '. ' + ban.n + ' says: ' + ban.diet.t + '."'); return; } a.hng = 100; what = 'They tasted it. Now the whole town wants ' + name + ' for dinner.'; }
     else if(/pickaxe|drill/i.test(name)) what = 'They made a tiny alien version and started digging holes everywhere.';
     else if(/hat|crown|cape|mask|boots|shirt/i.test(name)) what = 'Now everyone in town wants to wear one.';
     else what = pick(['They made their own glowing version of it.', 'They put it in their museum.', 'They wrote a song about it.', 'They think it is a new kind of pet.']);
@@ -28022,6 +28022,91 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__blockHomes = {get movin(){ return [...movers.values()].map(m=>m.a.d.name).join(','); }, dbgPen:()=>{ const near = []; skyEdits.forEach(v=>{ if(Math.abs(v.x - P.x) < 45 && Math.abs(v.z - P.z) < 45 && v.d >= -24) near.push(v); }); const ground = near.filter(v=>{ const below = v.d + 1; return below <= 0 && solid(v.x, below, v.z) && !solid(v.x, v.d - 3, v.z); }); return near.length + ' ' + ground.length; }, setBlock:(x,d,z,t)=>setBlock(x,d,z,t), get:(x,d,z)=>get(x,d,z), bid:n=>blockIdOf(n), scan, get homes(){ return homes; }, live, startBuild, get job(){ return job; }, buildNow:()=>{ buildT = 0; }, pathNow:()=>{ pathT = 0; }, finishBuild:()=>{ if(job){ while(job && job.i < job.plan.length){ const p = job.plan[job.i]; if(!solid(p[0], p[1], p[2])) setBlock(p[0], p[1], p[2], p[3]); job.i++; } job.t = 0; } }};
 })();
 /* LN-blockhomes end */
+/* LN-religrules start: religions get many rules and food rules, and some have none at all (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const DIETS = [
+    {t:'No meat',                       rx:/meat|sausage|bacon|burger|jerky|steak|chicken|\bham\b|drumstick/i},
+    {t:'No cheese',                     rx:/cheese/i},
+    {t:'No sweets',                     rx:/cake|candy|cookie|donut|doughnut|chocolate|ice cream|\bpie\b|honey|jelly bean|lollipop/i},
+    {t:'No fish',                       rx:/fish|salmon|tuna|sushi/i},
+    {t:'Only round food',               rx:/bread|fries|sandwich|taco|noodle|jerky|bacon|sausage|carrot|banana|toast/i},
+    {t:'Fruit and vegetables only',     rx:/meat|sausage|bacon|burger|cheese|cake|candy|cookie|fish|\begg|pizza|taco|jerky|donut|chocolate/i},
+    {t:'No eggs',                       rx:/\begg/i},
+    {t:'No green food',                 rx:/apple|lettuce|pickle|\bpea|broccoli|lime|cucumber|kiwi/i},
+    {t:'No bread or toast',             rx:/bread|toast|sandwich|bun\b/i},
+    {t:'Nothing purple',                rx:/grape|berry|plum|eggplant|jam/i},
+    {t:'No spicy food',                 rx:/spicy|chili|pepper|taco|curry/i},
+    {t:'No fizzy drinks',               rx:/soda|cola|fizzy|pop\b/i}
+  ];
+  const ALIEN_DIETS = [{t:'No Glorp Goo', rx:/glorp/i}, {t:'No Star Fruit', rx:/star fruit/i}, {t:'No Earth food at all', rx:/./}];
+  const EXTRA = ['Pray to your favourite rock every morning.', 'Never step on a crack.', 'Hug a tree once a week.', 'Always say thank you to your pickaxe.',
+    'Wear something orange on Fridays.', 'No shouting after sunset.', 'Feed every stray cat you meet.', 'Share your snacks with a friend.',
+    'Holiday every 7th day: no digging allowed.', 'Bow to the biggest mountain you can see.', 'Never whistle indoors.', 'Write a poem about the moon once a month.',
+    'Keep your boots shiny.', 'Help a neighbour build their house.', 'Plant one seed for every tree you chop.', 'Visit the temple on your birthday.',
+    'Always knock three times.', 'Never laugh at a duck.', 'Sing before you sleep.', 'Give away one coin every day.'];
+  const ALIEN_EXTRA = ['Polish your antenna every morning.', 'Float for one hour on holy days.', 'Never point at a black hole.', 'Bow to both suns.',
+    'Say "glorp" when you meet a stranger.', 'Rest on the third moon of every week.', 'Paint your spaceship once a year.', 'Never eat in front of a UFO.'];
+  // ---- Earth religions (save.relig): a list of rules and maybe a food rule, or nothing at all
+  function fill(r){
+    if(r.rules) return;
+    const roll = Math.random();
+    if(roll < .25){ r.rules = []; r.diet = null; r.free = true; return; }                 // no rules and no food rules
+    const n = 1 + Math.floor(Math.random()*4), L = [r.rule];
+    while(L.length < n){ const x = pick(EXTRA); if(L.indexOf(x) < 0) L.push(x); }
+    r.rules = L; r.diet = roll < .65 ? DIETS.indexOf(pick(DIETS)) : null;          // some have rules but no food rule
+  }
+  function fillAll(){ const R = save.relig; if(R && R.list){ let ch = false; R.list.forEach(r=>{ if(!r.rules){ fill(r); ch = true; } }); if(ch) persist(); } }
+  fillAll(); setInterval(()=>{ try{ fillAll(); }catch(e){} }, 3000);
+  const dietOf = r=>r && r.diet != null ? DIETS[r.diet] : null;
+  function html(r){
+    fill(r);
+    if(r.free || !r.rules.length) return '<div><b>No rules at all!</b> Followers can do and eat whatever they like.</div>';
+    const d = dietOf(r);
+    return '<div><b>Rules:</b><ul style="margin:2px 0 2px 18px;padding:0">' + r.rules.map(x=>'<li>' + x + '</li>').join('') + '</ul></div>' +
+      '<div><b>Food rule:</b> ' + (d ? d.t : 'none, they eat anything') + '</div>';
+  }
+  // ---- Novaria religions: fixed rules for each one (some have none)
+  const AT = window.__alienTowns, AR = AT && AT.RELIG;
+  if(AR) AR.forEach((R, k)=>{
+    const plan = [[2, 0], [0, -1], [3, 1], [1, -1], [4, 2], [0, -1], [2, 0]][k % 7];       // [number of rules, food rule (-1 none)]
+    R.rules = []; for(let j=0; j<plan[0]; j++) R.rules.push(ALIEN_EXTRA[(k*3 + j) % ALIEN_EXTRA.length]);
+    R.diet = plan[1] >= 0 ? ALIEN_DIETS[plan[1]] : null;
+  });
+  function alienShort(R){
+    if(!R || !R.rules) return '';
+    if(!R.rules.length && !R.diet) return '  (no rules)';
+    return '  (' + R.rules.length + ' rule' + (R.rules.length === 1 ? '' : 's') + (R.diet ? ', ' + R.diet.t : '') + ')';
+  }
+  function alienBan(i, name){
+    const U = window.__uni; if(!U || !AR) return null;
+    const R = AR[U.civ[i].relig]; return R && R.diet && R.diet.rx.test(name) ? R : null;
+  }
+  // ---- eating forbidden food next to a town: the residents gasp
+  function townAt(){
+    const N = (save.nations || []).filter(n=>n && n.pop && n.pop.length);
+    let best = null, bd = 30; N.forEach(n=>{ const d = Math.hypot(P.x - n.x, P.z - n.z); if(d < bd){ bd = d; best = n; } }); return best;
+  }
+  const _er = eatRef;
+  eatRef = function(ref){
+    const name = typeof ref === 'string' && ref.slice(0, 2) === 'i:' ? ref.slice(2) : null, had = name && save.inv ? save.inv[name] || 0 : 0;
+    const out = _er.apply(this, arguments);
+    try{
+      if(name && realm === 0 && (save.inv ? save.inv[name] || 0 : 0) < had){
+        const n = townAt(), R = save.relig;
+        if(n && R){ const c = {}; n.pop.forEach(q=>{ if(q && q.relig) c[q.relig] = (c[q.relig] || 0) + 1; });
+          const top = Object.keys(c).sort((a, b)=>c[b] - c[a])[0], r = top && R.list.find(x=>String(x.id) === top);
+          const d = dietOf(r);
+          if(d && d.rx.test(name)) setTimeout(()=>toast('The residents of ' + n.name + ' gasp! You ate ' + name + ', but ' + r.name + ' says: ' + d.t + '.'), 60);
+        }
+      }
+    }catch(e){}
+    return out;
+  };
+  window.__religRules = {DIETS, html, fill, alienShort, alienBan, dietOf};
+})();
+/* LN-religrules end */
+
 
 
 
