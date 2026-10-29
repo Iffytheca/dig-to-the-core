@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 104 (Oct 29)';
+  window.__BUILD = 'Build 105 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28106,6 +28106,145 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__religRules = {DIETS, html, fill, alienShort, alienBan, dietOf};
 })();
 /* LN-religrules end */
+/* LN-lore start: the Lore Book (Y): funny lore pages you find as Lore Scrolls while digging, or unlock by visiting places (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const GAME = 'Deep Chaos Diggers';
+  // [id, chapter, title, text, how it unlocks: 'scroll' | 'novaria' | 'mars' | 'deep' | 'night']
+  const LORE = [
+    ['w1','The World','How the World Began','In the beginning there was nothing. Then somebody sneezed. The sneeze became the dirt, the dirt became the rock, and the rock has been grumpy about it ever since.','scroll'],
+    ['w2','The World','Why Grass Is Green','Grass used to be purple. It turned green after seeing how much Bob eats. Grass has never fully recovered.','scroll'],
+    ['w3','The World','The Great Dirt Shortage of Year 3','Once, all the dirt in the world went missing. It turned out it was just under the grass the whole time. Nobody had looked.','scroll'],
+    ['w4','The World','Why Rocks Get Harder Deeper Down','The deeper rocks are older, and old rocks have had more time to work out at the rock gym.','scroll'],
+    ['w5','The World','The Core','Scientists say the Core is hot metal. The Core says it is just warm, and a little shy. Please knock before entering.','deep'],
+    ['w6','The World','The Deeper Core','Below the Core is the Deeper Core. Below that is the Even Deeper Core. Nobody has gone further, because the stairs are broken.','deep'],
+    ['w7','The World','The Cheese Core Theory','Some miners believe the centre of the world is made of cheese. They are called Cheese Core Truthers. They are always hungry.','scroll'],
+    ['b1','The Bobs','Who Is Bob?','Nobody knows where the first Bob came from. The second Bob came from the first Bob asking "can there be two of me?" There could. There were. There are now thousands.','scroll'],
+    ['b2','The Bobs','The Bob Election','Bob ran for mayor against Bob. Bob won. Bob demanded a recount. Bob still won.','scroll'],
+    ['b3','The Bobs','Bob Law Number 1','No Bob may be taller than the tallest Bob. This law has never been broken, and nobody understands it.','scroll'],
+    ['b4','The Bobs','The Propeller Hat','Every Bob gets a propeller hat on their birthday. It does not make them fly. It makes them feel like they could, which Bobs say is better.','scroll'],
+    ['b5','The Bobs','Super Bob','Super Bob can fly, lift a house and run very fast. He uses these powers mainly to get to the bakery before it closes.','scroll'],
+    ['k1','Baba Caka','The Night Baboon','When the sun goes down, Baba Caka wakes up. He is a big baboon with a red face. He cannot be beaten. He has never lost a game of hide and seek. He has also never won one, because nobody dares to look for him.','night'],
+    ['k2','Baba Caka','What Baba Caka Wants','Many have asked what Baba Caka wants. The answer is simple: bananas, a good nap, and for you to go to bed on time.','scroll'],
+    ['k3','Baba Caka','The Nightlight','Baba Caka was once seen buying a nightlight. When asked, he said it was for a friend. He does not have friends. He has a nightlight.','scroll'],
+    ['n1','Newton','Newton and the Apple','Sir Isaac Newton discovered gravity when an apple hit his head. He has been angry at apples, and at anything that floats, ever since.','scroll'],
+    ['n2','Newton','The Laws of Newton','Law 1: things fall down. Law 2: things that do not fall down are cheating. Law 3: Newton will find you.','scroll'],
+    ['n3','Newton','The Floating Fish Incident','A fish once built a tower so tall it floated. Newton praised the tower. Then he remembered the rules. The fish has learned its lesson.','scroll'],
+    ['s1','The Shopkeeper','The Shopkeeper Is a Fish','The shopkeeper has been a fish all along. Nobody noticed, because he wears a very good moustache.','scroll'],
+    ['s2','The Shopkeeper','Why Prices Go Up','The shopkeeper raises prices every time somebody says "that is too expensive". This is why everything is too expensive.','scroll'],
+    ['s3','The Shopkeeper','The Shopkeeper Never Sleeps','He just closes his eyes and counts money very quietly.','scroll'],
+    ['s4','The Shopkeeper','The Shopkeeper\'s Cat','The shopkeeper has a cat called Mr. Whiskerbucks. One day the shopkeeper sold him for $1, as a joke. Mr. Whiskerbucks walked straight back to the shop the same day. The shopkeeper kept the dollar. The cat is alive and well and still sleeps on the counter.','scroll'],
+    ['s5','The Shopkeeper','Mr. Whiskerbucks Is the Real Boss','Some say the cat runs the shop and the shopkeeper just works there. Every price is checked by the cat first. If the cat yawns, the price goes up.','scroll'],
+    ['s6','The Shopkeeper','The Nine Lives of Mr. Whiskerbucks','Mr. Whiskerbucks has fallen in a mine, ridden a rocket and been chased by Baba Caka. He has used 2 of his 9 lives. He is saving the rest for something exciting.','scroll'],
+    ['a1','Animals','The Rubber Duck Uprising','The Evil Rubber Ducks were once bath toys. Then they learned to swim on their own, and they never forgave anyone for the bubbles.','scroll'],
+    ['a2','Animals','The Udder Cows','One day a cow drank too much milk. Nobody knows how. Now some cows shoot milk. Scientists are still trying to find the off switch.','scroll'],
+    ['a3','Animals','Why Pigs Fly in Chaos Mode','In Chaos Mode, pigs fly. Nobody asked them to. They just felt it was time.','scroll'],
+    ['a4','Animals','The Animal Kingdom','The animals built cities because they were tired of living in holes. Then they built wars, because they were tired of being bored. Then they built cake, because they were tired of wars.','scroll'],
+    ['a5','Animals','The Kiwi Who Could Not Fly','The kiwi cannot fly. The kiwi is fine with it. Please stop asking the kiwi.','scroll'],
+    ['m1','Memes','The Grand Meme Lord','Long ago, the Grand Meme Lord ruled the internet. Then he got lost in a cave and has been posting from there ever since. His Wi-Fi is terrible.','scroll'],
+    ['m2','Memes','Stonks','Stonks Man only knows one direction: up. He has never seen down. He fell down a hole once and called it "an investment opportunity".','scroll'],
+    ['m3','Memes','One Does Not Simply','One does not simply dig to the Core. One digs to the Core in many small steps, with snack breaks.','scroll'],
+    ['m4','Memes','The Illuminati Triangle','The triangles are hidden everywhere. Who hides them? The Illuminati. Who are the Illuminati? That is a secret. Who keeps the secret? Also a secret.','scroll'],
+    ['p1','Planets','The Rocket','The rocket was built by a Bob in his garage. It runs on hope and three AA batteries.','mars'],
+    ['p2','Planets','Mars','Mars is red because it is embarrassed. Somebody saw it without its atmosphere on.','mars'],
+    ['p3','Planets','The Mars Soul','Deep in Mars there is a Soul Stone. It hums a song when you hold it. The song is "Happy Birthday", but slower.','mars'],
+    ['p4','Planets','TOI-1853b','TOI-1853b was named by a scientist who sneezed on the keyboard. Everyone agreed it sounded scientific.','scroll'],
+    ['p5','Planets','Too Tuff Rock','Too Tuff Rock is the hardest thing in the universe. It went to school with Carbyne and used to steal its lunch.','scroll'],
+    ['u1','Novaria','Welcome to Novaria','Novaria is in the Next Universe. The Next Universe is just like this universe, but everyone is a little bit more purple.','novaria'],
+    ['u2','Novaria','The Great Glorp','The aliens of Novaria believe in the Great Glorp. The Great Glorp is a big friendly blob who lives inside every jelly. That is why aliens never eat jelly. It would be rude.','novaria'],
+    ['u3','Novaria','Alien Names','Alien babies are named after the first sound they make. This is why so many aliens are called Glonk.','novaria'],
+    ['u4','Novaria','The Twin Suns','Novaria has two suns. They are brothers. They argue about who gets to set first, which is why the sunsets are so long.','novaria'],
+    ['u5','Novaria','Alien Inventions','Aliens invented the Teleport Pad, the Robot Butler and the Glorp Confetti Cannon. They also invented the sock, but forgot to make the second one.','novaria'],
+    ['u6','Novaria','Earth Miners','To the aliens, Earth miners are a legend: strange creatures who walk into the ground on purpose and come back with rocks they call "treasure".','novaria'],
+    ['x1','Mysteries','The Hiatus Sign','Once there was a sign that said the game was on a break. The game did not like that. The sign is gone now. We do not talk about the sign.','scroll'],
+    ['x2','Mysteries','The Fake News Bureau','All the fake news in the world is written by one very busy pigeon with a typewriter. It is paid in breadcrumbs.','scroll'],
+    ['x3','Mysteries','The Lost Remote','Every town has a legend about the Lost Remote. It controls the sun. Somebody sat on it once and that is why we have night.','scroll'],
+    ['x4','Mysteries','Who Wrote the Lore?','These pages were written by a mysterious miner who dug so deep they came out the other side. They left notes everywhere. They had very bad handwriting.','scroll'],
+    ['x5','Mysteries','The Name of the Game','This world was once called Dig to the Core. Then the miners voted and renamed it ' + GAME + ', because it was deep, it was chaos, and they were diggers.','scroll']
+  ];
+  save.lore = save.lore || {};
+  const got = id=>!!save.lore[id];
+  function unlock(id, how){
+    if(got(id)) return false;
+    const L = LORE.find(q=>q[0] === id); if(!L) return false;
+    save.lore[id] = Date.now(); persist();
+    toast((how || 'New lore page') + ': "' + L[2] + '". Press Y to read it in your Lore Book. (' + Object.keys(save.lore).length + '/' + LORE.length + ')');
+    blip(660, .1, .08, 'triangle'); setTimeout(()=>blip(990, .14, .08, 'triangle'), 120);
+    if(Object.keys(save.lore).length === LORE.length){ save.coins += 25000; persist(); setTimeout(()=>toast('You found EVERY lore page! The mysterious miner left you $25,000.'), 2500); }
+    return true;
+  }
+  // ---- Lore Scrolls: sometimes found while digging underground
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    const r = _bb.apply(this, arguments);
+    try{ if(h && h.d >= 3 && Math.random() < .012){
+      const left = LORE.filter(q=>q[4] === 'scroll' && !got(q[0]));
+      if(left.length) unlock(pick(left)[0], 'You found a Lore Scroll');
+      else { save.coins += 300; persist(); toast('You found a Lore Scroll, but you already know this story. You sold it for $300.'); }
+    } }catch(e){}
+    return r;
+  };
+  // ---- places unlock their own pages
+  let placeT = 3;
+  function placeTick(dt){
+    placeT -= dt; if(placeT > 0) return; placeT = 3;
+    const U = window.__uni;
+    const where = U && U.onUni && U.onUni() ? 'novaria' : (P.x >= 65000 ? 'mars' : null);
+    if(where){ const n = LORE.find(q=>q[4] === where && !got(q[0])); if(n) unlock(n[0], 'Lore from your trip'); }
+    if(P.y < -60 && realm === 0){ const n = LORE.find(q=>q[4] === 'deep' && !got(q[0])); if(n) unlock(n[0], 'Lore from the deep'); }
+    try{ const t = ((tod % 1) + 1) % 1; if(t > .6 && t < .9 && realm === 0 && P.y > -4){ const n = LORE.find(q=>q[4] === 'night' && !got(q[0])); if(n) unlock(n[0], 'Lore of the night'); } }catch(e){}
+  }
+  // ---- lore in the news
+  let newsT = 90;
+  function newsTick(dt){ newsT -= dt; if(newsT > 0) return; newsT = 100 + Math.random()*80;
+    const L = pick(LORE); newsQ('LORE CORNER: ' + L[2] + '. ' + L[3].split('. ')[0] + '.'); }
+  // ---- the Lore Book panel
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;inset:0;z-index:71;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  panel.innerHTML = '<div style="position:relative;background:#2a2016;color:#f3ead8;border:3px solid #c8a060;border-radius:10px;padding:18px 20px;max-width:660px;width:92vw;max-height:86vh;overflow:auto;font:15px/1.45 Georgia,serif">' +
+    '<button id="loreX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 24px Georgia,serif;color:#ffd890;margin-bottom:2px">The Lore Book</div>' +
+    '<div id="loreSub" style="opacity:.8;margin-bottom:10px;font-size:13px"></div><div id="loreList"></div></div>';
+  document.body.appendChild(panel);
+  function refresh(){
+    const n = Object.keys(save.lore).length;
+    panel.querySelector('#loreSub').textContent = 'The true (mostly) history of ' + GAME + '. Pages found: ' + n + ' of ' + LORE.length + '. Find Lore Scrolls while digging, and visit new places to unlock more.';
+    const ch = []; LORE.forEach(q=>{ if(ch.indexOf(q[1]) < 0) ch.push(q[1]); });
+    panel.querySelector('#loreList').innerHTML = ch.map(c=>{
+      const items = LORE.filter(q=>q[1] === c), k = items.filter(q=>got(q[0])).length;
+      return '<div style="font:900 18px Georgia,serif;color:#ffd890;margin:12px 0 6px;border-bottom:1px solid rgba(200,160,96,.5)">' + c + '  <span style="font-size:13px;opacity:.7">(' + k + '/' + items.length + ')</span></div>' +
+        items.map(q=>got(q[0]) ? '<div style="margin-bottom:9px"><b style="color:#fff0c8">' + q[2] + '</b><br>' + q[3] + '</div>'
+          : '<div style="margin-bottom:9px;opacity:.45"><b>??? Missing page</b><br>' + (q[4] === 'scroll' ? 'Dig to find this Lore Scroll.' : q[4] === 'novaria' ? 'Visit Planet Novaria.' : q[4] === 'mars' ? 'Visit Mars.' : q[4] === 'deep' ? 'Dig very deep.' : 'Be outside at night.') + '</div>').join('');
+    }).join('');
+  }
+  function openL(){ refresh(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closeL(){ panel.style.display = 'none'; }
+  panel.addEventListener('click', e=>{ if(e.target === panel || e.target.id === 'loreX') closeL(); });
+  addEventListener('keydown', e=>{
+    if(e.code === 'Escape' && panel.style.display === 'flex'){ closeL(); return; }
+    if(e.code === 'KeyY' && !e.repeat && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')){ if(panel.style.display === 'flex') closeL(); else if(locked || !document.pointerLockElement) openL(); }
+  });
+  { const st = document.createElement('style');
+    st.textContent = '#loreBtn{position:absolute;top:174px;left:268px;z-index:30;padding:6px 14px;font:700 14px system-ui,sans-serif;color:#fff;background:rgba(150,104,40,.9);border:2px solid rgba(255,255,255,.45);border-radius:10px;cursor:pointer;letter-spacing:.5px;pointer-events:auto}' +
+      'body.touchplay #loreBtn{top:8px;left:auto;right:150px}';
+    document.head.appendChild(st);
+    const b = document.createElement('button'); b.id = 'loreBtn'; b.textContent = 'LORE (Y)'; b.onclick = e=>{ e.stopPropagation(); openL(); }; document.body.appendChild(b);
+    // only show it when the PLANETS button shows
+    setInterval(()=>{ const p = document.getElementById('planetsBtn'); if(p) b.style.display = getComputedStyle(p).display === 'none' ? 'none' : ''; }, 500);
+  }
+  // first page for free so the book is not empty
+  setTimeout(()=>{ try{ if(!Object.keys(save.lore).length) unlock('x4', 'Your first lore page'); }catch(e){} }, 9000);
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ if(startEl.style.display !== 'flex' && !won){ placeTick(dt); newsTick(dt); } }catch(e){ console.warn('LN-lore', e); }
+  })(last);
+  window.__lore = {LORE, unlock, open:openL, close:closeL, got};
+})();
+/* LN-lore end */
+
 
 
 
