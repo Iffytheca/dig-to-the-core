@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 110 (Oct 29)';
+  window.__BUILD = 'Build 111 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -26154,7 +26154,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const rnd = a=>a[Math.floor(Math.random()*a.length)];
   const money = v=>'$' + Math.round(v).toLocaleString('en-US');
   const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
-  const inUni = (x, z)=>x >= UPPER_EDGE && x < 65000 && z < UZ;
+  const inUni = (x, z)=>x >= UPPER_EDGE && x < 65000 && z < UZ && !(window.__uniP && window.__uniP.inAny(x, z));
   const onUni = ()=>realm === 0 && inUni(P.x, P.z);
   const sAdd = o=>{ o.traverse(m=>{ m.userData.gone = true; }); scene.add(o); return o; };   // Mine Anything must not grab these meshes
   function addB(o){
@@ -28729,6 +28729,397 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     place:(name, x, d, z)=>{ const it = save.furnItems[name]; spawnPlaced(name, it.kind, it.col, null, {t:'i', key:name}, x, d, z, 0); }};
 })();
 /* LN-fancyhomes end */
+/* LN-moreplanets start: four more planets in the Next Universe (Sugarnova, Bouncia, Gearon, Glacio), each with its own layers, ores, biomes, creatures, sky and gravity (Irfan 2026-10-29 16:46) */
+(function(){
+  const U = window.__uni; if(!U) return;
+  const rnd = a=>a[Math.floor(Math.random()*a.length)];
+  const money = v=>'$' + Math.round(v).toLocaleString('en-US');
+  const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
+  const Z0 = -49000, Z1 = -36000;           // they sit south of Novaria, still inside the Next Universe
+  // [name, hardness, value, base colour, speck colours, glow]
+  const L = (n, h, v, base, sp, glow)=>({name:n, th:4, h, v, base, amp:20, sp, p:.35, glow:glow || 0});
+  const PL = [
+    {k:'sugar', name:'Planet Sugarnova', x0:40000, x1:46250, fl:'canopy', grav:1, sky:[[1, .62, .85], [.62, .9, 1]], cloud:[1, .85, .95], fog:.0,
+      blurb:'A planet made of candy: candy cane forests, gumdrop hills and chocolate swamps.',
+      layers:[L('Sugar Soil',4000,3000,[250,220,230],[[255,255,255],[255,150,190]]), L('Gummy Clay',8000,6500,[240,90,120],[[255,200,80],[120,220,90]],.1), L('Jellybean Rock',15000,12000,[200,80,200],[[255,230,60],[60,200,255]],.1),
+        L('Toffee Stone',30000,25000,[190,130,60],[[240,190,110],[110,70,30]]), L('Licorice Rock',60000,50000,[30,20,24],[[220,30,60],[60,40,50]]), L('Rock Candy',110000,90000,[180,230,255],[[255,255,255],[150,120,255]],.35),
+        L('Caramel Mantle',200000,160000,[220,150,60],[[255,210,120],[150,90,30]],.2), L('Fudge Rock',350000,280000,[90,50,30],[[150,100,60],[50,25,15]]), L('Hard Candy Mantle',550000,450000,[255,80,80],[[255,255,255],[255,160,40]],.4),
+        L('Sugarnova Core',800000,650000,[255,200,240],[[255,255,255],[255,100,200]],1)],
+      ores:[['Gumdrop Gem',2000000,[120,255,120],[0,1,2,3],.05,.3], ['Lollipop Crystal',10000000,[255,90,200],[4,5,6],.035,.5], ['Candy Diamond',60000000,[150,240,255],[7,8],.025,.7], ['Golden Chocolate Coin',400000000,[255,210,60],[9],.012,1]],
+      surf:{top:L('Frosting Grass',3000,2500,[255,190,220],[[255,255,255],[255,120,180]],.1), trunk:L('Candy Cane Block',3500,4000,[255,255,255],[[255,40,60],[255,255,255]]), canopy:L('Cotton Candy',2500,3000,[255,170,230],[[255,220,250],[160,200,255]],.2),
+        dome:L('Gumdrop Block',3000,3500,[90,220,90],[[255,255,255],[40,150,40]],.2), pit:L('Chocolate Mud',3000,2500,[110,60,30],[[150,90,50],[60,30,15]]), spike:L('Rock Candy Spike',5000,6000,[200,170,255],[[255,255,255],[120,90,255]],.5)},
+      biomes:[{k:'hills', name:'Frosting Fields'}, {k:'pillars', name:'Candy Cane Forest'}, {k:'domes', name:'Gumdrop Hills'}, {k:'pits', name:'Chocolate Swamp'}, {k:'floats', name:'Cotton Candy Sky'}],
+      animals:{gummybear:{name:'Gummy Bear', hp:90, r:.8, yo:.8, speed:1.6, reward:600, col:0xff5060, quips:['It squeaks like a rubber toy.', 'The Gummy Bear wobbles away.']},
+               cupcake:{name:'Cupcake Critter', hp:50, r:.6, yo:.6, speed:2.4, hop:true, reward:500, col:0xffc0e0, quips:['Sprinkles fly everywhere!', 'The Cupcake Critter bounces off.']}},
+      core:'YOU REACHED THE SUGARNOVA CORE! The whole planet smells like candy floss.'},
+    {k:'bounce', name:'Planet Bouncia', x0:46250, x1:52500, fl:'canopy', grav:.45, sky:[[.55, 1, .55], [1, 1, .55]], cloud:[.8, 1, .8], fog:0,
+      blurb:'A wobbly jelly planet with super low gravity, slime towers and bubbles floating in the sky.',
+      layers:[L('Jelly Soil',10000,8000,[120,230,120],[[200,255,200],[40,160,60]],.15), L('Wobble Clay',20000,16000,[90,200,200],[[200,255,255],[30,120,120]],.1), L('Bouncy Rubber',40000,32000,[240,80,60],[[255,160,120],[140,30,20]]),
+        L('Slime Stone',80000,65000,[60,200,90],[[170,255,140],[20,90,40]],.3), L('Trampoline Rock',150000,120000,[40,40,50],[[90,140,255],[10,10,20]]), L('Spring Stone',280000,230000,[190,190,200],[[255,255,255],[120,120,140]],.1),
+        L('Boing Crust',480000,400000,[255,180,40],[[255,240,120],[180,90,10]],.3), L('Gel Mantle',750000,620000,[80,220,255],[[220,255,255],[30,120,200]],.4), L('Elastic Mantle',1100000,900000,[230,60,200],[[255,170,240],[120,20,100]],.4),
+        L('Bouncia Core',1600000,1300000,[200,255,80],[[255,255,255],[120,255,60]],1)],
+      ores:[['Rubber Ruby',4000000,[255,60,80],[0,1,2,3],.05,.3], ['Slime Sapphire',25000000,[60,255,160],[4,5,6],.035,.5], ['Bounce Diamond',120000000,[200,255,255],[7,8],.025,.7], ['Infinite Spring',700000000,[255,255,120],[9],.012,1]],
+      surf:{top:L('Jelly Grass',8000,6000,[110,240,110],[[220,255,200],[40,170,60]],.2), trunk:L('Slime Pillar',9000,7000,[60,210,90],[[170,255,140],[20,110,40]],.3), canopy:L('Bubble Block',6000,6000,[190,240,255],[[255,255,255],[140,200,255]],.3),
+        dome:L('Rubber Dome',9000,7000,[240,90,70],[[255,170,140],[150,40,30]]), pit:L('Green Goo',8000,6000,[60,180,40],[[150,255,90],[20,80,20]],.4), spike:L('Jelly Spike',12000,9000,[255,120,220],[[255,220,250],[160,40,140]],.4)},
+      biomes:[{k:'hills', name:'Wobble Plains'}, {k:'pillars', name:'Slime Towers'}, {k:'floats', name:'Bubble Sky'}, {k:'domes', name:'Rubber Domes'}, {k:'pits', name:'Goo Pits'}],
+      animals:{blob:{name:'Bouncy Blob', hp:120, r:.8, yo:.6, speed:1.6, hop:true, reward:1200, col:0x60e060, quips:['BOING! It bounces over your head.', 'The Bouncy Blob jiggles away.']},
+               springfrog:{name:'Spring Frog', hp:90, r:.6, yo:.5, speed:2.6, hop:true, reward:1000, col:0x40c0ff, quips:['It jumps 20 blocks high. Show off.', 'Ribbit-boing!']}},
+      core:'YOU REACHED THE BOUNCIA CORE! It is so bouncy your pickaxe wobbled for a whole minute.'},
+    {k:'gear', name:'Planet Gearon', x0:52500, x1:58750, grav:1.15, sky:[[.45, .42, .4], [1, .62, .3]], cloud:[.6, .55, .5], fog:0,
+      blurb:'A planet of machines: gear towers, antenna spikes, solar fields and oil pits. Gravity is a bit heavier.',
+      layers:[L('Scrap Soil',25000,20000,[110,100,90],[[160,150,140],[70,60,50]]), L('Rusty Plate',50000,40000,[160,80,40],[[220,130,70],[90,40,20]]), L('Copper Wire Rock',100000,80000,[90,60,40],[[255,150,60],[50,30,20]],.15),
+        L('Steel Plate',180000,150000,[150,155,165],[[220,225,235],[90,95,105]]), L('Circuit Stone',300000,250000,[20,80,40],[[60,255,120],[255,220,60]],.4), L('Gear Rock',480000,400000,[120,110,90],[[200,180,120],[60,55,45]]),
+        L('Titanium Plate',720000,600000,[190,200,215],[[255,255,255],[130,140,160]],.1), L('Reactor Rock',1050000,880000,[40,60,40],[[120,255,80],[20,30,20]],.6), L('Quantum Metal',1500000,1250000,[80,60,160],[[180,160,255],[30,20,80]],.5),
+        L('Gearon Core',2200000,1800000,[255,140,40],[[255,240,160],[200,60,20]],1)],
+      ores:[['Bolt Ore',8000000,[200,200,210],[0,1,2,3],.05,.2], ['Microchip Ore',40000000,[60,255,120],[4,5,6],.035,.6], ['Robot Heart Gem',200000000,[255,60,60],[7,8],.025,.8], ['Infinity Battery',1200000000,[120,255,255],[9],.012,1]],
+      surf:{top:L('Metal Floor',20000,15000,[140,140,150],[[200,200,210],[90,90,100]]), trunk:L('Gear Tower Block',25000,20000,[110,100,90],[[200,170,90],[60,55,45]]), canopy:L('Antenna Light',15000,15000,[255,60,40],[[255,200,120],[180,20,10]],.8),
+        dome:L('Solar Panel',20000,18000,[30,50,110],[[120,160,255],[10,20,50]],.3), pit:L('Oil Slick',20000,15000,[20,20,24],[[80,60,120],[10,10,12]],.1), spike:L('Antenna Spike',30000,25000,[180,180,190],[[255,255,255],[255,60,40]],.3)},
+      biomes:[{k:'hills', name:'Factory Flats'}, {k:'pillars', name:'Gear Towers'}, {k:'spikes', name:'Antenna Spikes'}, {k:'floats', name:'Solar Fields'}, {k:'pits', name:'Oil Pits'}],
+      animals:{robodog:{name:'Robo Dog', hp:180, r:.8, yo:.8, speed:2.2, reward:2500, col:0xa0a8b8, quips:['Beep boop woof.', 'The Robo Dog runs off to charge its batteries.']},
+               toaster:{name:'Toaster Bot', hp:140, r:.7, yo:.6, speed:1.4, reward:2200, col:0xd0d0d8, quips:['It shoots out two slices of toast. Breakfast!', 'The Toaster Bot pops away.']}},
+      core:'YOU REACHED THE GEARON CORE! Every machine on the planet says "TASK COMPLETE".'},
+    {k:'ice', name:'Planet Glacio', x0:58750, x1:65000, grav:1, sky:[[.05, .12, .3], [.3, .9, .65]], cloud:[.85, .95, 1], fog:0,
+      blurb:'The coldest planet: frozen pine forests, ice spikes, floating icebergs and green aurora in the sky. The hardest of all.',
+      layers:[L('Snow Soil',50000,40000,[240,245,255],[[255,255,255],[180,200,230]]), L('Deep Permafrost',100000,80000,[150,170,190],[[220,235,255],[80,100,120]],.05), L('Blue Ice',180000,150000,[100,170,255],[[220,240,255],[40,100,200]],.3),
+        L('Glacier Rock',300000,250000,[120,140,170],[[200,220,255],[60,70,90]],.1), L('Frozen Granite',460000,380000,[160,160,180],[[230,240,255],[90,90,110]]), L('Aurora Ice',680000,560000,[60,220,160],[[200,255,230],[120,60,220]],.6),
+        L('Crystal Frost',950000,800000,[200,230,255],[[255,255,255],[120,180,255]],.5), L('Absolute Zero Rock',1300000,1100000,[20,30,60],[[120,160,255],[5,8,20]],.2), L('Frost Giant Mantle',1800000,1500000,[90,120,200],[[200,220,255],[30,40,90]],.4),
+        L('Glacio Core',2600000,2200000,[200,255,255],[[255,255,255],[80,200,255]],1)],
+      ores:[['Frost Pearl',12000000,[240,250,255],[0,1,2,3],.05,.3], ['Ice Sapphire',60000000,[60,140,255],[4,5,6],.035,.6], ['Aurora Gem',300000000,[80,255,170],[7,8],.025,.8], ['Eternal Snowflake',2000000000,[255,255,255],[9],.012,1]],
+      surf:{top:L('Snow Grass',40000,30000,[235,245,255],[[255,255,255],[150,200,170]]), trunk:L('Frozen Pine Wood',45000,35000,[90,70,60],[[200,220,255],[60,45,35]]), canopy:L('Snowy Pine Leaves',35000,30000,[40,110,80],[[255,255,255],[20,70,50]],.05),
+        dome:L('Floating Iceberg',40000,40000,[170,220,255],[[255,255,255],[90,160,230]],.3), pit:L('Frozen Lake Ice',40000,30000,[140,200,255],[[230,245,255],[70,130,200]],.3), spike:L('Ice Spike',60000,50000,[180,230,255],[[255,255,255],[100,170,255]],.5)},
+      biomes:[{k:'hills', name:'Snow Plains'}, {k:'pillars', name:'Frozen Pine Forest'}, {k:'spikes', name:'Ice Spikes'}, {k:'floats', name:'Floating Icebergs'}, {k:'pits', name:'Frozen Lakes'}],
+      animals:{yeti:{name:'Snow Yeti', hp:300, r:1.1, yo:1.3, speed:1.6, reward:5000, col:0xf0f4ff, quips:['It does a big friendly roar.', 'The Snow Yeti stomps off to build a snowman.']},
+               frostfox:{name:'Frost Fox', hp:160, r:.6, yo:.6, speed:3, reward:4000, col:0xb0e0ff, quips:['Its tail leaves sparkles in the air.', 'The Frost Fox vanishes into the snow.']}},
+      core:'YOU REACHED THE GLACIO CORE! Your hands are frozen but you are a LEGEND of TWO universes.'}
+  ];
+  PL.forEach(p=>{ p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((Z0 + Z1)/2); });
+  const inAny = (x, z)=>z >= Z0 && z < Z1 && x >= UPPER_EDGE && x < 65000;
+  const planetAt = (x, z)=>{ if(!inAny(x, z)) return null; for(const p of PL) if(x >= p.x0 && x < p.x1) return p; return null; };
+  const cur = ()=>realm === 0 ? planetAt(P.x, P.z) : null;
+  window.__uniP = {inAny, planetAt};
+  const sAdd = o=>{ o.traverse(m=>{ m.userData.gone = true; }); scene.add(o); return o; };
+  function addB(o){
+    let j = BLOCKS.findIndex(b=>b.name === o.name);
+    if(j < 0 && BLOCKS.length < 1000){ BLOCKS.push(o); meshes.push(createBlockMesh(o, BLOCKS.length-1)); j = BLOCKS.length-1; }
+    return j >= 0 ? j + 1 : 0;
+  }
+
+  /* ------------------------------------------------ blocks for every planet */
+  PL.forEach(p=>{
+    const want = Math.max(40, D - 4), have = p.layers.reduce((s, l)=>s + l.th, 0); let left = want;
+    p.layers.forEach(l=>{ l.th = Math.max(3, Math.floor(l.th*want/have)); left -= l.th; });
+    for(let i=p.layers.length-1; left > 0; i = i > 0 ? i - 1 : p.layers.length - 1){ p.layers[i].th++; left--; }
+    for(let i=p.layers.length-1; left < 0 && i >= 0; i--){ if(p.layers[i].th > 3){ p.layers[i].th--; left++; } }
+    p.ids = []; p.at = []; p.st = []; p.D = 0;
+    p.layers.forEach(l=>{ p.st.push(p.D); for(let k=0;k<l.th;k++) p.at.push(p.ids.length); p.ids.push(addB(Object.assign({upper:true, ore:false, planet:p.k}, l))); p.D += l.th; });
+    p.oIds = p.ores.map(o=>{ const H = p.layers[o[3][0]];
+      return addB({name:o[0], ore:true, planet:p.k, cat:'crystal', oreName:o[0], hostName:p.name, host:0, th:0, max:1500, h:Math.round(H.h*1.05), v:o[1], base:H.base, amp:H.amp, sp:[o[2]], p:.4, glow:o[5], oreCol:o[2]}); });
+    p.sIds = {}; for(const k in p.surf) p.sIds[k] = addB(Object.assign({upper:true, ore:false, planet:p.k, th:0}, p.surf[k]));
+    const fb = p.ids[0] || 1;
+    for(let i=0;i<p.ids.length;i++) if(!p.ids[i]) p.ids[i] = fb;
+    for(const k in p.sIds) if(!p.sIds[k]) p.sIds[k] = fb;
+    p.cache = new Map();
+  });
+  try{ _blockIds = null; }catch(e){}
+
+  /* ------------------------------------------------ the land: hills, pillar forests, domes, pits, floating islands, spikes */
+  const S = 90;
+  function vn(x, z, sd){
+    const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, ux = fx*fx*(3-2*fx), uz = fz*fz*(3-2*fz);
+    const a = hash3(ix,0,iz,sd), b = hash3(ix+1,0,iz,sd), c = hash3(ix,0,iz+1,sd), d = hash3(ix+1,0,iz+1,sd);
+    return a + (b-a)*ux + (c-a)*uz + (a-b-c+d)*ux*uz;
+  }
+  function col(p, x, z){
+    const key = (x - p.x0)*200000 + (z - Z0);
+    let c = p.cache.get(key); if(c) return c;
+    if(p.cache.size > 150000) p.cache.clear();
+    const fd = Math.hypot(x - p.cx, z - p.cz), I = p.sIds;
+    if(fd < 30){ c = {b:p.biomes[0], h:0}; p.cache.set(key, c); return c; }      // the flat landing site
+    const sd = 4400 + PL.indexOf(p)*97;
+    const gx = Math.floor(x/S), gz = Math.floor(z/S);
+    let d1 = 1e9, d2 = 1e9, bx = 0, bz = 0, cx = 0, cz = 0;
+    for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
+      const px = (gx+i + .2 + .6*hash3(gx+i,7,gz+j,sd))*S, pz = (gz+j + .2 + .6*hash3(gx+i,9,gz+j,sd + 1))*S, d = Math.hypot(x-px, z-pz);
+      if(d < d1){ d2 = d1; d1 = d; bx = gx+i; bz = gz+j; cx = px; cz = pz; } else if(d < d2) d2 = d;
+    }
+    const b = p.biomes[Math.floor(hash3(bx,11,bz,sd + 2)*p.biomes.length)];
+    const e = Math.min(1, (d2 - d1)/20) * Math.min(1, (fd - 30)/18);
+    c = {b, h:0};
+    if(b.k === 'hills') c.h = Math.round(e*2.2*vn(x*.07, z*.07, sd + 3));
+    else if(b.k === 'pillars' && e > .6){
+      const G = 7, tx = Math.floor(x/G), tz = Math.floor(z/G);
+      if(hash3(tx,1,tz,sd + 4) < .5){
+        const ox = tx*G + 1 + Math.floor(hash3(tx,2,tz,sd + 5)*5), oz = tz*G + 1 + Math.floor(hash3(tx,3,tz,sd + 6)*5), th = 4 + Math.floor(hash3(tx,4,tz,sd + 7)*4);
+        if(x === ox && z === oz){ c.h = th; c.cid = c.tid = I.trunk; c.f0 = th + 1; c.f1 = th + 2; c.fid = I.canopy; }
+        else if(Math.abs(x - ox) <= 1 && Math.abs(z - oz) <= 1){ c.f0 = th - 1; c.f1 = th + 1; c.fid = I.canopy; }
+      }
+    }
+    else if(b.k === 'domes' && e > .5){
+      const G = 13, tx = Math.floor(x/G), tz = Math.floor(z/G);
+      if(hash3(tx,1,tz,sd + 8) < .6){
+        const ox = tx*G + 6.5 + (hash3(tx,2,tz,sd + 9) - .5)*3, oz = tz*G + 6.5 + (hash3(tx,3,tz,sd + 10) - .5)*3, r = 3 + hash3(tx,4,tz,sd + 11)*2.5, dd = Math.hypot(x + .5 - ox, z + .5 - oz);
+        if(dd < r){ c.h = Math.max(1, Math.round(Math.sqrt(r*r - dd*dd)*.9)); c.cid = c.tid = I.dome; }
+      }
+    }
+    else if(b.k === 'pits'){ const t = 1 - d1/(S*.4); if(t > 0){ c.h = -Math.round(e*4*Math.min(1, t*2)); c.pit = true; } }
+    else if(b.k === 'floats'){
+      if(e > .5){ const G = 21, tx = Math.floor(x/G), tz = Math.floor(z/G);
+        if(hash3(tx,1,tz,sd + 12) < .7){
+          const ox = tx*G + 7 + hash3(tx,2,tz,sd + 13)*7, oz = tz*G + 7 + hash3(tx,3,tz,sd + 14)*7, r = 2.5 + hash3(tx,4,tz,sd + 15)*3, dd = Math.hypot(x + .5 - ox, z + .5 - oz);
+          if(dd < r){ const top = 8 + Math.floor(hash3(tx,5,tz,sd + 16)*5); c.f1 = top; c.f0 = top - (dd < r*.45 ? 2 : 1); c.fid = I[p.fl || 'dome']; }
+        } }
+      c.h = Math.round(e*1.2*vn(x*.06, z*.06, sd + 17));
+    }
+    else if(b.k === 'spikes'){
+      for(let i=0;i<7;i++){ const ox = cx + (hash3(bx,20+i,bz,sd + 18) - .5)*70, oz = cz + (hash3(bx,30+i,bz,sd + 19) - .5)*70, r = 1.4 + hash3(bx,40+i,bz,sd + 20)*2, dd = Math.hypot(x-ox, z-oz);
+        if(dd < r){ const hh = Math.round(e*(5 + hash3(bx,50+i,bz,sd + 21)*9)*(1 - dd/r)); if(hh > c.h){ c.h = hh; c.cid = c.tid = I.spike; } } }
+    }
+    p.cache.set(key, c); return c;
+  }
+  const topOf = (p, c)=>c.pit ? p.sIds.pit : p.sIds.top;
+  function sky(p, c, d){
+    const j = -d;
+    if(c.h > 0 && j <= c.h) return j === c.h ? (c.tid || topOf(p, c)) : (c.cid || p.ids[0]);
+    if(c.f0 && j >= c.f0 && j <= c.f1) return c.fid;
+    return 0;
+  }
+  function pBase(p, x, d, z){
+    if(d < 0) return 0;
+    if(d >= p.D) return d < p.D + 3 ? pBase(p, x, p.D - 1, z) : 0;
+    const c = col(p, x, z);
+    if(c.h < 0 && d < -c.h) return 0;
+    if(d === Math.max(0, -c.h)) return topOf(p, c);
+    const li = p.at[d];
+    if(hash3(x>>1, d>>1, z>>1, 4490) < .3){
+      for(let i=p.ores.length-1;i>=0;i--){ const o = p.ores[i]; if(p.oIds[i] && o[3].indexOf(li) >= 0 && hash3(x, d, z, 4491 + i) < o[4]*3) return p.oIds[i]; }
+    }
+    return p.ids[li];
+  }
+  const _ub = upperBase;
+  upperBase = function(x, d, z){ const p = planetAt(x, z); return p ? pBase(p, x, d, z) : _ub(x, d, z); };
+  const _g = get;
+  get = function(x, d, z){
+    if(d < 0 && d > -40 && z < Z1 && z >= Z0){ const p = planetAt(x, z);
+      if(p){ const t = sky(p, col(p, x, z), d); if(t){ if(edits.size){ const k = ek(x,d,z); if(edits.has(k)) return edits.get(k); } return t; } } }
+    return _g(x, d, z);
+  };
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    _sb(x, d, z, t);
+    if(d < 0 && !t){ const p = planetAt(x, z); if(p && sky(p, col(p, x, z), d)){ edits.set(ek(x,d,z), 0); editsDirty = true; } }
+  };
+  const _m4 = new THREE.Matrix4(), _cM = new THREE.Color();
+  function nearE(x, d, z){ return edits.has(ek(x-1,d,z)) || edits.has(ek(x+1,d,z)) || edits.has(ek(x,d,z-1)) || edits.has(ek(x,d,z+1)) || edits.has(ek(x,d-1,z)) || edits.has(ek(x,d+1,z)); }
+  const _rb = rebuild;
+  rebuild = function(){
+    _rb();
+    if(woz > Z1 || woz + WIN < Z0 || wox > 65000 || wox + WIN < UPPER_EDGE) return;
+    let any = false;
+    for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
+      const x = wox+lx, z = woz+lz, p = planetAt(x, z); if(!p) continue;
+      const c = col(p, x, z), top = Math.max(c.h, c.f1 || 0); if(top <= 0) continue;
+      const nat = (xx, j, zz)=>{ if(j <= 0) return 1; const q = planetAt(xx, zz); return q ? sky(q, col(q, xx, zz), -j) : 0; };
+      for(let j=1; j<=top; j++){
+        const t = sky(p, c, -j); if(!t) continue;
+        const d = -j, k = ek(x,d,z);
+        if(edits.size && edits.has(k)) continue;
+        const hidden = nat(x, j+1, z) && nat(x, j-1, z) && nat(x-1, j, z) && nat(x+1, j, z) && nat(x, j, z-1) && nat(x, j, z+1);
+        if(hidden && !(edits.size && nearE(x, d, z))) continue;
+        const m = meshes[t-1]; if(!m || m.count >= m.userData.max) continue;
+        _m4.makeTranslation(x+.5, j-.5, z+.5); m.setMatrixAt(m.count, _m4);
+        const jj = .82 + hash3(x,d,z,7)*.3; _cM.setRGB(jj,jj,jj); m.setColorAt(m.count, _cM); m.count++; any = true;
+      }
+    }
+    if(any) meshes.forEach(m=>{ m.instanceMatrix.needsUpdate = true; if(m.instanceColor) m.instanceColor.needsUpdate = true; });
+  };
+
+  /* ------------------------------------------------ layers on screen, planet name, gravity, sky */
+  const ORIG = {L:UPPER_LAYERS.slice(), at:upperLayerAt.slice(), ids:upperIds.slice(), st:upperStart.slice(), D:UPPER_D};
+  let loaded = null;
+  function load(Sx, p){
+    UPPER_LAYERS.length = 0; Sx.L.forEach(l=>UPPER_LAYERS.push(l));
+    upperLayerAt.length = 0; Sx.at.forEach(v=>upperLayerAt.push(v));
+    upperIds.length = 0; Sx.ids.forEach(v=>upperIds.push(v));
+    upperStart.length = 0; Sx.st.forEach(v=>upperStart.push(v));
+    UPPER_D = Sx.D; loaded = p;
+    try{ if(panelUp){ renderLayerPanel(UPPER_LAYERS); lastUpName = ''; } }catch(e){}
+  }
+  const _mn = window.__marsName;
+  window.__marsName = ()=>{ const p = cur(); return p ? p.name : (_mn ? _mn() : null); };
+  const _st = step;
+  step = function(dt){
+    const p = cur();
+    if(!p || p.grav === 1 || GRAV.float || !(GRAV.scale > 0)) return _st.apply(this, arguments);
+    const g0 = GRAV.scale; GRAV.scale = g0*p.grav;
+    try{ return _st.apply(this, arguments); } finally { GRAV.scale = g0; }
+  };
+  const _ps = planetsSky;
+  const _sT = new THREE.Color(), _sB = new THREE.Color();
+  planetsSky = function(s){
+    const p = cur();
+    if(!p || s <= 0 || typeof skyMat === 'undefined') return _ps(s);
+    const t = performance.now()*.001, w = .5 + .5*Math.sin(t*.2);
+    _sT.setRGB(p.sky[0][0], p.sky[0][1], p.sky[0][2]); _sB.setRGB(p.sky[1][0], p.sky[1][1], p.sky[1][2]);
+    if(p.k === 'ice'){ _sB.setRGB(.15 + .2*w, .7 + .25*w, .55 + .3*(1 - w)); }                        // the aurora slowly changes colour
+    skyMat.uniforms.top.value.copy(dark).lerp(_sT, s); skyMat.uniforms.bot.value.copy(dark).lerp(_sB, s); skyMat.uniforms.night.value = .3;
+    scene.background.copy(skyMat.uniforms.top.value);
+    try{ clouds[0].children[0].material.color.setRGB(p.cloud[0], p.cloud[1], p.cloud[2]); }catch(e){}
+    if(lightOn){ scene.fog.color.copy(skyMat.uniforms.bot.value); ambient.intensity = Math.max(ambient.intensity, .4 + .4*s); }
+  };
+
+  /* ------------------------------------------------ a landing pad with a sign on every planet */
+  function pad(p){
+    const g = new THREE.Group(); g.position.set(p.cx + .5, 0, p.cz + .5); g.visible = false; sAdd(g);
+    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff}[p.k];
+    const ring = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, .12, 32), new THREE.MeshLambertMaterial({color:0x303040})); ring.position.y = .06; g.add(ring);
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.4, .12, 8, 40), new THREE.MeshBasicMaterial({color:pc})); ring2.rotation.x = Math.PI/2; ring2.position.y = .14; g.add(ring2);
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const x = cv.getContext('2d');
+    x.fillStyle = '#18182a'; x.fillRect(0, 0, 512, 192); x.strokeStyle = '#' + pc.toString(16).padStart(6, '0'); x.lineWidth = 10; x.strokeRect(5, 5, 502, 182);
+    x.textAlign = 'center'; x.fillStyle = '#ffffff'; x.font = 'bold 30px system-ui,sans-serif'; x.fillText('WELCOME TO', 256, 50);
+    x.font = 'bold 46px system-ui,sans-serif'; x.fillStyle = '#ffe080'; x.fillText(p.name.toUpperCase(), 256, 108, 490);
+    x.font = 'bold 22px system-ui,sans-serif'; x.fillStyle = '#c0d0ff'; x.fillText('Press R to come back here. PLANETS (O) to travel.', 256, 158, 490);
+    const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.6), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(cv), side:THREE.DoubleSide}));
+    sign.position.set(0, 3.2, -5); g.add(sign);
+    [-1.9, 1.9].forEach(px=>{ const post = new THREE.Mesh(new THREE.BoxGeometry(.2, 2.6, .2), new THREE.MeshLambertMaterial({color:0x606070})); post.position.set(px, 1.3, -5.05); g.add(post); });
+    return g;
+  }
+  PL.forEach(p=>{ p.pad = pad(p); });
+
+  /* ------------------------------------------------ creatures */
+  PL.forEach(p=>{ for(const k in p.animals){ const a = p.animals[k]; AD[k] = {name:a.name, hp:a.hp, r:a.r, yo:a.yo, speed:a.speed, hop:a.hop, reward:a.reward, planet:p.k, quips:a.quips}; } });
+  try{ Object.assign(ANIMAL_DROP, {gummybear:'Gummy Fluff', cupcake:'Sprinkles', blob:'Bouncy Goo', springfrog:'Spring Coil', robodog:'Robot Bone', toaster:'Golden Toast', yeti:'Yeti Fur', frostfox:'Frost Tail'}); }catch(e){}
+  const _bA = buildAnimal;
+  buildAnimal = function(type){
+    const d = AD[type]; if(!d || !d.planet) return _bA(type);
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const b = (w,h,dd,c,x,y,z)=>sbox(w,h,dd,c,x,y,z,g);
+    const leg = (x, z, h, c)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); sbox(.16, h, .16, c, 0, -h/2, 0, lg); g.userData.legs.push(lg); };
+    const eyes = (y, z, dx, s)=>{ [-dx, dx].forEach(x=>{ b(s, s, .05, 0xffffff, x, y, z); b(s*.5, s*.5, .05, 0x111111, x, y, z + .03); }); };
+    const glow = (m, c)=>{ m.material.emissive = new THREE.Color(c); return m; };
+    if(type === 'gummybear'){ const C = 0xff5060; [-.2, .2].forEach(x=>{ leg(x, .15, .35, C); }); b(.7, .7, .55, C, 0, .7, 0); b(.5, .45, .45, C, 0, 1.25, .05); [-.2, .2].forEach(x=>b(.15, .15, .1, C, x, 1.5, 0)); eyes(1.3, .28, .1, .08); [-.42, .42].forEach(x=>b(.16, .4, .16, C, x, .8, .1));
+      g.traverse(m=>{ if(m.isMesh && m.material){ m.material.transparent = true; m.material.opacity = .85; } }); }
+    else if(type === 'cupcake'){ b(.6, .4, .6, 0xc08040, 0, .25, 0); b(.7, .3, .7, 0xffc0e0, 0, .58, 0); b(.4, .2, .4, 0xffe0f0, 0, .8, 0); glow(b(.12, .12, .12, 0xff2040, 0, .97, 0), 0x601010); eyes(.55, .31, .12, .09);
+      for(let i=0;i<6;i++) b(.05, .02, .12, [0x40c0ff, 0xffe040, 0x60ff60][i%3], Math.cos(i)*.25, .74, Math.sin(i)*.25); }
+    else if(type === 'blob'){ glow(b(.9, .7, .9, 0x60e060, 0, .35, 0), 0x103010); b(.6, .25, .6, 0x90ff90, 0, .8, 0); eyes(.55, .46, .2, .16); g.traverse(m=>{ if(m.isMesh){ m.material.transparent = true; m.material.opacity = .8; } }); }
+    else if(type === 'springfrog'){ const C = 0x40c0ff; [-.25, .25].forEach(x=>{ leg(x, .15, .25, C); leg(x, -.2, .25, C); }); b(.6, .35, .7, C, 0, .4, 0); [-.18, .18].forEach(x=>{ b(.18, .18, .18, C, x, .65, .25); b(.1, .1, .05, 0x111111, x, .68, .35); });
+      const sp = new THREE.Mesh(new THREE.TorusGeometry(.12, .03, 6, 12), new THREE.MeshLambertMaterial({color:0xc0c0c0})); sp.position.set(0, .12, -.2); sp.rotation.x = Math.PI/2; g.add(sp); }
+    else if(type === 'robodog'){ const C = 0xa0a8b8; [-.2, .2].forEach(x=>{ leg(x, .35, .55, 0x606878); leg(x, -.35, .55, 0x606878); }); b(.5, .45, 1, C, 0, .8, 0); b(.4, .4, .4, C, 0, 1.1, .6); glow(b(.3, .08, .04, 0x40ff60, 0, 1.15, .81), 0x20a030);
+      b(.06, .3, .06, 0x404040, 0, 1.4, .55); glow(b(.1, .1, .1, 0xff3030, 0, 1.58, .55), 0x801010); b(.08, .08, .4, C, 0, .95, -.65); }
+    else if(type === 'toaster'){ b(.8, .6, .5, 0xd0d0d8, 0, .5, 0); b(.25, .04, .35, 0x202020, -.18, .81, 0); b(.25, .04, .35, 0x202020, .18, .81, 0); b(.2, .25, .3, 0xe0b070, -.18, .92, 0); eyes(.55, .26, .18, .1);
+      [-.3, .3].forEach(x=>leg(x, 0, .2, 0x505058)); b(.06, .2, .06, 0x303030, .42, .6, 0); }
+    else if(type === 'yeti'){ const C = 0xf0f4ff; [-.3, .3].forEach(x=>leg(x, 0, .7, C)); b(1, 1.1, .7, C, 0, 1.25, 0); b(.6, .55, .55, C, 0, 2.05, .05); b(.4, .25, .1, 0x7090c0, 0, 2.0, .33); eyes(2.15, .34, .13, .09); [-.62, .62].forEach(x=>b(.25, .9, .25, C, x, 1.25, .05)); }
+    else if(type === 'frostfox'){ const C = 0xb0e0ff; [-.15, .15].forEach(x=>{ leg(x, .3, .35, C); leg(x, -.3, .35, C); }); b(.4, .35, .9, C, 0, .55, 0); b(.35, .32, .35, C, 0, .78, .5); b(.15, .12, .2, 0xffffff, 0, .72, .72); eyes(.85, .68, .09, .07);
+      [-.11, .11].forEach(x=>b(.08, .18, .06, C, x, 1.02, .45)); glow(b(.18, .18, .6, 0xe0f4ff, 0, .7, -.65), 0x406080); }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  };
+  let auto = false;
+  const _sA = spawnAnimal;
+  spawnAnimal = function(type, x, z){
+    const p = auto ? planetAt(Math.floor(x), Math.floor(z)) : null;
+    if(!p) return _sA.apply(this, arguments);
+    type = rnd(Object.keys(p.animals));
+    const d = AD[type], g = buildAnimal(type), gy = groundTop(Math.floor(x), 3, Math.floor(z));
+    const a = {type, d, g, pos:new THREE.Vector3(x, gy, z), vy:0, hp:d.hp, max:d.hp, t:Math.random()*10, dir:Math.random()*6.283, wanderT:Math.random()*3, fleeT:0, moving:false, ang:0};
+    g.position.copy(a.pos); scene.add(g); animals.push(a); return a;
+  };
+  const _uA = updateAnimals;
+  updateAnimals = function(dt){
+    auto = true; try{ _uA(dt); } finally { auto = false; }
+    const p = cur(); if(p){ for(const a of animals.slice()) if(a.d && a.d.planet !== p.k && !a.pet && !a.isPet && !a.homeOf) removeAnimal(a); }
+  };
+
+  { const _t = toast; toast = function(msg){
+      if(typeof msg === 'string' && cur()) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      return _t.call(this, msg); }; }
+  /* ------------------------------------------------ travel, R, knock-out */
+  function goPlanet(p){
+    P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
+    save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
+    toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
+    blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
+    if(first) news('BREAKING: A miner landed on ' + p.name + ' in the Next Universe. ' + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+  }
+  const _pr = window.__planetR;
+  window.__planetR = function(){
+    const p = cur(); if(p){ P.x = p.cx + .5; P.z = p.cz + 2.5; P.vx = P.vy = P.vz = 0; P.y = 1; dirty = true; toast('Back on the landing pad of ' + p.name + '.'); return true; }
+    return _pr ? _pr() : false;
+  };
+  const _ko = knockOut;
+  knockOut = function(){
+    const p = cur(); const r = _ko.apply(this, arguments);
+    if(p){ P.x = p.cx + .5; P.z = p.cz + 2.5; P.vx = P.vy = P.vz = 0; P.y = 1; dirty = true; setTimeout(()=>toast('You woke up on the landing pad of ' + p.name + '.'), 300); }
+    return r;
+  };
+  // buttons in the planet chooser (keys 5 to 8)
+  try{
+    const anchor = document.getElementById('mrsD') || document.getElementById('mrsB');
+    const panel = anchor && (anchor.closest('div[style*="inset:0"]') || anchor.parentNode.parentNode);
+    if(anchor){
+      const box = anchor.parentNode; box.style.maxHeight = '92vh'; box.style.overflowY = 'auto';
+      const COL = {sugar:'#d0408a', bounce:'#2a9a3a', gear:'#a0581a', ice:'#2a6ab0'};
+      let after = anchor;
+      PL.forEach((p, i)=>{
+        const bt = document.createElement('button'); bt.className = 'btn'; bt.id = 'mrsP' + i;
+        bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + COL[p.k];
+        bt.textContent = (5 + i) + '   NEXT UNIVERSE: ' + p.name.toUpperCase();
+        bt.title = p.blurb;
+        bt.onclick = e=>{ e.stopPropagation(); if(panel) panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} };
+        after.parentNode.insertBefore(bt, after.nextSibling); after = bt;
+      });
+      addEventListener('keydown', e=>{ if(!panel || panel.style.display !== 'flex') return; const m = /^Digit([5-8])$/.exec(e.code); if(m){ const p = PL[+m[1] - 5]; panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} } });
+    }
+  }catch(e){ console.warn('LN-moreplanets buttons', e); }
+
+  /* ------------------------------------------------ every frame: layer swap, biome name, pad, core */
+  let curB = null, last = performance.now();
+  (function frame(now){
+    requestAnimationFrame(frame);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      const p = cur();
+      if(p){ if(loaded !== p || UPPER_LAYERS[0] !== p.layers[0]) load({L:p.layers, at:p.at, ids:p.ids, st:p.st, D:p.D}, p); }
+      else if(loaded){ loaded = null; if(!(P.x >= 65000) && !(U.onUni && U.onUni())) load(ORIG, null); }
+      PL.forEach(q=>{ q.pad.visible = q === p && Math.hypot(P.x - q.cx, P.z - q.cz) < 150; });
+      if(p){
+        const c = col(p, Math.floor(P.x), Math.floor(P.z)), el = document.getElementById('biomename');
+        if(el && el.textContent !== c.b.name) el.textContent = c.b.name;
+        if(c.b !== curB){ if(curB && P.y > -4) toast('You entered: ' + c.b.name); curB = c.b; }
+        save.planetCores = save.planetCores || {};
+        if(!save.planetCores[p.k] && -P.y >= p.D - p.layers[p.layers.length - 1].th){ save.planetCores[p.k] = 1; persist(); toast(p.core); news('BREAKING: A miner reached the core of ' + p.name + '.'); }
+      } else curB = null;
+    }catch(e){ if(!frame.w){ frame.w = 1; console.warn('LN-moreplanets', e); } }
+  })(last);
+  window.__morePlanets = {PL, planetAt, goPlanet, col, pBase, cur, inAny};
+})();
+/* LN-moreplanets end */
+
+/* LN-rarer start: the rarest blocks are rarer (Irfan 2026-10-29 16:46 "make rarer blocks rarer"). Legendary ores keep 45%, Mythic 30%, Divine 20% on Earth; the top ores of every planet keep 50% */
+(function(){
+  const keepMain = v=>v >= 2000000000 ? .2 : v >= 20000000 ? .3 : v >= 200000 ? .45 : 1;
+  const OFF = [[5,3],[-6,-4],[9,-7],[-11,8],[13,13]];
+  function swap(fn, t, x, d, z){
+    for(const [ox, oz] of OFF){ const u = fn(x + ox, d, z + oz); if(u && !(BLOCKS[u-1] && BLOCKS[u-1].ore)) return u; }
+    return t;
+  }
+  const _bb = baseBlock;
+  baseBlock = function(x, d, z){
+    const t = _bb(x, d, z), B = t && BLOCKS[t-1];
+    if(!B || x >= UPPER_EDGE || (B.v || 0) < 200000) return t;
+    const k = keepMain(B.v || 0); if(k >= 1 || hash3(x, d, z, 6101) < k) return t;
+    for(const [ox, oz] of OFF){ const u = _bb(x + ox, d, z + oz); if(u && (BLOCKS[u-1].v || 0) < 200000) return u; }
+    return t;
+  };
+  const _ub = upperBase;
+  upperBase = function(x, d, z){
+    const t = _ub(x, d, z), B = t && BLOCKS[t-1];
+    if(!B || !B.ore || (B.v || 0) < 100000000 || hash3(x, d, z, 6103) < .5) return t;
+    return swap(_ub, t, x, d, z);
+  };
+  window.__rarer = {keepMain};
+})();
+/* LN-rarer end */
+
 
 
 
