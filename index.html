@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 106 (Oct 29)';
+  window.__BUILD = 'Build 107 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -18989,18 +18989,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function cityTag(n){
     const txt = 'Population '+n.pop.length+'  |  Houses '+(n.houses||0)+(n.colonyOf ? '  |  Colony of '+((save.nations.find(o=>o.id === n.colonyOf) || {}).name || 'a far away land') : '')+(n.techs && n.techs.length ? '  |  Inventions '+n.techs.length : '')+(n.war ? '  |  AT WAR' : '');
     const R = n.res || {}, txt2 = 'Wood '+(R.wood||0)+'   Stone '+(R.stone||0)+'   Food '+(R.food||0)+'   Iron '+(R.iron||0)+'   Gold '+(R.gold||0)+'   Gems '+(R.gems||0);
-    const key = txt+'#'+txt2;
+    const txt3 = window.__natl ? (window.__natl.fill(n), window.__natl.line(n)) : '';
+    const key = txt+'#'+txt2+'#'+txt3;
     let t = ctags[n.id];
     if(t && t.txt === key) return t.sp;
     if(t){ scene.remove(t.sp); t.sp.material.map.dispose(); }
-    const cv = document.createElement('canvas'); cv.width = 768; cv.height = 128; const x = cv.getContext('2d');
+    const cv = document.createElement('canvas'); cv.width = 768; cv.height = txt3 ? 180 : 128; const x = cv.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; x.font = 'bold 30px system-ui,sans-serif';
     let fs = 30; while(x.measureText(txt).width > 750 && fs > 14){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; }
     x.strokeText(txt, 384, 32); x.fillStyle = n.war ? '#ffb0a0' : '#bff5ff'; x.fillText(txt, 384, 32);
     fs = 28; x.font = 'bold 28px system-ui,sans-serif'; while(x.measureText(txt2).width > 750 && fs > 14){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; }
     x.strokeText(txt2, 384, 94); x.fillStyle = '#ffe08a'; x.fillText(txt2, 384, 94);
+    if(txt3){ fs = 26; x.font = 'bold 26px system-ui,sans-serif'; while(x.measureText(txt3).width > 750 && fs > 12){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; } x.strokeText(txt3, 384, 150); x.fillStyle = '#b8ffb0'; x.fillText(txt3, 384, 150); }
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
-    sp.scale.set(13, 2.17, 1); sp.position.set((n.fx||n.x)+2, n.G + 7.9, n.fz||n.z); scene.add(sp);
+    sp.scale.set(13, 13*cv.height/768, 1); sp.position.set((n.fx||n.x)+2, n.G + 7.9, n.fz||n.z); scene.add(sp);
     ctags[n.id] = {sp, txt:key}; return sp;
   }
   // ---- friends, enemies and families moving about
@@ -28348,6 +28350,66 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__babaHW = {H, newHW, tick, done};
 })();
 /* LN-babahw end */
+/* LN-national start: every country gets its own random currency, national animal and national food (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const CUR_A = ['Moo','Quack','Squeak','Bob','Banana','Pickle','Sock','Cheese','Wobble','Bubble','Oink','Honk','Pebble','Biscuit','Sparkle','Turnip','Noodle','Button','Jelly','Thunder'];
+  const CUR_B = ['Dollar','Coin','Buck','Bill','Penny','Pound','Token','Crown','Shell','Nugget'];
+  const FOOD_A = ['Bob','Moon','Cheesy','Duck','Grandma','Volcano','Rainbow','Sneezy','Royal','Midnight','Bubble','Thunder','Wobbly','Happy','Lazy','Disco'];
+  const FOOD_B = ['Meat','Potato','Noodle','Carrot','Bean','Rice','Mushroom','Pumpkin','Corn','Turnip','Jelly','Fish','Egg','Banana','Pickle','Cabbage'];
+  const FOOD_C = ['Curry','Pie','Soup','Stew','Pancakes','Tacos','Pizza','Sandwich','Dumplings','Cake','Noodles','Burger','Smoothie','Omelette','Waffles','Kebab'];
+  const ANIM_EXTRA = ['Kiwi','Penguin','Sleepy Cat','Golden Duck','Moon Bunny','Dancing Goat','Giant Snail','Flying Pig','Grumpy Owl','Disco Llama','Polite Shark','Tiny Horse'];
+  function animalNames(){
+    const L = [];
+    try{ for(const k in AD){ const d = AD[k]; if(d && d.name && !d.boss && !d.foe && L.indexOf(d.name) < 0 && /^[A-Za-z ]+$/.test(d.name)) L.push(d.name); } }catch(e){}
+    return L.concat(ANIM_EXTRA);
+  }
+  function fill(n){
+    if(n.natl) return false;
+    const a = pick(CUR_A), b = pick(CUR_B);
+    n.natl = {cur:a + ' ' + b, rate:+(Math.pow(10, Math.random()*4 - 1)).toFixed(2), animal:pick(animalNames()), food:pick(FOOD_A) + ' ' + pick(FOOD_B) + ' ' + pick(FOOD_C), visited:false};
+    return true;
+  }
+  const plural = s=>/[sy]$/.test(s) ? s : s + 's';
+  function line(n){
+    const N = n && n.natl; if(!N) return '';
+    return 'Money: ' + plural(N.cur) + ' (1 coin = ' + N.rate.toLocaleString() + ')   Animal: ' + N.animal + '   Food: ' + N.food;
+  }
+  const towns = ()=>(save.nations || []).filter(n=>n);
+  function fillAll(){ let ch = false; towns().forEach(n=>{ if(fill(n)) ch = true; }); if(ch) persist(); }
+  fillAll();
+  // visiting a country: a welcome sign, and a free plate of the national food the first time
+  const seenT = {};
+  let newsT = 120;
+  setInterval(()=>{
+    try{
+      fillAll();
+      if(realm !== 0 || won) return;
+      for(const n of towns()){
+        if(!n.natl || Math.hypot(P.x - n.x, P.z - n.z) > 28) continue;
+        if(seenT[n.id] && performance.now() - seenT[n.id] < 180000) continue;
+        seenT[n.id] = performance.now();
+        const N = n.natl;
+        toast('Welcome to ' + n.name + '! Money: ' + plural(N.cur) + ' (1 coin = ' + N.rate.toLocaleString() + '). National animal: ' + N.animal + '. National food: ' + N.food + '.');
+        if(!N.visited){ N.visited = true; save.foodPower = save.foodPower || {}; if(!save.foodPower[N.food]) save.foodPower[N.food] = 6; addItem(N.food, 1); persist();
+          setTimeout(()=>toast('The people of ' + n.name + ' gave you a plate of ' + N.food + '! Press E to eat it.'), 3500); }
+        break;
+      }
+      // the money goes up and down
+      newsT -= 2; if(newsT <= 0){ newsT = 150 + Math.random()*120;
+        const L = towns().filter(n=>n.natl); if(L.length){ const n = pick(L), N = n.natl, up = Math.random() < .5, f = 1 + Math.random()*.6;
+          N.rate = +(up ? N.rate/f : N.rate*f).toFixed(2); persist();
+          newsQ('MONEY NEWS: The ' + N.cur + ' of ' + n.name + ' went ' + (up ? 'UP' : 'DOWN') + '! ' + pick(up ? ['People are buying extra ' + N.food + '.', 'The ' + N.animal + ' on the coin looks proud.', 'Stonks!'] : ['Someone sat on the money printer.', 'The ' + N.animal + ' on the coin looks sad.', 'Not stonks.'])); }
+        else if(L.length > 1){ }
+        if(Math.random() < .35 && L.length){ const n = pick(L); newsQ('FOOD NEWS: ' + n.name + ' held a ' + n.natl.food + ' festival. ' + pick(['Nobody could finish it.', 'The ' + n.natl.animal + ' ate the leftovers.', 'It won a prize for being the most ' + n.natl.food + ' ever.'])); }
+      }
+    }catch(e){ console.warn('LN-national', e); }
+  }, 2000);
+  window.__natl = {fill, line, fillAll};
+})();
+/* LN-national end */
+
 
 
 
