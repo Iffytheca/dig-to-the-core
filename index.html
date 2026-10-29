@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 109 (Oct 29)';
+  window.__BUILD = 'Build 110 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27679,7 +27679,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-alienhomes end */
 /* LN-animalhouse start: you can build an Animal House and nearby animals move in, go out in the day and sleep inside at night (Irfan 2026-10-29) */
 (function(){
-  const NAME = 'Animal House', CAP = 3;
+  const NAME = 'Animal House', capOf = d=>({alarge:5, aapart:6, amansion:8})[d && d.kind] || 3, HK = /^(animalhouse|alarge|aapart|amansion)$/;
   const pick = a=>a[Math.floor(Math.random()*a.length)];
   const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
   const night = ()=>{ const t = ((tod % 1) + 1) % 1; return t > .58 && t < .92; };
@@ -27708,20 +27708,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   const v = new THREE.Vector3();
-  const houses = ()=>furnObjs.filter(f=>f.d && f.d.kind === 'animalhouse');
-  const doorOf = f=>({x:f.d.x + Math.sin(f.d.rot || 0)*1.6, z:f.d.z + Math.cos(f.d.rot || 0)*1.6});
+  const houses = ()=>furnObjs.filter(f=>f.d && HK.test(f.d.kind));
+  const doorOf = f=>{ const r = ({alarge:2.4, aapart:2.2, amansion:3.8})[f.d.kind] || 1.6; return {x:f.d.x + Math.sin(f.d.rot || 0)*r, z:f.d.z + Math.cos(f.d.rot || 0)*r}; };
   // a tag over each house: who lives there
   function retag(f){
-    const d = f.d, res = d.res || [], key = res.map(r=>r.name + (r.out ? '' : '*')).join('|');
+    const d = f.d, res = d.res || [], key = res.map(r=>r.name + (r.out ? '' : '*')).join('|') + '#' + (d.gad || []).join(',');
     if(f.tagKey === key && f.tag) return; f.tagKey = key;
     if(f.tag) f.g.remove(f.tag);
-    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const x = cv.getContext('2d');
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150; const x = cv.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.85)';
-    const l1 = 'Animal House  ' + res.length + '/' + CAP, l2 = res.length ? res.map(r=>r.name).join(', ') : 'Nobody lives here yet';
+    const l1 = (window.__fancy ? window.__fancy.title(d) : 'Animal House') + '  ' + res.length + '/' + capOf(d), l3 = window.__fancy ? window.__fancy.gadLine(d.gad) : '', l2 = res.length ? res.map(r=>r.name).join(', ') : 'Nobody lives here yet';
     x.font = 'bold 38px system-ui,sans-serif'; x.strokeText(l1, 256, 32); x.fillStyle = '#ffe080'; x.fillText(l1, 256, 32);
     x.font = 'bold 26px system-ui,sans-serif'; x.strokeText(l2, 256, 80); x.fillStyle = '#ffffff'; x.fillText(l2, 256, 80);
+    if(l3){ x.font = 'bold 22px system-ui,sans-serif'; x.strokeText(l3, 256, 122, 500); x.fillStyle = '#a0e8ff'; x.fillText(l3, 256, 122, 500); }
     const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
-    s.scale.set(3.6, .79, 1); s.position.y = 3.2; f.g.add(s); f.tag = s;
+    s.scale.set(3.6, 1.05, 1); s.position.y = ({alarge:3.9, aapart:5.9, amansion:6.4})[d.kind] || 3.2; f.g.add(s); f.tag = s;
   }
   const outA = new Map();        // resident id -> live animal while it is outside
   let rid = Date.now() % 100000;
@@ -27740,18 +27741,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const d = f.d; d.res = d.res || [];
       const near = Math.hypot(d.x - P.x, d.z - P.z) < 90, door = doorOf(f);
       // 1) new animals move in
-      if(scan && near && d.res.length < CAP + (d.coming ? -1 : 0) && !d.coming){
+      if(scan && near && d.res.length < capOf(d) + (d.coming ? -1 : 0) && !d.coming){
         let best = null, bd = 26;
         for(const a of animals){ if(!a.g || a.popRef || a.homeOf || a.d.boss || a.d.foe || a.angry || a.isPet || a.goingHome) continue; const dd = Math.hypot(a.pos.x - d.x, a.pos.z - d.z); if(dd < bd){ bd = dd; best = a; } }
-        if(best){ best.goingHome = d.id; d.coming = true; f.comer = best; if(bd < 40 && Math.hypot(P.x - d.x, P.z - d.z) < 40) toast('A ' + best.d.name + ' saw your Animal House and is walking over to move in!'); }
+        if(best){ best.goingHome = d.id; d.coming = true; f.comer = best; if(bd < 40 && Math.hypot(P.x - d.x, P.z - d.z) < 40) toast('A ' + best.d.name + ' saw your ' + (window.__fancy ? window.__fancy.title(d) : 'Animal House') + ' and is walking over to move in!'); }
       }
       if(f.comer){
         const a = f.comer;
         if(animals.indexOf(a) < 0){ f.comer = null; d.coming = false; }
         else if(walk(a, door.x, door.z, 2.2, dt)){
           const r = {id:++rid, type:a.type, name:a.d.name, out:false}; d.res.push(r); removeAnimal(a); f.comer = null; d.coming = false; persist();
-          if(Math.hypot(P.x - d.x, P.z - d.z) < 50){ toast('A ' + r.name + ' moved into your Animal House! (' + d.res.length + '/' + CAP + ')'); blip(880, .1, .08, 'triangle'); try{ burst(d.x, d.y + 1.5, d.z, 0, 14); }catch(e){} }
-          if(d.res.length === CAP) newsQ('NEWS: A miner\'s Animal House is full! ' + d.res.map(q=>q.name).join(', ') + ' are now neighbours. ' + pick(['They share one tiny bathroom.', 'They argue about who gets the top bunk.', 'Their house party was very loud.']));
+          if(Math.hypot(P.x - d.x, P.z - d.z) < 50){ toast('A ' + r.name + ' moved into your ' + (window.__fancy ? window.__fancy.title(d) : 'Animal House') + '! (' + d.res.length + '/' + capOf(d) + ')'); blip(880, .1, .08, 'triangle'); try{ burst(d.x, d.y + 1.5, d.z, 0, 14); }catch(e){} }
+          if(d.res.length === capOf(d)) newsQ('NEWS: A miner\'s Animal House is full! ' + d.res.map(q=>q.name).join(', ') + ' are now neighbours. ' + pick(['They share one tiny bathroom.', 'They argue about who gets the top bunk.', 'Their house party was very loud.']));
         }
       }
       // 2) residents go out in the day and come home at night
@@ -27784,17 +27785,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // F next to an Animal House: who lives here
   addEventListener('keydown', e=>{
     if(e.code !== 'KeyF' || e.repeat || !locked || realm !== 0) return;
-    for(const f of houses()){ if(Math.hypot(f.d.x - P.x, f.d.z - P.z) < 2.8){ const res = f.d.res || [];
-      setTimeout(()=>toast(res.length ? 'Animal House: ' + res.map(r=>r.name + (r.out ? ' (out playing)' : ' (home)')).join(', ') + '.' + (res.length < CAP ? ' Room for ' + (CAP - res.length) + ' more.' : ' Full!') : 'Nobody lives here yet. Animals nearby will move in soon.'), 40); return; } }
+    for(const f of houses()){ if(Math.hypot(f.d.x - P.x, f.d.z - P.z) < (({alarge:3.2, aapart:3, amansion:4.6})[f.d.kind] || 2.8)){ const res = f.d.res || [];
+      setTimeout(()=>toast(res.length ? 'Animal House: ' + res.map(r=>r.name + (r.out ? ' (out playing)' : ' (home)')).join(', ') + '.' + (res.length < capOf(f.d) ? ' Room for ' + (capOf(f.d) - res.length) + ' more.' : ' Full!') + ((f.d.gad || []).length ? ' Gadgets: ' + f.d.gad.join(', ') + '.' : '') : 'Nobody lives here yet. Animals nearby will move in soon.'), 40); return; } }
   });
   // breaking the house sends everyone back to the wild
   const _rf = removeFurniture;
   removeFurniture = function(d){
-    if(d && d.kind === 'animalhouse' && d.res){ d.res.forEach(r=>{ const a = outA.get(r.id); if(a){ a.homeOf = null; outA.delete(r.id); } else if(realm === 0){ try{ const q = spawnAnimal(r.type, d.x, d.z); } catch(e){} } }); if(d.res.length) toast('The animals moved out of the Animal House.'); d.res = []; }
+    if(d && HK.test(d.kind) && d.res){ d.res.forEach(r=>{ const a = outA.get(r.id); if(a){ a.homeOf = null; outA.delete(r.id); } else if(realm === 0){ try{ const q = spawnAnimal(r.type, d.x, d.z); } catch(e){} } }); if(d.res.length) toast('The animals moved out of the Animal House.'); d.res = []; }
     return _rf.apply(this, arguments);
   };
   // after loading a save every resident starts at home
-  (save.furn || []).forEach(d=>{ if(d.kind === 'animalhouse' && d.res) d.res.forEach(r=>{ r.out = false; }); });
+  (save.furn || []).forEach(d=>{ if(HK.test(d.kind) && d.res) d.res.forEach(r=>{ r.out = false; }); });
   let last = performance.now();
   (function loop(now){
     requestAnimationFrame(loop);
@@ -27865,15 +27866,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(c[3] === 'pen' && cells.length < 4) continue;
       cells.sort((a, b)=>a[0] - b[0] || a[2] - b[2]);
       const cx = cells.reduce((s, q)=>s + q[0], 0)/cells.length + .5, cz = cells.reduce((s, q)=>s + q[2], 0)/cells.length + .5;
-      const cap = c[3] === 'house' ? Math.max(1, Math.min(4, Math.floor(cells.length/2) || 1)) : Math.max(2, Math.min(6, Math.floor(cells.length/4)));
+      const cap = c[3] === 'house' ? Math.max(1, Math.min(cells.length >= 25 ? 10 : cells.length >= 9 ? 6 : 4, Math.floor(cells.length/2) || 1)) : Math.max(2, Math.min(6, Math.floor(cells.length/4)));
       out.push({kind:c[3], cells, cx, cz, cd:cells[0][1], cap});
     }
     // keep the same id (and residents) when a home is found again in the same spot
     const old = homes; homes = out.map(h=>{
-      const m = old.find(o=>o.kind === h.kind && Math.hypot(o.cx - h.cx, o.cz - h.cz) < 3);
-      h.id = m ? m.id : Object.keys(save.bHomes).find(id=>{ const s = save.bHomes[id]; return s.kind === h.kind && Math.hypot(s.cx - h.cx, s.cz - h.cz) < 3; }) || ('h' + Math.round(h.cx) + '_' + Math.round(h.cz) + '_' + h.kind);
+      const m = old.find(o=>o.kind === h.kind && Math.hypot(o.cx - h.cx, o.cz - h.cz) < 3 && Math.abs(o.cd - h.cd) < 2);
+      h.id = m ? m.id : Object.keys(save.bHomes).find(id=>{ const s = save.bHomes[id]; return s.kind === h.kind && Math.hypot(s.cx - h.cx, s.cz - h.cz) < 3 && (s.cd === undefined || Math.abs(s.cd - h.cd) < 2); }) || ('h' + Math.round(h.cx) + '_' + Math.round(h.cz) + '_' + h.kind + (h.cd < -2 ? '_' + (-h.cd) : ''));
       const s = save.bHomes[h.id] = save.bHomes[h.id] || {res:[], kind:h.kind};
-      s.cx = h.cx; s.cz = h.cz; if(s.res.length > h.cap) s.res.length = h.cap;
+      s.cx = h.cx; s.cz = h.cz; s.cd = h.cd; if(s.res.length > h.cap) s.res.length = h.cap;
       if(!m && !s.told){ s.told = true; persist(); if(!h.by) toast(h.kind === 'house' ? 'The animals noticed your block house! It has room for ' + h.cap + '. They will move in soon.' : 'The animals noticed your fenced pen! ' + h.cap + ' animals can live in it.'); }
       return h;
     });
@@ -27890,16 +27891,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   const tags = new Map();
   function retag(h){
-    const s = save.bHomes[h.id], key = h.kind + h.cap + s.res.map(r=>r.name).join(',');
+    const s = save.bHomes[h.id], key = h.kind + h.cap + s.res.map(r=>r.name).join(',') + '#' + (s.gad || []).join(',') + (window.__fancy ? window.__fancy.label(h, s) : '');
     let t = tags.get(h.id); if(t && t.key === key){ t.sp.position.set(h.cx, -h.cd + 2.6, h.cz); return; }
     if(t) scene.remove(t.sp);
-    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 112; const x = cv.getContext('2d');
+    const cv = document.createElement('canvas'); cv.width = 512; cv.height = 150; const x = cv.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 7; x.strokeStyle = 'rgba(0,0,0,.85)';
-    const l1 = (h.kind === 'house' ? (s.by ? 'Animal-Built House  ' : 'Animal Home  ') : 'Animal Pen  ') + s.res.length + '/' + h.cap, l2 = s.res.length ? s.res.map(r=>r.name).join(', ') : 'Empty: animals will move in';
+    const l1 = (window.__fancy ? window.__fancy.label(h, s) : (h.kind === 'house' ? (s.by ? 'Animal-Built House  ' : 'Animal Home  ') : 'Animal Pen  ')) + s.res.length + '/' + h.cap, l3 = window.__fancy ? window.__fancy.gadLine(s.gad) : '', l2 = s.res.length ? s.res.map(r=>r.name).join(', ') : 'Empty: animals will move in';
     x.font = 'bold 36px system-ui,sans-serif'; x.strokeText(l1, 256, 32); x.fillStyle = '#ffe080'; x.fillText(l1, 256, 32);
     x.font = 'bold 25px system-ui,sans-serif'; x.strokeText(l2, 256, 80); x.fillStyle = '#ffffff'; x.fillText(l2, 256, 80);
+    if(l3){ x.font = 'bold 22px system-ui,sans-serif'; x.strokeText(l3, 256, 122, 500); x.fillStyle = '#a0e8ff'; x.fillText(l3, 256, 122, 500); }
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
-    sp.scale.set(3.6, .79, 1); sp.position.set(h.cx, -h.cd + 2.6, h.cz); scene.add(sp); tags.set(h.id, {sp, key});
+    sp.scale.set(3.6, 1.05, 1); sp.position.set(h.cx, -h.cd + 2.6, h.cz); scene.add(sp); tags.set(h.id, {sp, key});
   }
   const movers = new Map();     // home id -> {a, h}
   function homeTick(dt){
@@ -27946,19 +27948,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(!cand.length) return false;
     const a = pick(cand);
     for(let t=0;t<20;t++){
+      const ST = window.__fancy ? window.__fancy.style() : {k:'small', W:5, H:4};
       const x0 = Math.floor(a.pos.x + (Math.random() - .5)*16), z0 = Math.floor(a.pos.z + (Math.random() - .5)*16);
-      if(Math.hypot(x0 + 2.5 - P.x, z0 + 2.5 - P.z) < 5) continue;
+      if(Math.hypot(x0 + ST.W/2 - P.x, z0 + ST.W/2 - P.z) < ST.W) continue;
       let ok = true;
-      for(let x=x0; x<x0+5 && ok; x++) for(let z=z0; z<z0+5 && ok; z++){ if(!solid(x, 0, z) || solid(x, -1, z) || solid(x, -2, z) || solid(x, -3, z) || solid(x, -4, z)) ok = false; }
+      for(let x=x0; x<x0+ST.W && ok; x++) for(let z=z0; z<z0+ST.W && ok; z++){ if(!solid(x, 0, z)) ok = false; for(let dd=-1; dd>=-ST.H && ok; dd--) if(solid(x, dd, z)) ok = false; }
       if(!ok) continue;
-      if(homes.some(h=>Math.hypot(h.cx - x0, h.cz - z0) < 9)) continue;
+      if(homes.some(h=>Math.hypot(h.cx - x0, h.cz - z0) < 4 + ST.W)) continue;
       const wn = WALLS.filter(n=>blockIdOf(n)), wall = blockIdOf(pick(wn.length ? wn : ['Dirt'])), roof = blockIdOf('Wood Floor') || wall;
       const plan = [], door = pick([[2, 0], [2, 4], [0, 2], [4, 2]]);
       for(let d=-1; d>=-3; d--) for(let x=0; x<5; x++) for(let z=0; z<5; z++){ const edge = x === 0 || x === 4 || z === 0 || z === 4; if(!edge) continue; if(x === door[0] && z === door[1] && d >= -2) continue; plan.push([x0 + x, d, z0 + z, wall]); }
       for(let x=0; x<5; x++) for(let z=0; z<5; z++) plan.push([x0 + x, -4, z0 + z, roof]);
-      job = {a, plan, i:0, t:0, x0, z0};
+      if(ST.k !== 'small' && window.__fancy){ plan.length = 0; window.__fancy.plan(plan, x0, z0, ST, wall, roof); }
+      job = {a, plan, i:0, t:0, x0, z0, ST};
       a.goingHome = 'build';
-      if(Math.hypot(P.x - x0, P.z - z0) < 60) toast('A ' + a.d.name + ' started building its own house out of blocks!');
+      if(Math.hypot(P.x - x0, P.z - z0) < 60) toast('A ' + a.d.name + ' started building its own ' + ({small:'house', large:'large house', apartment:'apartment building', mansion:'MANSION'})[ST.k] + ' out of blocks!');
       return true;
     }
     return false;
@@ -27969,15 +27973,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const {a} = job;
     if(animals.indexOf(a) < 0){ job = null; return; }
     const p = job.plan[job.i]; if(!p){ return; }
-    walk(a, p[0] + .5 + (p[0] === job.x0 ? -1 : p[0] === job.x0 + 4 ? 1 : 0), p[2] + .5 + (p[2] === job.z0 ? -1 : p[2] === job.z0 + 4 ? 1 : 0), 3, dt);
-    job.t -= dt; if(job.t > 0) return; job.t = .5;
+    walk(a, p[0] + .5 + (p[0] === job.x0 ? -1 : p[0] === job.x0 + job.ST.W - 1 ? 1 : 0), p[2] + .5 + (p[2] === job.z0 ? -1 : p[2] === job.z0 + job.ST.W - 1 ? 1 : 0), 3, dt);
+    job.t -= dt; if(job.t > 0) return; job.t = job.ST.k === 'small' ? .5 : .15;
     if(!solid(p[0], p[1], p[2])){ setBlock(p[0], p[1], p[2], p[3]); try{ burst(p[0] + .5, -p[1] - .5, p[2] + .5, p[3] - 1, 4); }catch(e){} }
     job.i++;
     if(job.i >= job.plan.length){
-      const cx = job.x0 + 2.5, cz = job.z0 + 2.5, id = 'h' + Math.round(cx) + '_' + Math.round(cz) + '_house';
-      save.bHomes[id] = {res:[{type:a.type, name:a.d.name}], kind:'house', by:true, cx, cz, told:true};
+      const cx = job.x0 + job.ST.W/2, cz = job.z0 + job.ST.W/2, id = 'h' + Math.round(cx) + '_' + Math.round(cz) + '_house';
+      save.bHomes[id] = {res:[{type:a.type, name:a.d.name}], kind:'house', by:true, cx, cz, told:true, style:job.ST.k, cd:-1};
       removeAnimal(a); job = null; persist(); scanT = 0;
-      if(Math.hypot(P.x - cx, P.z - cz) < 60) toast('The ' + a.d.name + ' finished its block house and moved in!');
+      if(Math.hypot(P.x - cx, P.z - cz) < 60) toast('The ' + a.d.name + ' finished its block ' + ({small:'house', large:'large house', apartment:'apartment building', mansion:'MANSION'})[job.ST.k] + ' and moved in!');
       newsQ('NEWS: A ' + a.d.name + ' built its own house out of blocks. ' + pick(['Its friends say the door is a bit small.', 'It has a lovely view of a tree.', 'Builders everywhere are impressed.']));
     }
   }
@@ -28021,7 +28025,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       homeTick(dt); buildTick(dt); pathTick(dt);
     }catch(e){ console.warn('LN-blockhomes', e); }
   })(last);
-  window.__blockHomes = {get movin(){ return [...movers.values()].map(m=>m.a.d.name).join(','); }, dbgPen:()=>{ const near = []; skyEdits.forEach(v=>{ if(Math.abs(v.x - P.x) < 45 && Math.abs(v.z - P.z) < 45 && v.d >= -24) near.push(v); }); const ground = near.filter(v=>{ const below = v.d + 1; return below <= 0 && solid(v.x, below, v.z) && !solid(v.x, v.d - 3, v.z); }); return near.length + ' ' + ground.length; }, setBlock:(x,d,z,t)=>setBlock(x,d,z,t), get:(x,d,z)=>get(x,d,z), bid:n=>blockIdOf(n), scan, get homes(){ return homes; }, live, startBuild, get job(){ return job; }, buildNow:()=>{ buildT = 0; }, pathNow:()=>{ pathT = 0; }, finishBuild:()=>{ if(job){ while(job && job.i < job.plan.length){ const p = job.plan[job.i]; if(!solid(p[0], p[1], p[2])) setBlock(p[0], p[1], p[2], p[3]); job.i++; } job.t = 0; } }};
+  window.__blockHomes = {get homes(){ return homes; }, get movin(){ return [...movers.values()].map(m=>m.a.d.name).join(','); }, dbgPen:()=>{ const near = []; skyEdits.forEach(v=>{ if(Math.abs(v.x - P.x) < 45 && Math.abs(v.z - P.z) < 45 && v.d >= -24) near.push(v); }); const ground = near.filter(v=>{ const below = v.d + 1; return below <= 0 && solid(v.x, below, v.z) && !solid(v.x, v.d - 3, v.z); }); return near.length + ' ' + ground.length; }, setBlock:(x,d,z,t)=>setBlock(x,d,z,t), get:(x,d,z)=>get(x,d,z), bid:n=>blockIdOf(n), scan, get homes(){ return homes; }, live, startBuild, get job(){ return job; }, buildNow:()=>{ buildT = 0; }, pathNow:()=>{ pathT = 0; }, finishBuild:()=>{ if(job){ while(job && job.i < job.plan.length){ const p = job.plan[job.i]; if(!solid(p[0], p[1], p[2])) setBlock(p[0], p[1], p[2], p[3]); job.i++; } job.t = 0; } }};
 })();
 /* LN-blockhomes end */
 /* LN-religrules start: religions get many rules and food rules, and some have none at all (Irfan 2026-10-29) */
@@ -28495,6 +28499,237 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__alliance = {A, form, breakUp, allyOf, formNow:()=>{ A.formT = 0; }};
 })();
 /* LN-alliance end */
+/* LN-fancyhomes start: animal houses come as small houses, large houses, apartments and mansions, and some have gadgets: TV, mobile phone, wifi, robot vacuum and more (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const HKIND = /^(animalhouse|alarge|aapart|amansion)$/;
+  const TITLE = {animalhouse:'Animal House', alarge:'Large Animal House', aapart:'Animal Apartment', amansion:'Animal Mansion'};
+  // the new houses you can place (and craft: ask for a "mansion", "apartment" or "big house")
+  const ITEMS = [['Large Animal House', 'alarge', 0xd0a070, ['bighouse','largehouse','cottage','farmhouse']], ['Animal Apartment', 'aapart', 0x9090a8, ['apartment','flat','flats','tower','condo']], ['Animal Mansion', 'amansion', 0xf0e8d8, ['mansion','palace','villa','castle']]];
+  save.furnItems = save.furnItems || {};
+  ITEMS.forEach(([n, k, c, words])=>{
+    save.furnItems[n] = {kind:k, col:c};
+    try{ if(FURN_KINDS.indexOf(k) < 0) FURN_KINDS.push(k); words.forEach(w=>{ if(WANT.furniture.indexOf(w) < 0) WANT.furniture.push(w); FURN_ALIAS[w] = k; }); }catch(e){ console.warn('LN-fancyhomes craft words', e); }
+  });
+  try{ if(!localStorage.getItem('digcore_gift_fancy')){ localStorage.setItem('digcore_gift_fancy', '1'); ITEMS.forEach(([n])=>addItem(n, 1, true)); persist(); setTimeout(()=>toast('NEW: you got a Large Animal House, an Animal Apartment and an Animal Mansion! Place them and animals move in. Some homes come with gadgets.'), 9000); } }catch(e){}
+
+  /* ------------------------------------------------ the gadgets */
+  const G = {
+    'TV':             {act:['is watching cartoons on the TV', 'is watching a cooking show and getting hungry', 'is shouting at the TV during a football match', 'fell asleep in front of the TV']},
+    'Mobile Phone':   {act:['is texting all its friends on its mobile phone', 'is taking selfies with its mobile phone', 'ordered a pizza on its mobile phone', 'is playing a game on its mobile phone instead of sleeping']},
+    'Wifi Router':    {act:['says the wifi is too slow', 'turned the wifi off and on again', 'changed the wifi password to "password"', 'is very happy because the wifi has five bars']},
+    'Robot Vacuum':   {act:['is riding the robot vacuum around the house', 'is chasing the robot vacuum', 'got its tail stuck in the robot vacuum', 'named the robot vacuum "Mr. Sucky"']},
+    'Game Console':   {act:['is playing video games and will not stop', 'lost a video game and is very grumpy', 'beat the final boss of a video game', 'is playing a game called Deep Chaos Diggers']},
+    'Fridge':         {act:['raided the fridge in the middle of the night', 'is staring into the fridge, looking for snacks', 'put a funny drawing on the fridge']},
+    'Computer':       {act:['is doing homework on the computer (it is really watching videos)', 'is typing very fast on the computer', 'is making a slideshow about grass']},
+    'Smart Speaker':  {act:['asked the smart speaker to tell a joke', 'asked the smart speaker to play its favourite song', 'is arguing with the smart speaker']},
+    'Disco Ball':     {act:['is having a dance party under the disco ball', 'is doing the robot dance under the disco ball']},
+    'Hot Tub':        {act:['is relaxing in the hot tub', 'did a cannonball into the hot tub', 'is blowing bubbles in the hot tub']},
+    'Popcorn Machine':{act:['made way too much popcorn', 'is eating popcorn and watching a movie']},
+    'Massage Chair':  {act:['fell asleep in the massage chair', 'turned the massage chair up to MAXIMUM']},
+    'Satellite Dish': {act:['is watching 900 channels on the satellite dish', 'is trying to call aliens with the satellite dish']}
+  };
+  const COMMON = ['TV', 'Mobile Phone', 'Wifi Router', 'Robot Vacuum', 'Game Console', 'Fridge', 'Computer', 'Smart Speaker', 'Popcorn Machine'];
+  const FANCY = ['Disco Ball', 'Massage Chair', 'Satellite Dish'];
+  // how many gadgets a home gets
+  function roll(style){
+    const n = style === 'mansion' ? 4 + Math.floor(Math.random()*4) : style === 'apartment' ? 1 + Math.floor(Math.random()*3) : style === 'large' ? 1 + Math.floor(Math.random()*3) : (Math.random() < .35 ? 1 : 0);
+    const pool = COMMON.slice().concat(style === 'mansion' || style === 'large' ? FANCY : []), out = style === 'mansion' ? ['Hot Tub'] : [];
+    while(out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random()*pool.length), 1)[0]);
+    return out;
+  }
+  // 3D models (y = floor height in the group); returns {g, anim(t, home, dt)}
+  function model(name, home){
+    const g = new THREE.Group(), b = (w,h,d,c,x,y,z)=>sbox(w,h,d,c,x,y,z,g), em = (m, c)=>{ m.material = new THREE.MeshBasicMaterial({color:c}); return m; };
+    let anim = null;
+    if(name === 'TV'){ b(.9, .55, .08, 0x151515, 0, .55, 0); const s = em(b(.8, .45, .02, 0, 0, .55, .05), 0x203040); b(.08, .3, .08, 0x303030, 0, .14, 0); b(.4, .04, .2, 0x303030, 0, .02, 0);
+      const C = [0x40a0ff, 0xff6040, 0x60ff80, 0xffe040, 0xff60e0]; let k = 0; anim = (t, on)=>{ if(!on){ s.material.color.setHex(0x101418); return; } if(Math.floor(t*3) !== k){ k = Math.floor(t*3); s.material.color.setHex(C[(k*7) % C.length]); } }; }
+    else if(name === 'Mobile Phone'){ b(.32, .05, .18, 0x7a5a3a, 0, .5, 0); b(.3, .5, .16, 0x7a5a3a, 0, .25, 0); const p = b(.1, .02, .18, 0x111111, 0, .54, 0); const s = em(b(.08, .005, .15, 0, 0, .555, 0), 0x2a2a2a);
+      anim = (t, on)=>{ s.material.color.setHex(on && Math.sin(t*1.3) > -.3 ? 0x60c0ff : 0x202020); }; }
+    else if(name === 'Wifi Router'){ b(.5, .08, .32, 0xf0f0f0, 0, .5, 0); b(.3, .5, .2, 0x7a5a3a, 0, .25, 0); b(.03, .3, .03, 0x202020, -.2, .68, -.12); b(.03, .3, .03, 0x202020, .2, .68, -.12);
+      const L = [-.12, 0, .12].map(x=>em(b(.05, .03, .02, 0, x, .52, .17), 0x40ff40)); anim = t=>{ L.forEach((m, i)=>m.material.color.setHex(Math.sin(t*9 + i*2.1) > 0 ? 0x40ff40 : 0x104010)); }; }
+    else if(name === 'Robot Vacuum'){ const v = new THREE.Mesh(new THREE.CylinderGeometry(.28, .28, .1, 16), new THREE.MeshLambertMaterial({color:0x303038})); v.position.y = .06; g.add(v); const l = em(b(.08, .03, .08, 0, 0, .12, .15), 0x40ff60); l.parent.remove(l); v.add(l); l.position.set(0, .06, .18);
+      anim = (t, on, dt, R)=>{ if(!R) return; // drives round and round the house
+        const per = R*8, s = (t*.9) % per; let x, z, a;
+        if(s < R*2){ x = -R + s; z = R; a = Math.PI/2; } else if(s < R*4){ x = R; z = R - (s - R*2); a = Math.PI; } else if(s < R*6){ x = R - (s - R*4); z = -R; a = -Math.PI/2; } else { x = -R; z = -R + (s - R*6); a = 0; }
+        v.position.set(x, .06, z); v.rotation.y = a; }; }
+    else if(name === 'Game Console'){ b(.45, .1, .3, 0x202028, 0, .02, 0); const c1 = b(.18, .05, .1, 0xd03030, -.35, .03, .15), c2 = b(.18, .05, .1, 0x3050d0, .35, .03, .15); const l = em(b(.05, .02, .02, 0, .15, .06, .16), 0x40a0ff);
+      anim = t=>{ c1.rotation.y = Math.sin(t*4)*.4; c2.rotation.y = Math.cos(t*5)*.4; }; }
+    else if(name === 'Fridge'){ b(.6, 1.3, .55, 0xe8e8f0, 0, .65, 0); b(.04, .35, .04, 0x909090, .22, .95, .3); b(.04, .25, .04, 0x909090, .22, .4, .3); b(.15, .12, .01, 0xffd040, -.1, .9, .28); }
+    else if(name === 'Computer'){ b(.6, .05, .4, 0x7a5a3a, 0, .5, 0); [-.25, .25].forEach(x=>b(.05, .5, .05, 0x7a5a3a, x, .25, 0)); b(.45, .3, .04, 0x151515, 0, .72, -.12); const s = em(b(.4, .25, .01, 0, 0, .72, -.095), 0x3060a0); b(.35, .02, .12, 0x303030, 0, .54, .08);
+      anim = (t, on)=>{ s.material.color.setHex(on ? (Math.sin(t*2) > 0 ? 0x3080d0 : 0x40c070) : 0x101418); }; }
+    else if(name === 'Smart Speaker'){ const c = new THREE.Mesh(new THREE.CylinderGeometry(.1, .1, .3, 12), new THREE.MeshLambertMaterial({color:0x303038})); c.position.y = .15; g.add(c); const r = em(b(.2, .02, .2, 0, 0, .31, 0), 0x40c0ff);
+      anim = t=>{ r.material.color.setHex(Math.sin(t*3) > 0 ? 0x40c0ff : 0x1060a0); }; }
+    else if(name === 'Disco Ball'){ const s = new THREE.Mesh(new THREE.IcosahedronGeometry(.22, 0), new THREE.MeshLambertMaterial({color:0xe0e0f0, emissive:0x303040, flatShading:true})); s.position.y = 1.35; g.add(s); b(.02, .2, .02, 0x909090, 0, 1.6, 0);
+      anim = (t, on, dt)=>{ s.rotation.y += dt*2; s.material.emissive.setHex(on ? [0x802080, 0x208080, 0x808020][Math.floor(t*4) % 3] : 0x202020); }; }
+    else if(name === 'Hot Tub'){ b(1.3, .45, 1.3, 0x8a6a4a, 0, .22, 0); const w = em(b(1.1, .02, 1.1, 0, 0, .46, 0), 0x50c0f0);
+      anim = t=>{ w.position.y = .46 + Math.sin(t*6)*.015; w.material.color.setHex(Math.sin(t*2) > .6 ? 0x80e0ff : 0x50c0f0); }; }
+    else if(name === 'Popcorn Machine'){ b(.45, .35, .35, 0xd02020, 0, .18, 0); b(.4, .4, .3, 0xd0e8f0, 0, .55, 0); b(.3, .18, .2, 0xfff0c0, 0, .45, 0); b(.48, .08, .38, 0xd02020, 0, .8, 0); }
+    else if(name === 'Massage Chair'){ b(.6, .35, .6, 0x302020, 0, .18, 0); const back = b(.6, .7, .15, 0x302020, 0, .65, -.25); b(.12, .25, .6, 0x402828, -.33, .45, 0); b(.12, .25, .6, 0x402828, .33, .45, 0);
+      anim = (t, on)=>{ back.position.x = on ? Math.sin(t*25)*.02 : 0; }; }
+    else if(name === 'Satellite Dish'){ const d = new THREE.Mesh(new THREE.SphereGeometry(.35, 12, 6, 0, Math.PI*2, 0, Math.PI/3), new THREE.MeshLambertMaterial({color:0xe0e0e0, side:THREE.DoubleSide})); d.rotation.x = -1; d.position.y = .35; g.add(d); b(.05, .35, .05, 0x909090, 0, .17, 0); }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return {g, anim, name};
+  }
+
+  /* ------------------------------------------------ bigger house models */
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind !== 'alarge' && kind !== 'aapart' && kind !== 'amansion') return _bf.apply(this, arguments);
+    const g = new THREE.Group(), b = (w,h,d,c,x,y,z)=>sbox(w,h,d,c,x,y,z,g), win = (w,h,d,x,y,z)=>{ const m = b(w, h, d, 0x303038, x, y, z); m.userData.win = true; return m; };
+    // a box house with a door hole in the front (z+) and windows on the sides
+    function shell(W, H, y0, c, door){
+      const h2 = W/2;
+      b(W, H, .15, c, 0, y0 + H/2, -h2); b(.15, H, W, c, -h2, y0 + H/2, 0); b(.15, H, W, c, h2, y0 + H/2, 0);
+      if(door){ const dw = door; b((W - dw)/2, H, .15, c, -(dw/2 + (W - dw)/4), y0 + H/2, h2); b((W - dw)/2, H, .15, c, dw/2 + (W - dw)/4, y0 + H/2, h2); b(dw, H - 1.3, .15, c, 0, y0 + 1.3 + (H - 1.3)/2, h2); }
+      else b(W, H, .15, c, 0, y0 + H/2, h2);
+      [-1, 1].forEach(s=>{ win(.05, .4, .45, s*(h2 + .03), y0 + H*.55, -W*.2); win(.05, .4, .45, s*(h2 + .03), y0 + H*.55, W*.2); });
+      if(!door) [-.25, .25].forEach(x=>win(.45, .4, .05, x*W, y0 + H*.55, h2 + .03));
+    }
+    if(kind === 'alarge'){
+      b(3.8, .15, 3.8, 0x6a4a2a, 0, .07, 0); shell(3.6, 2, .1, col, .8);
+      const r1 = b(4.1, .14, 2.4, 0x3060a0, 0, 2.6, -.85); r1.rotation.x = .6; const r2 = b(4.1, .14, 2.4, 0x3060a0, 0, 2.6, .85); r2.rotation.x = -.6;
+      b(.4, 1, .4, 0x904030, 1.1, 3.0, -.6);                                         // chimney
+      [-1.3, 1.3].forEach(x=>win(.6, .5, .05, x, 1.3, 1.83));
+    } else if(kind === 'aapart'){
+      b(3.2, .15, 3.2, 0x505058, 0, .07, 0);
+      for(let f=0; f<3; f++){ const y0 = .1 + f*1.6; shell(3, 1.6, y0, col, f === 0 ? .8 : 0); b(3, .1, 3, 0x707078, 0, y0 + 1.6, 0);
+        if(f > 0){ b(1.2, .08, .6, 0x707078, 0, y0 + .05, 1.8); [-.58, .58].forEach(x=>b(.05, .4, .6, 0xc0c0c8, x, y0 + .25, 1.8)); b(1.2, .4, .05, 0xc0c0c8, 0, y0 + .25, 2.08); } }   // balconies
+      b(.5, .8, .05, 0xf0e0b0, 0, 5.3, 1.45);                                         // sign on the roof
+    } else {
+      // the mansion: two floors, columns, a gold trim, a pool out front
+      b(6.4, .2, 6.4, 0xd8d0c0, 0, .1, 0);
+      shell(5.6, 2, .2, col, 1.2); b(5.8, .15, 5.8, 0xc8a040, 0, 2.25, 0);
+      shell(5.6, 1.8, 2.3, col, 0); b(6, .2, 6, 0xc8a040, 0, 4.2, 0);
+      const r1 = b(6.2, .15, 3.6, 0x404050, 0, 4.9, -1.3); r1.rotation.x = .45; const r2 = b(6.2, .15, 3.6, 0x404050, 0, 4.9, 1.3); r2.rotation.x = -.45;
+      [-2.6, -1.3, 1.3, 2.6].forEach(x=>b(.25, 2.1, .25, 0xffffff, x, 1.25, 3.05));
+      b(5.8, .15, .9, 0xffffff, 0, 2.35, 3.1);                                        // porch roof
+      b(2.2, .12, 1.4, 0x40a0e0, -2, .14, 4.4); b(2.4, .1, .1, 0xffffff, -2, .2, 3.65); b(2.4, .1, .1, 0xffffff, -2, .2, 5.15);   // little pool
+      [-.8, .8].forEach(x=>b(.12, .5, .12, 0xc8a040, x, 5.6, 0));
+    }
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  };
+  // inside sizes for placing gadgets (local x/z), the floor height of each floor, and the vacuum's loop
+  const LAY = {animalhouse:{r:.7, ys:[.15], loop:1.6}, alarge:{r:1.2, ys:[.15], loop:2.3}, aapart:{r:1, ys:[.15, 1.8, 3.4], loop:2}, amansion:{r:2.2, ys:[.3, 2.4], loop:3.6}};
+  const live = [];                 // {m, home():bool, R}
+  function addGadgets(f){
+    const d = f.d, L = LAY[d.kind]; if(!L) return;
+    if(!d.gad) d.gad = roll({animalhouse:'small', alarge:'large', aapart:'apartment', amansion:'mansion'}[d.kind]);
+    if(f.gadG) f.g.remove(f.gadG);
+    const gg = f.gadG = new THREE.Group(); f.g.add(gg);
+    const spots = [[0, -1], [-1, 0], [1, 0], [-1, -1], [1, -1], [-.5, .4], [.5, .4]];
+    let si = 0;
+    d.gad.forEach((n, i)=>{
+      const o = model(n); let R = 0;
+      if(n === 'Robot Vacuum'){ R = L.loop; o.g.position.set(0, 0, 0); }
+      else if(n === 'Satellite Dish'){ o.g.position.set(-L.r*.6, d.kind === 'amansion' ? 5.2 : d.kind === 'aapart' ? 4.95 : d.kind === 'alarge' ? 3.2 : 2.3, -L.r*.4); }
+      else if(n === 'Hot Tub'){ o.g.position.set(1.6, .2, 4.4); }
+      else { const s = spots[si % spots.length], y = L.ys[Math.floor(si/spots.length*0 + si) % L.ys.length]; si++;
+        o.g.position.set(s[0]*L.r, y, s[1]*L.r); if(n === 'TV') o.g.position.z = -L.r - .05; }
+      gg.add(o.g); live.push({o, d, R});
+    });
+  }
+  const _af = addFurnitureObject;
+  addFurnitureObject = function(d){
+    const r = _af.apply(this, arguments);
+    try{ if(d && HKIND.test(d.kind)){ const f = furnObjs.find(q=>q.d === d); if(f) addGadgets(f); } }catch(e){ console.warn('LN-fancyhomes gadgets', e); }
+    return r;
+  };
+  furnObjs.forEach(f=>{ if(f.d && HKIND.test(f.d.kind)) try{ addGadgets(f); }catch(e){} });
+
+  /* ------------------------------------------------ block homes: size decides the type, stacked homes are apartments */
+  function blockStyle(h){
+    const s = save.bHomes[h.id] || {}, BH = window.__blockHomes, all = BH && BH.homes ? BH.homes : [];
+    if(s.style) return s.style;
+    const stack = all.filter(o=>o !== h && o.kind === 'house' && Math.abs(o.cx - h.cx) < 2 && Math.abs(o.cz - h.cz) < 2 && o.cd !== h.cd);
+    if(stack.length){ const st = stack.map(o=>(save.bHomes[o.id] || {}).style).find(Boolean); return st || (h.cells.length >= 25 ? 'mansion' : 'apartment'); }
+    return h.cells.length >= 25 ? 'mansion' : h.cells.length >= 9 ? 'large' : 'small';
+  }
+  function floorNo(h){ const BH = window.__blockHomes, all = (BH && BH.homes || []).filter(o=>o.kind === 'house' && Math.abs(o.cx - h.cx) < 2 && Math.abs(o.cz - h.cz) < 2); return all.filter(o=>o.cd > h.cd).length + 1; }
+  function label(h, s){
+    if(h.kind !== 'house') return 'Animal Pen  ';
+    const st = blockStyle(h), who = s.by ? 'Animal-Built ' : '';
+    return st === 'apartment' ? 'Animal Apartment (floor ' + floorNo(h) + ')  ' : st === 'mansion' ? (s.by ? 'Animal-Built Mansion' : 'Animal Mansion') + (floorNo(h) > 1 ? ' (upstairs)' : '') + '  ' : st === 'large' ? (s.by ? 'Animal-Built Large House  ' : 'Large Animal House  ') : (s.by ? 'Animal-Built House  ' : 'Animal Home  ');
+  }
+  function gadLine(list){ return list && list.length ? 'Has: ' + list.join(', ') : ''; }
+  const bG = new Map();            // block home id -> {grp, key}
+  function blockGadgets(){
+    const BH = window.__blockHomes, all = BH && BH.homes ? BH.homes : [];
+    for(const h of all){
+      const s = save.bHomes[h.id]; if(!s || h.kind !== 'house') continue;
+      if(!s.gad && s.res.length) s.gad = roll(blockStyle(h)).filter(n=>n !== 'Satellite Dish' && n !== 'Hot Tub');
+      const key = h.cells.length + '|' + (s.gad || []).join(',');
+      let e = bG.get(h.id); if(e && e.key === key) continue;
+      if(e){ scene.remove(e.grp); live.splice(0, live.length, ...live.filter(q=>q.bid !== h.id)); }
+      const grp = new THREE.Group(); scene.add(grp); e = {grp, key}; bG.set(h.id, e);
+      (s.gad || []).forEach((n, i)=>{ const c = h.cells[(i*5 + 2) % h.cells.length], o = model(n); o.g.position.set(c[0] + .5, -c[1] - 1, c[2] + .5); o.g.rotation.y = (i % 4)*Math.PI/2; o.g.scale.setScalar(.8);
+        if(n === 'Robot Vacuum'){ o.g.position.set(h.cx, -h.cd - 1, h.cz); }
+        grp.add(o.g); live.push({o, bid:h.id, R:n === 'Robot Vacuum' ? Math.max(.3, Math.min(2, Math.sqrt(h.cells.length)/2 - .6)) : 0}); });
+    }
+    for(const [id, e] of bG) if(!all.some(h=>h.id === id)){ scene.remove(e.grp); bG.delete(id); live.splice(0, live.length, ...live.filter(q=>q.bid !== id)); }
+  }
+
+  /* ------------------------------------------------ the animals use their gadgets */
+  const homeNow = q=>q.d ? (q.d.res || []).some(r=>!r.out) : !!(save.bHomes[q.bid] && save.bHomes[q.bid].res.length);
+  let useT = 25, vidT = 150, scanT = 1, t = 0;
+  function nearHomes(){
+    const out = [];
+    furnObjs.forEach(f=>{ if(f.d && HKIND.test(f.d.kind) && (f.d.res || []).length && (f.d.gad || []).length && Math.hypot(f.d.x - P.x, f.d.z - P.z) < 40) out.push({title:TITLE[f.d.kind], res:f.d.res, gad:f.d.gad}); });
+    const BH = window.__blockHomes; (BH && BH.homes || []).forEach(h=>{ const s = save.bHomes[h.id]; if(s && s.res.length && (s.gad || []).length && Math.hypot(h.cx - P.x, h.cz - P.z) < 40) out.push({title:label(h, s).trim(), res:s.res, gad:s.gad}); });
+    return out;
+  }
+  function tick(dt){
+    t += dt;
+    if(realm !== 0) return;
+    scanT -= dt; if(scanT <= 0){ scanT = 2; try{ blockGadgets(); }catch(e){ console.warn('LN-fancyhomes block gadgets', e); } }
+    for(const q of live){ if(!q.o.anim) continue; if(q.d && !furnObjs.some(f=>f.d === q.d)) continue;
+      const near = q.d ? Math.hypot(q.d.x - P.x, q.d.z - P.z) < 60 : true; if(!near) continue;
+      try{ q.o.anim(t, homeNow(q), dt, q.R); }catch(e){} }
+    useT -= dt;
+    if(useT <= 0){ useT = 35 + Math.random()*25;
+      const H = nearHomes(); if(H.length){ const h = pick(H), g = pick(h.gad), r = pick(h.res); toast('The ' + r.name + ' in your ' + h.title + ' ' + pick(G[g].act) + '.');
+        if(Math.random() < .3) newsQ('NEWS: A ' + r.name + ' living in an ' + h.title + ' ' + pick(G[g].act) + '. Neighbours say it is the fanciest animal in town.'); } }
+    vidT -= dt;
+    if(vidT <= 0){ vidT = 150 + Math.random()*90;
+      const H = nearHomes().filter(h=>h.gad.some(g=>g === 'Mobile Phone' || g === 'Computer'));
+      if(H.length){ const h = pick(H), r = pick(h.res), n = 100 + 50*h.gad.length; save.coins += n; persist();
+        toast('The ' + r.name + ' from your ' + h.title + ' posted a funny video online and it went viral! +$' + n); } }
+  }
+  // the sound of the robot vacuum is too quiet to hear, which is how robot vacuums like it
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ if(startEl.style.display !== 'flex' && !won) tick(dt); }catch(e){ console.warn('LN-fancyhomes', e); }
+  })(last);
+
+  /* ------------------------------------------------ animals build bigger houses too */
+  const bName = n=>{ try{ return blockIdOf(n); }catch(e){ return 0; } };
+  function style(){ const r = Math.random(); return r < .45 ? {k:'small', W:5, H:4} : r < .65 ? {k:'large', W:7, H:4} : r < .83 ? {k:'apartment', W:5, H:12} : {k:'mansion', W:9, H:8}; }
+  // fills plan with [x, d, z, block] from the bottom up
+  function plan(out, x0, z0, ST, wall, roof){
+    const W = ST.W, glass = bName('Skyscraper Glass') || wall, brick = bName('City Brick') || wall, w = ST.k === 'large' ? wall : brick;
+    const doorX = Math.floor(W/2), slabs = ST.k === 'apartment' ? [-4, -8] : ST.k === 'mansion' ? [-4] : [], top = -ST.H;
+    for(let d=-1; d>top; d--){
+      for(let x=0; x<W; x++) for(let z=0; z<W; z++){
+        const edge = x === 0 || x === W - 1 || z === 0 || z === W - 1;
+        if(slabs.indexOf(d) >= 0){ out.push([x0 + x, d, z0 + z, edge ? w : roof]); continue; }
+        if(!edge) continue;
+        if(z === W - 1 && d >= -2 && (x === doorX || (ST.k === 'mansion' && x === doorX - 1))) continue;   // the front door
+        const corner = (x === 0 || x === W - 1) && (z === 0 || z === W - 1), lvl = ((-d - 1) % 4), side = x === 0 || x === W - 1;
+        const isWin = !corner && lvl === 1 && (ST.k !== 'large' || side) && ((side ? z : x) % 2 === 1) && !(z === W - 1 && Math.abs(x - doorX) <= 1 && d >= -3);
+        out.push([x0 + x, d, z0 + z, isWin ? glass : w]);
+      }
+    }
+    for(let x=0; x<W; x++) for(let z=0; z<W; z++) out.push([x0 + x, top, z0 + z, roof]);
+  }
+  window.__fancy = {style, plan, label, gadLine, blockStyle, roll, G, TITLE, live, title:d=>TITLE[d.kind] || 'Animal House', addGadgets, blockGadgets, nearHomes, useNow:()=>{ useT = 0; }, vidNow:()=>{ vidT = 0; },
+    place:(name, x, d, z)=>{ const it = save.furnItems[name]; spawnPlaced(name, it.kind, it.col, null, {t:'i', key:name}, x, d, z, 0); }};
+})();
+/* LN-fancyhomes end */
+
 
 
 
