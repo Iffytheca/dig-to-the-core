@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Dig to the Core</title>
+<title>Deep Chaos Diggers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   *{box-sizing:border-box}
@@ -120,7 +120,7 @@
 <div id="start" class="overlay">
   <div class="box" style="max-height:94vh;overflow:auto">
     <div style="font-size:54px;line-height:1">&#9935;</div>
-    <h1 id="gameTitle" style="font-size:40px">DIG TO THE CORE</h1>
+    <h1 id="gameTitle" style="font-size:40px">DEEP CHAOS DIGGERS</h1>
     <div style="opacity:.8">Tunnel through the layers of the Earth. Each one is tougher than the last &mdash; sell what you dig, upgrade your tools, and break through to the core.</div>
     <button class="btn" id="play" style="font-size:20px;padding:13px 54px">&#9654; PLAY</button>
     <div style="margin-top:14px">
@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 99 (Oct 29)';
+  window.__BUILD = 'Build 100 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -4601,8 +4601,8 @@ refreshMineBtn(); document.getElementById('btnMine').onclick = toggleMineAny;
   bf.textContent = '\uD83E\uDD21 Hilarious Mode: ' + (HILARIOUS ? 'ON' : 'OFF');
   bf.onclick = ()=>{ try{ localStorage.setItem('digcore_funny', HILARIOUS ? '0' : '1'); }catch(e){} location.reload(); };
   if(HILARIOUS){
-    document.getElementById('gameTitle').textContent = 'DIG TO THE CHEESE CORE \uD83E\uDD21';
-    document.title = 'Dig to the Cheese Core';
+    document.getElementById('gameTitle').textContent = 'DEEP CHEESE DIGGERS';
+    document.title = 'Deep Cheese Diggers';
     document.getElementById('extras').parentElement.style.display = 'none';
     document.getElementById('shoptitle').innerHTML = '&#127881; Sir Honks-a-Lot\'s Emporium';
     document.getElementById('shopquote').textContent = '"HONK! Welcome, goofball! Everything is slightly damp and 100% legal."';
@@ -4838,7 +4838,7 @@ function lnFanfare(id){
 })();
 /* LN-core end */
 if(CHAOS){
-  document.getElementById('gameTitle').textContent = (HILARIOUS ? 'DIG TO THE CHEESE CORE' : 'DIG TO THE CORE') + ': CHAOS';
+  document.getElementById('gameTitle').textContent = (HILARIOUS ? 'DEEP CHEESE DIGGERS' : 'DEEP CHAOS DIGGERS') + ': CHAOS MODE';
   document.getElementById('shopquote').textContent = HILARIOUS ? '"*honk* P-please don\'t shoot! Take anything you want!"' : '"P-please don\'t shoot! Everything is for sale, just put the gun down!"';
 }
 function unlockChaos(){
