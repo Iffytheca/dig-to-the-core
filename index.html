@@ -16879,6 +16879,11 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     }
     return real.trim();
   }
+  function fakeNewsFor(name){                               /* LN-fakenews3: a made-up fact, different from the Fact line */
+    const num = (k, a, b)=>a + Math.floor(strHash(name+k+'fn')*(b-a+1));
+    const all = FAKE_T.concat(FAKE2), t = all[Math.floor(strHash(name+'fakenews3')*all.length)];
+    return t.split('{n}').join(name).split('{x}').join(num('x',3,999)).split('{y}').join(num('y',1066,1999)).split('{z}').join(num('z',1,12));
+  }
   function factFor(ref){
     const inf = refInfo(ref) || (ref.slice(0,2) === 'u:' ? hotInfo(ref) : null); if(!inf) return null;
     const name = inf.name, mf = window.__mf, lines = [];
@@ -16904,6 +16909,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
       '<div style="font-weight:800;font-size:16px;color:#ffd54a;margin-right:30px">'+f.name+'</div>'+
       '<div style="opacity:.8;font-size:12px;margin:4px 0 8px">'+f.lines.join('<br>')+'</div>'+
       '<div><b style="color:#7fd0ff">Fact:</b> '+f.fact+'</div>'+
+      '<div style="margin-top:8px"><b style="color:#ff9a4a">FAKE NEWS (100% made up):</b> '+fakeNewsFor(f.name)+'</div>'+   /* LN-fakenews3 */
       '<div style="margin-top:8px;font-size:11px;opacity:.55">Some facts are real, some are totally made up, and some are a bit of both. Can you tell which?</div>';
     pop.style.display = 'block'; blip(880,.06,.08,'triangle');
     document.getElementById('factX').onclick = e=>{ e.stopPropagation(); pop.style.display = 'none'; };
@@ -17045,9 +17051,9 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     if(lv.length && r < .15) return lv[Math.floor(Math.random()*lv.length)];
     const pick = a=>a[Math.floor(Math.random()*a.length)];
     if(window.__newsQ && window.__newsQ.length && (headline.alt = !headline.alt)) return window.__newsQ.shift();   /* LN-fakenews2 */
-    if(r < .3) return 'BREAKING: '+pick(FUNNY);
-    if(r < .45) return 'NEWS: '+pick(NORMAL);
-    if(r < .6) return 'IMPOSSIBLE NEWS: '+pick(IMPOSSIBLE);
+    if(r < .25) return 'BREAKING: '+pick(FUNNY);
+    if(r < .35) return 'NEWS: '+pick(NORMAL);
+    if(r < .5) return 'IMPOSSIBLE NEWS: '+pick(IMPOSSIBLE);
     return 'FAKE NEWS: '+pick(FAKE_NEWS);
   }
   const st = document.createElement('style');
@@ -17055,12 +17061,13 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     '#newsbar .lbl{position:absolute;left:0;top:0;bottom:0;padding:0 8px;background:#ffd54a;color:#4a1010;font-weight:900;letter-spacing:1px;z-index:2}'+
     '#newsbar .txt{position:absolute;top:0;white-space:nowrap;will-change:transform}'+
     '#newsX{position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:5px;border:0;background:rgba(0,0,0,.4);color:#fff;font:800 11px system-ui;cursor:pointer;pointer-events:auto;z-index:3}';
+  st.textContent += '@media (max-width:900px){#newsbar{left:8px;right:8px;top:auto;bottom:4px;height:22px;font-size:12px;line-height:22px}}';   /* LN-fakenews3 */
   document.head.appendChild(st);
   const bar = document.createElement('div'); bar.id = 'newsbar';
   bar.innerHTML = '<span class="lbl">DIG NEWS</span><span class="txt"></span><button id="newsX" title="Hide the news">X</button>';
   document.body.appendChild(bar);
   const txt = bar.querySelector('.txt'); let x = 0, w = 0, hidden = false;
-  bar.querySelector('#newsX').onclick = e=>{ e.stopPropagation(); hidden = true; bar.style.display = 'none'; };
+  bar.querySelector('#newsX').onclick = e=>{ e.stopPropagation(); hidden = true; bar.style.display = 'none'; setTimeout(()=>{ hidden = false; next(); }, 90000); };   /* LN-fakenews3: comes back after 90 s */
   function next(){ txt.textContent = headline(); w = txt.offsetWidth; x = bar.clientWidth; }
   next();
   let last = performance.now();
@@ -26963,6 +26970,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 500);
 })();
 /* LN-unireadd end */
+(function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
+  let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
+  if(!pend || !BLOCKS.some(b=>b.name === 'Too Tuff Rock')) return;
+  try{ localStorage.setItem('digcore_gift_tuff', '1'); addItem('Too Tuff Rock', 20, true); persist(); }catch(e){ console.warn('LN-tuffback', e); }
+})();
 
 
 
