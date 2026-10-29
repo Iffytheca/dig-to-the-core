@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 96 (Oct 29)';
+  window.__BUILD = 'Build 97 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27314,6 +27314,89 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__alive = {ids, anim, NEW, GAD, gadMeshes, hitCitizen, hitAlien, inventNow:()=>{ invT = 0; inventTick(.01); }, dead};
 })();
 /* LN-alive end */
+/* LN-alientowns start: Novaria towns get a religion and a temple, a big floating name tag like Earth towns, and every alien has a name (Irfan 2026-10-29) */
+(function(){
+  const U = window.__uni; if(!U || !U.town3D || !U.civ) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const RELIG = [
+    {n:'The Church of the Great Glorp', sym:0x60ff90, saying:'Glorp be with you.'},
+    {n:'The Moon Bunny Faith',          sym:0xffffff, saying:'Hop in peace.'},
+    {n:'The Order of the Twin Suns',    sym:0xffd040, saying:'Two suns, zero problems.'},
+    {n:'The Black Hole Believers',      sym:0x8040ff, saying:'Everything comes back eventually. Probably.'},
+    {n:'The Crystal Temple',            sym:0x80e0ff, saying:'Shine on, little crystal.'},
+    {n:'The Way of the Comet',          sym:0xff8040, saying:'Go fast, leave a nice tail.'},
+    {n:'The Gravity Monks',             sym:0xc0c0ff, saying:'What goes up is our friend.'}
+  ];
+  const FIRST = ['Zib','Glonk','Quib','Mexa','Plorp','Vix','Nebby','Tork','Yumi','Zazz','Blib','Krell','Ooma','Fizz','Juno','Pib','Raxx','Snerp','Tilda','Wob'];
+  const JOB = ['Baker','Pilot','Inventor','Guard','Farmer','Teacher','Doctor','Builder','Priest','Painter','Star Gazer','Robot Fixer'];
+  const T = U.TOWNS, C = U.civ, T3 = U.town3D;
+  // a religion for every town (kept in the save)
+  C.forEach((c, i)=>{ if(c.relig == null) c.relig = (i*3 + Math.floor(Math.random()*RELIG.length)) % RELIG.length; });
+  function tagSprite(lines, col, w, h){
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 64 + lines.length*44; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
+    lines.forEach((l, k)=>{ x.font = (k ? 'bold 26px' : 'bold 40px') + ' system-ui,sans-serif'; const y = 36 + k*44; x.strokeText(l, 320, y); x.fillStyle = k ? (k === 1 ? '#ffe080' : '#ffffff') : col; x.fillText(l, 320, y); });
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, depthTest:false}));
+    sp.scale.set(w, w*cv.height/640, 1); return sp;
+  }
+  const hex = c=>'#' + c.toString(16).padStart(6, '0');
+  // the big town tag
+  const tags = T3.map(()=>null), tagKey = T3.map(()=>'');
+  function townLines(i){ const c = C[i], R = RELIG[c.relig]; return [T[i].n, 'Religion: ' + R.n, 'Level ' + c.lvl + '  -  ' + (c.pop || 0).toLocaleString() + ' aliens  -  ' + ((c.inv || []).length) + ' inventions']; }
+  function refreshTag(i){
+    const L = townLines(i), key = L.join('|'); if(key === tagKey[i]) return; tagKey[i] = key;
+    if(tags[i]) T3[i].g.remove(tags[i]);
+    const s = tagSprite(L, hex(T[i].col), 16); s.position.set(0, 15 + C[i].lvl*1.2, 0); T3[i].g.add(s); tags[i] = s;
+  }
+  // the temple: a stepped pyramid with a glowing symbol of the town's religion
+  const temples = T3.map(()=>null);
+  function buildTemple(i){
+    if(temples[i]) T3[i].g.remove(temples[i]);
+    const R = RELIG[C[i].relig], g = new THREE.Group(); g.position.set(-14, 0, -4);
+    [[6, 1.2, 0x4a3a6a], [4.6, 1.2, 0x5a4a80], [3.2, 1.2, 0x6a5a98]].forEach(([w, h, col], k)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), new THREE.MeshLambertMaterial({color:col})); m.position.y = k*1.2 + .6; g.add(m); });
+    const sym = new THREE.Mesh(new THREE.OctahedronGeometry(.9), new THREE.MeshLambertMaterial({color:R.sym, emissive:R.sym, emissiveIntensity:.8})); sym.position.y = 5; g.add(sym); g.userData.sym = sym;
+    const s = tagSprite([R.n], '#ffe080', 7); s.position.y = 6.6; g.add(s);
+    T3[i].g.add(g); temples[i] = g;
+  }
+  // every alien gets a name and a job
+  T3.forEach((o, i)=>o.aliens.forEach((a, k)=>{
+    a.nm = FIRST[(i*7 + k*5) % FIRST.length] + ' the ' + JOB[(i*5 + k*3) % JOB.length];
+    const s = tagSprite([a.nm], hex(T[i].col), 2.6); s.position.y = 2.4; a.g.add(s); a.tag = s;
+  }));
+  T3.forEach((o, i)=>{ buildTemple(i); refreshTag(i); });
+  // talking: F near an alien says its name, job and religion
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || !locked || !U.onUni || !U.onUni()) return;
+    const v = new THREE.Vector3();
+    for(let i=0;i<T3.length;i++) for(const a of T3[i].aliens){ if(a.dead) continue; a.g.getWorldPosition(v); if(Math.hypot(v.x - P.x, v.z - P.z) < 3){
+      const R = RELIG[C[i].relig]; setTimeout(()=>toast(a.nm + ' of ' + T[i].n + ': "Hello, Earth miner! I follow ' + R.n + '. ' + R.saying + '"'), 40); return; } }
+  });
+  // religions spread, split and hold festivals
+  let rT = 70;
+  function religTick(dt){
+    rT -= dt; if(rT > 0) return; rT = 70 + Math.random()*70;
+    const i = Math.floor(Math.random()*T.length), j = (i + 1 + Math.floor(Math.random()*(T.length - 1))) % T.length, r = Math.random();
+    if(r < .35 && C[i].relig !== C[j].relig){ C[j].relig = C[i].relig; newsQ('SPACE NEWS: ' + RELIG[C[i].relig].n + ' spread from ' + T[i].n + ' to ' + T[j].n + '. ' + RELIG[C[i].relig].saying); buildTemple(j); }
+    else if(r < .5){ const k = Math.floor(Math.random()*RELIG.length); if(k !== C[i].relig){ C[i].relig = k; newsQ('SPACE NEWS: The aliens of ' + T[i].n + ' now follow ' + RELIG[k].n + '. Their old temple was turned into a gift shop.'); buildTemple(i); } }
+    else newsQ('SPACE NEWS: ' + T[i].n + ' held a festival for ' + RELIG[C[i].relig].n + '. ' + pick(['There was glowing cake.', 'Everyone floated for an hour.', 'A UFO did a loop the loop.', 'The Moon Bunny gave a speech. Nobody understood it.']));
+    persist();
+  }
+  let last = performance.now(), tagT = 0;
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      temples.forEach(g=>{ if(g && g.userData.sym) g.userData.sym.rotation.y += dt*1.2; });
+      T3.forEach(o=>o.aliens.forEach(a=>{ if(a.tag) a.tag.visible = !a.dead; }));
+      tagT -= dt; if(tagT <= 0){ tagT = 2; T3.forEach((o, i)=>refreshTag(i)); }
+      if(startEl.style.display !== 'flex' && !won) religTick(dt);
+    }catch(e){ console.warn('LN-alientowns', e); }
+  })(last);
+  window.__alienTowns = {RELIG, refreshTag, buildTemple, tags, temples, religNow:()=>{ rT = 0; religTick(.01); }};
+})();
+/* LN-alientowns end */
+
 
 (function(){ /* LN-tuffback: Irfan 2026-10-29 08:27 "re add too tuff block and dont add too tuff block" */
   let pend = false; try{ pend = !localStorage.getItem('digcore_gift_tuff'); }catch(e){}
