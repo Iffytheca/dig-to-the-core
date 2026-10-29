@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 92 (Oct 29)';
+  window.__BUILD = 'Build 93 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -6903,6 +6903,7 @@ function buildAnimal(type){
 }
 function spawnAnimal(type, x, z){
   if(CHAOS && CHAOS_SWAP[type]) type = CHAOS_SWAP[type]();
+  if(!AD[type]){ console.warn('unknown animal kind', type); type = 'duckling'; }   /* LN-animalfix */
   const d = AD[type], g = buildAnimal(type), gy = groundTop(Math.floor(x), 3, Math.floor(z));
   const a = {type, d, g, pos:new THREE.Vector3(x, d.fly ? gy+2.5 : gy, z), vy:0, hp:d.hp, max:d.hp, t:Math.random()*10, dir:Math.random()*6.283, wanderT:Math.random()*3, fleeT:0, moving:false, ang:0};
   g.position.copy(a.pos); scene.add(g); animals.push(a); return a;
