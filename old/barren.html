@@ -3675,7 +3675,12 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   updateShop = function(){};
   PICKS.length = PICKS.findIndex(function(p){ return /MIGHTY/.test(p.name); }) + 1;
   /* the Core Chamber has walls (and the Heart is not minable) */
-  heartMined = true;
+  heartMined = false;
+  mineHeart = function(){      /* the Heart never disappears, you can keep mining it */
+    burst(heart.position.x, heart.position.y, heart.position.z, 9, 50); shake = .25; blip(80,.6,.2,'sawtooth');
+    toast('You mined the Heart of the Earth!');
+  };
+  var ck = document.getElementById('clock'); if(ck && ck.parentElement) ck.parentElement.style.display = 'none';   /* no day timer */
   var wm = new THREE.MeshLambertMaterial({color:0x6b2410, emissive:0x3a1206}), cy = -(D+5.5);
   [[X0-.5,(Z0+Z1)/2,1,Z1-Z0+2],[X1+.5,(Z0+Z1)/2,1,Z1-Z0+2],[(X0+X1)/2,Z0-.5,X1-X0,1],[(X0+X1)/2,Z1+.5,X1-X0,1]].forEach(function(w){
     var m = new THREE.Mesh(new THREE.BoxGeometry(w[2],12,w[3]), wm); m.position.set(w[0], cy, w[1]); scene.add(m); });
