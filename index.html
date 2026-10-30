@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 115 (Oct 30)';
+  window.__BUILD = 'Build 116 (Oct 30)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -1545,6 +1545,7 @@ const ALL_LAYERS = [
   {name:'Hot Metal',  th:6, h:170, v:550,  base:[214,138,72], amp:34, sp:[[255,232,170],[150,78,38]],       p:.25, glow:.75},
   {name:'Silicate Rock', th:6, h:62,  v:120,  base:[112,126,84],  amp:24, sp:[[176,196,104],[78,92,58],[210,140,70]], p:.24, glow:.1},
   {name:'Deeper Core',  th:8, h:560, v:2000, base:[186,222,255], amp:36, sp:[[255,255,255],[110,170,255]],        p:.3,  glow:1},
+  {name:'Even Deeper Core',  th:8, h:900, v:5000, base:[214,176,255], amp:36, sp:[[255,255,255],[255,150,235]],        p:.3,  glow:1},
   // ---- optional extra layers (toggle them in the main menu) ----
   {name:'Sand',         extra:1, th:3, h:1.5, v:3,   base:[222,200,140],amp:18, sp:[[240,224,170],[196,172,112]], p:.15, glow:0},
   {name:'Gravel',       extra:1, th:3, h:4.5, v:10,  base:[120,116,110],amp:40, sp:[[160,156,150],[80,76,72]],    p:.3,  glow:0},
@@ -1857,7 +1858,8 @@ if(EXTRA){                                          // Extra Chaos: physics gave
     'Magma':['Frozen Magma',[90,200,230],[[220,255,255],[60,120,190]],.3],
     'Hot Metal':['Warm Nothing',[190,100,220],[[250,200,255],[120,60,160]],.25],
     'Core':['Soft Core',[255,170,230],[[255,255,255],[150,255,240]],.3],
-    'Deeper Core':['Impossible Core',[170,255,235],[[255,255,255],[200,120,255]],.3]
+    'Deeper Core':['Impossible Core',[170,255,235],[[255,255,255],[200,120,255]],.3],
+    'Even Deeper Core':['Wrong Way Core',[255,170,235],[[255,255,255],[150,255,240]],.3]
   };
   const POOL = ['Tilted Granite','Hiccup Rock','Dizzy Slate','Shy Quartz','Folded Flint','Hollow Anvil','Maybe Marble','Lopsided Ore','Gentle Obsidian','Tipsy Tuff','Backward Sand','Polite Pumice','Nervous Shale','Sleepy Feldspar','Crooked Jasper','Mumbling Mica','Wonky Agate','Tidy Chaos Rock','Sulking Slate','Giggling Gneiss','Reversed Chalk','Odd Ore','Frowning Flint','Borrowed Basalt'];
   const exQ = lnCpa('extraLayerQuips', ['Physics gave up here.','Down is more of a suggestion.','This stone is facing the wrong way.','The rules were optional.','Gravity is on a break.']);
@@ -2009,7 +2011,7 @@ const REAL_ORES = [
   {cat:'crystal',  name:'Emerald',  hosts:['Rock','Hard Rock','Bedrock'],                     veins:4,  size:[1,3], v:300,  col:[60,230,120],  p:.4,  glow:.45},
   {cat:'crystal',  name:'Sapphire', hosts:['Bedrock','Silicate Rock','Hot Rock'],             veins:4,  size:[1,3], v:380,  col:[70,120,255],  p:.4,  glow:.5},
   {cat:'crystal',  name:'Ruby',     hosts:['Silicate Rock','Hot Rock','Magma'],               veins:4,  size:[1,3], v:500,  col:[255,60,84],   p:.4,  glow:.55},
-  {cat:'crystal',  name:'Core',     hosts:['Core','Deeper Core'],                             veins:5,  size:[1,3], v:2500, col:[255,255,210], p:.45, glow:.9},
+  {cat:'crystal',  name:'Core',     hosts:['Core','Deeper Core','Even Deeper Core'],                             veins:5,  size:[1,3], v:2500, col:[255,255,210], p:.45, glow:.9},
   // ---- treasure (value is a gamble: half to double) ----
   {cat:'treasure', name:'Treasure Chest', hosts:['Dirt','Clay','Rock','Hard Rock','Bedrock','Hot Rock'], veins:2, size:[1,1], v:750,  col:[255,196,60], p:.55, glow:.15},
   {cat:'treasure', name:'Ancient Relic',  hosts:['Hard Rock','Silicate Rock','Magma','Hot Metal'],       veins:1, size:[1,1], v:1800, col:[255,236,140],p:.55, glow:.4},
@@ -28124,7 +28126,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     ['w3','The World','The Great Dirt Shortage of Year 3','Once, all the dirt in the world went missing. It turned out it was just under the grass the whole time. Nobody had looked.','scroll'],
     ['w4','The World','Why Rocks Get Harder Deeper Down','The deeper rocks are older, and old rocks have had more time to work out at the rock gym.','scroll'],
     ['w5','The World','The Core','Scientists say the Core is hot metal. The Core says it is just warm, and a little shy. Please knock before entering.','deep'],
-    ['w6','The World','The Deeper Core','Below the Core is the Deeper Core. Below that is the Even Deeper Core. Nobody has gone further, because the stairs are broken.','deep'],
+    ['w6','The World','The Deeper Core','Below the Core is the Deeper Core. Below that is the Even Deeper Core. People used to say nobody had gone further because the stairs were broken. The stairs are fixed now. Keep digging.','deep'],
     ['w7','The World','The Cheese Core Theory','Some miners believe the centre of the world is made of cheese. They are called Cheese Core Truthers. They are always hungry.','scroll'],
     ['b1','The Bobs','Who Is Bob?','Nobody knows where the first Bob came from. The second Bob came from the first Bob asking "can there be two of me?" There could. There were. There are now thousands.','scroll'],
     ['b2','The Bobs','The Bob Election','Bob ran for mayor against Bob. Bob won. Bob demanded a recount. Bob still won.','scroll'],
