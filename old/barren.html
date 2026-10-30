@@ -91,7 +91,7 @@
   <div id="hpwrap" style="position:absolute;left:50%;bottom:16px;width:240px;margin-left:-120px;height:14px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);border-radius:7px;overflow:hidden"><div id="hpbar" style="height:100%;width:100%;background:#e0453a"></div></div>
   <div id="feed" style="position:absolute;left:14px;bottom:78px;display:flex;flex-direction:column;gap:4px;align-items:flex-start"></div>
   <div id="pickinfo" class="panel"></div>
-  <div id="help" class="panel"><kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br><kbd>Hold Click</kbd> dig &nbsp; <kbd>R</kbd> surface &nbsp; <kbd>E</kbd> main menu</div>
+  <div id="help" class="panel"><kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br><kbd>Hold Click</kbd> dig &nbsp; <kbd>B</kbd> shop &nbsp; <kbd>R</kbd> surface &nbsp; <kbd>E</kbd> main menu</div>
 </div>
 <div id="vig"></div>
 
@@ -114,7 +114,7 @@
       <div class="keys" style="margin-top:2px">
         <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br>
         <kbd>Hold left click</kbd> dig the block you aim at<br>
-        <kbd>R</kbd> teleport to the surface &nbsp; <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause
+        <kbd>B</kbd> shop &nbsp; <kbd>R</kbd> teleport to the surface &nbsp; <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause
       </div>
     </div>
     <div style="margin-top:14px;text-align:left">
@@ -3672,7 +3672,7 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   shopG.visible = false; rocketHome.visible = false; rocketUp.visible = false;
   for(var si = solids.length-1; si >= 0; si--){ var b = solids[si];
     if((b[0] >= SHOP.x-2.2 && b[1] <= SHOP.x+2.2 && b[4] >= SHOP.z-2 && b[5] <= SHOP.z+2) || (b[0] >= ROCKET_HOME.x-1.4 && b[1] <= ROCKET_HOME.x+1.4 && b[4] >= ROCKET_HOME.z-1.4 && b[5] <= ROCKET_HOME.z+1.4)) solids.splice(si,1); }
-  openShop = function(){}; updateShop = function(){};
+  updateShop = function(){};
   PICKS.length = PICKS.findIndex(function(p){ return /MIGHTY/.test(p.name); }) + 1;
   /* the Core Chamber has walls (and the Heart is not minable) */
   heartMined = true;
@@ -3682,7 +3682,7 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   /* the only extra keys: B (shop), R (surface), E (main menu); everything else does nothing */
   addEventListener('keydown', function(e){
     if(e.target && e.target.tagName === 'INPUT') return;
-    if(/^(KeyB|KeyK|KeyG|KeyT|KeyI|KeyF|KeyL|KeyM|KeyP|KeyO|KeyZ|KeyX|Digit[0-9])$/.test(e.code)){ e.stopImmediatePropagation(); e.preventDefault(); }
+    if(/^(KeyK|KeyG|KeyT|KeyI|KeyF|KeyL|KeyM|KeyP|KeyO|KeyZ|KeyX|Digit[0-9])$/.test(e.code)){ e.stopImmediatePropagation(); e.preventDefault(); }
   }, true);
   /* no Reset, Sound or Lighting buttons */
   ['btnReset','btnSound','btnLight'].forEach(function(id){ var b = document.getElementById(id); if(b) b.style.display = 'none'; });
@@ -3710,6 +3710,12 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   var obk2 = breakBlock; breakBlock = function(h){ ghostOff(true); return obk2(h); };
   addEventListener('mousedown', function(e){ if(e.button === 2){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
   addEventListener('wheel', function(e){ e.stopImmediatePropagation(); }, true);
+  addEventListener('keydown', function(e){      /* B: the shop menu, from anywhere */
+    if(e.code !== 'KeyB' || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.target && e.target.tagName === 'INPUT') return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    if($('shop').style.display === 'flex') closeShop(); else if(!invOpen) openShop();
+  }, true);
   /* no badges */
   award = function(){}; checkBadges = function(){};
   var mb = document.getElementById('menubadges'); if(mb && mb.parentElement) mb.parentElement.style.display = 'none';
