@@ -91,7 +91,7 @@
   <div id="hpwrap" style="position:absolute;left:50%;bottom:16px;width:240px;margin-left:-120px;height:14px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.25);border-radius:7px;overflow:hidden"><div id="hpbar" style="height:100%;width:100%;background:#e0453a"></div></div>
   <div id="feed" style="position:absolute;left:14px;bottom:78px;display:flex;flex-direction:column;gap:4px;align-items:flex-start"></div>
   <div id="pickinfo" class="panel"></div>
-  <div id="help" class="panel"><kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br><kbd>Hold Click</kbd> dig / shoot &nbsp; <kbd>G</kbd> guns &nbsp; <kbd>T</kbd> reload &nbsp; <kbd>F</kbd> talk to shopkeeper &nbsp; <kbd>I</kbd> items/craft &nbsp; <kbd>B</kbd> blueprint &nbsp; <kbd>Right-click</kbd> place &nbsp; <kbd>R</kbd> surface &nbsp; <kbd>E</kbd> main menu</div>
+  <div id="help" class="panel"><kbd>WASD</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br><kbd>Hold Click</kbd> dig &nbsp; <kbd>R</kbd> surface &nbsp; <kbd>E</kbd> main menu</div>
 </div>
 <div id="vig"></div>
 
@@ -114,8 +114,7 @@
       <div class="keys" style="margin-top:2px">
         <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br>
         <kbd>Hold left click</kbd> dig the block you aim at<br>
-         &nbsp; <kbd>R</kbd> teleport to the surface<br>
-        <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause &nbsp;  &nbsp; <kbd>G</kbd> switch gun &nbsp; <kbd>T</kbd> reload &nbsp;  &nbsp; <kbd>Right-click</kbd> place a block &nbsp; <kbd>Wheel / 1-9</kbd> pick block
+        <kbd>R</kbd> teleport to the surface &nbsp; <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause
       </div>
     </div>
     <div style="margin-top:14px;text-align:left">
@@ -3680,6 +3679,37 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   var wm = new THREE.MeshLambertMaterial({color:0x6b2410, emissive:0x3a1206}), cy = -(D+5.5);
   [[X0-.5,(Z0+Z1)/2,1,Z1-Z0+2],[X1+.5,(Z0+Z1)/2,1,Z1-Z0+2],[(X0+X1)/2,Z0-.5,X1-X0,1],[(X0+X1)/2,Z1+.5,X1-X0,1]].forEach(function(w){
     var m = new THREE.Mesh(new THREE.BoxGeometry(w[2],12,w[3]), wm); m.position.set(w[0], cy, w[1]); scene.add(m); });
+  /* the only extra keys: B (shop), R (surface), E (main menu); everything else does nothing */
+  addEventListener('keydown', function(e){
+    if(e.target && e.target.tagName === 'INPUT') return;
+    if(/^(KeyB|KeyK|KeyG|KeyT|KeyI|KeyF|KeyL|KeyM|KeyP|KeyO|KeyZ|KeyX|Digit[0-9])$/.test(e.code)){ e.stopImmediatePropagation(); e.preventDefault(); }
+  }, true);
+  /* no Reset, Sound or Lighting buttons */
+  ['btnReset','btnSound','btnLight'].forEach(function(id){ var b = document.getElementById(id); if(b) b.style.display = 'none'; });
+  Array.prototype.forEach.call(document.querySelectorAll('div,span,p'), function(el){ if(el.children.length < 8 && /^\s*In-game shortcuts/.test(el.textContent) && el.textContent.length < 90) el.style.display = 'none'; });
+  /* mining does not crack the block: it slowly turns transparent until it is gone */
+  var ghost = null, ghostIdx = 0, ghostVal = 0, ghostKey = '';
+  function ghostOff(restore){ if(!ghost) return; scene.remove(ghost); ghost = null; ghostKey = ''; if(restore){ wblk[ghostIdx] = ghostVal; dirty = true; } }
+  var osc = setCrack;
+  setCrack = function(f){
+    osc(f); crack.visible = false;
+    if(f <= 0 || !cur || cur.d < 0 || !inside(cur.i, cur.k)){ ghostOff(true); return; }
+    var key = cur.i + ',' + cur.d + ',' + cur.k;
+    if(key !== ghostKey){
+      ghostOff(true);
+      var lx = cur.i - wox, lz = cur.k - woz; if(lx < 0 || lx >= WIN || lz < 0 || lz >= WIN) return;
+      ghostIdx = (cur.d*WIN + lz)*WIN + lx; ghostVal = wblk[ghostIdx]; if(!ghostVal) return;
+      var src = meshes[ghostVal-1].material, mats = (Array.isArray(src) ? src : [src]).map(function(m){ var c = m.clone(); c.transparent = true; c.depthWrite = false; return c; });
+      ghost = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.length === 1 ? mats[0] : mats);
+      ghost.position.set(cur.i + .5, -cur.d - .5, cur.k + .5); scene.add(ghost); ghostKey = key;
+      wblk[ghostIdx] = 0; dirty = true;
+    }
+    var op = Math.max(.04, 1 - f);
+    (Array.isArray(ghost.material) ? ghost.material : [ghost.material]).forEach(function(m){ m.opacity = op; });
+  };
+  var obk2 = breakBlock; breakBlock = function(h){ ghostOff(true); return obk2(h); };
+  addEventListener('mousedown', function(e){ if(e.button === 2){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  addEventListener('wheel', function(e){ e.stopImmediatePropagation(); }, true);
   /* no badges */
   award = function(){}; checkBadges = function(){};
   var mb = document.getElementById('menubadges'); if(mb && mb.parentElement) mb.parentElement.style.display = 'none';
