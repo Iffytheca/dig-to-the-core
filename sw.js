@@ -1,6 +1,6 @@
 // Dig to the Core: keeps a copy of the game so it also plays with no internet.
 // Always loads the newest game from the website first; the saved copy is only used with no internet.
-const CACHE = 'digcore-v114';
+const CACHE = 'digcore-v115';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e=>{
   e.waitUntil(caches.open(CACHE).then(c=>Promise.all(FILES.map(f=>fetch(f, {cache:'no-store'}).then(r=>r.ok && c.put(f, r)).catch(()=>{})))).then(()=>self.skipWaiting()));
