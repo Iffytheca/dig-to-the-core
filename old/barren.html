@@ -114,8 +114,8 @@
       <div class="keys" style="margin-top:2px">
         <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br>
         <kbd>Hold left click</kbd> dig the block you aim at<br>
-        <kbd>F</kbd> shop (at the stall) &nbsp; <kbd>R</kbd> teleport to the surface<br>
-        <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause &nbsp; <kbd>B</kbd> shop &nbsp; <kbd>G</kbd> switch gun &nbsp; <kbd>T</kbd> reload &nbsp; <kbd>I</kbd> inventory &amp; crafting &nbsp; <kbd>Right-click</kbd> place a block &nbsp; <kbd>Wheel / 1-9</kbd> pick block
+         &nbsp; <kbd>R</kbd> teleport to the surface<br>
+        <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause &nbsp;  &nbsp; <kbd>G</kbd> switch gun &nbsp; <kbd>T</kbd> reload &nbsp; <kbd>I</kbd> inventory &amp; crafting &nbsp; <kbd>Right-click</kbd> place a block &nbsp; <kbd>Wheel / 1-9</kbd> pick block
       </div>
     </div>
     <div style="margin-top:14px;text-align:left">
@@ -425,7 +425,7 @@ function grantUnlock(k){ const u = readUnlocks(); if(u[k]) return; u[k] = true; 
 // Free gift pickaxe: index of the pick handed out for free, or -1 for none.
 // Setting this back to -1 takes the gifted pick out of the player's hand; the shop still sells it.
 const GIFT = HILARIOUS ? -1 : PICKS.findIndex(p=>/MIGHTY/.test(p.name));
-if(false && !save.owned[GIFT]){ save.owned[GIFT] = true; save.equipped = GIFT; save.gifted = GIFT; }
+if(GIFT >= 0 && !save.owned[GIFT]){ save.owned[GIFT] = true; save.equipped = GIFT; save.gifted = GIFT; }
 else if(GIFT < 0 && save.gifted != null){
   const g = save.gifted; save.owned[g] = false; delete save.gifted;
   if(save.equipped === g){ let b = 0; for(let i=0;i<g;i++) if(save.owned[i]) b = i; save.equipped = b; }
@@ -3647,7 +3647,7 @@ frame();
 
 // small hook so automated checks can poke at the game
 window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gunUpdate, setEdge:()=>{clickEdge=.18;}, getGun:()=>curGun, explode, spawnEnemy, enemies, getSave:()=>save, addCoins:(n)=>{save.coins+=n;}, setMouse:(v)=>{mouseDown=v;}, getProg:()=>prog, launchRocket, UPPER, UPPER_LAYERS, upperBase, tickRocket, startBlueprint, bp, bpPlace, bpOff, setLocked:(v)=>{locked=v;}, ghostRoot, BLOCKS, setSel:(i)=>{selName=placeables()[i]||null;}, removeFurniture, setWant:(t)=>{craftWant=t;}, parseWant, furnObjs, castRay, craftPreview, craftGo, setCraft:(a)=>{craftSlots=a;}, eatRef, equipRef, placeables, placeBlock, itemStats, getGear:()=>({...gear, hpMax}), rollMaterial, matVariant, WORLD3, world3Box, arenaBox, dropFor, dropFor, addItem, openInv, closeInv, aoeBreak2:0, mineThing, refreshMinables, mineables, chamberFloor, mineSky, getFloorGone:()=>floorGone, getSunGone:()=>sunGone, rings, animals, spawnAnimal, startPeta, pt, harmAdd:(n)=>{harm+=n;}, toggleMineAny, getMineAny:()=>mineAny, minePortal2, rescue:()=>chopTree(nw.tree), wipeLayer, erased, shopMad, sk, spawnEnemy, enemies, mineHeart, ATOM_LIST, aoeBreak, openChest, beast, enterRealm, hurt:hurtPlayer, getAct:()=>act, doAct, minePortal, getHp:()=>hp, getRealm:()=>realm, trees, mineUnder:(bx,bz)=>{setBlock(bx,0,bz,0); checkTreeSupport(bx,bz);}, newton:()=>startNewton(trees.find(t=>t.special)), chopNormal:()=>chopTree(trees.find(t=>!t.special)), nw, chopFirst:()=>chopTree(trees[0]), setTod:(v)=>{tod=v;}, P, save, get, setBlock, edits, BLOCKS, N, D, LAYERS, PICKS, openShop, closeShop, step, toSurface};
-/* BARREN RECREATION: a barrier, no animals, no NPCs, no modes, no Mine Anything, B opens the shop */
+/* BARREN RECREATION: invisible barrier, no shop, no animals, NPCs, modes or Mine Anything */
 (function(){
   var X0=0, X1=22, Z0=-2, Z1=16;
   function inside(x,z){ return x>=X0 && x<X1 && z>=Z0 && z<Z1; }
@@ -3657,32 +3657,23 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   spawnAnimal = function(){ return null; };
   animals.slice().forEach(function(a){ scene.remove(a.g); }); animals.length = 0;
   trees.forEach(function(t){ t.special = false; });
-  (function(){ var n = 0; trees.forEach(function(t){ if(n < 12 && !inside(t.bx, t.bz)){ n++;
-      var bx = n % 2 ? 1 + Math.floor(Math.random()*6) : 8 + Math.floor(Math.random()*13), bz = n % 2 ? -1 + Math.floor(Math.random()*15) : 13 + Math.floor(Math.random()*2);
-      t.bx = bx; t.bz = bz; t.x = bx + .5; t.z = bz + .5; t.g.position.set(t.x, 0, t.z); } }); })();
-  npc.visible = false; shopG.traverse(function(o){ if(o.isSprite) o.visible = false; });
+  trees.forEach(function(t){ if(inside(t.bx, t.bz)){ t.bx += 30; t.x += 30; t.g.position.x += 30; } });
   var oc = chopTree;
   chopTree = function(t){ if(!inside(t.bx, t.bz)){ toast('Unminable tree'); return; } return oc(t); };
   var os = setBlock;
   setBlock = function(x,d,z,t){ if(!inside(x,z)) return; return os(x,d,z,t); };
   ['btnMine','btnFunny'].forEach(function(id){ var b = document.getElementById(id); if(b) b.style.display = 'none'; });
   var ex = document.getElementById('extras'); if(ex && ex.parentElement) ex.parentElement.style.display = 'none';
-  /* the barrier: a tall wall all the way round, above and below ground */
-  var mat = new THREE.MeshLambertMaterial({color:0x55504a}), cap = new THREE.MeshLambertMaterial({color:0x8a1f1f});
-  function slab(x0,x1,z0,z1){
-    solids.push([x0,x1,-400,90,z0,z1]);
-    var m = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,12,z1-z0), mat); m.position.set((x0+x1)/2, 6, (z0+z1)/2); scene.add(m);
-    var c = new THREE.Mesh(new THREE.BoxGeometry(x1-x0,.5,z1-z0), cap); c.position.set((x0+x1)/2, 12.25, (z0+z1)/2); scene.add(c);
-  }
+  /* the barrier: INVISIBLE, goes all the way down, nothing gets through */
+  function slab(x0,x1,z0,z1){ solids.push([x0,x1,-400,90,z0,z1]); }
   slab(X0-2, X0, Z0-2, Z1+2); slab(X1, X1+2, Z0-2, Z1+2); slab(X0, X1, Z0-2, Z0); slab(X0, X1, Z1, Z1+2);
-  addEventListener('keydown', function(e){
-    if(e.code !== 'KeyB' || e.ctrlKey || e.metaKey || e.altKey) return;
-    if(e.target && e.target.tagName === 'INPUT') return;
-    e.stopImmediatePropagation(); e.preventDefault();
-    if(shopOpen) closeShop(); else openShop();
-  }, true);
-  window.__dig.collides = collides; window.__dig.inside = inside; window.__dig.solidsN = solids.length;
-  setTimeout(function(){ toast('The first version: a walled plot. Press B for the shop.'); }, 1500);
+  /* no shop, no rockets, only pickaxes up to the Mighty Pickaxe */
+  shopG.visible = false; rocketHome.visible = false; rocketUp.visible = false;
+  for(var si = solids.length-1; si >= 0; si--){ var b = solids[si];
+    if((b[0] >= SHOP.x-2.2 && b[1] <= SHOP.x+2.2 && b[4] >= SHOP.z-2 && b[5] <= SHOP.z+2) || (b[0] >= ROCKET_HOME.x-1.4 && b[1] <= ROCKET_HOME.x+1.4 && b[4] >= ROCKET_HOME.z-1.4 && b[5] <= ROCKET_HOME.z+1.4)) solids.splice(si,1); }
+  openShop = function(){}; updateShop = function(){};
+  PICKS.length = PICKS.findIndex(function(p){ return /MIGHTY/.test(p.name); }) + 1;
+  window.__dig.collides = collides; window.__dig.inside = inside;
 })();
 
 })();
