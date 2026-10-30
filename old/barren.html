@@ -3660,6 +3660,8 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   trees.forEach(function(t){ if(inside(t.bx, t.bz)){ t.bx += 30; t.x += 30; t.g.position.x += 30; } });
   var oc = chopTree;
   chopTree = function(t){ if(!inside(t.bx, t.bz)){ toast('Unminable tree'); return; } return oc(t); };
+  var obk = breakBlock;
+  breakBlock = function(h){ if(!inside(h.i, h.k)){ cur = null; prog = 0; return; } return obk(h); };   /* barrier blocks simply cannot be mined */
   var os = setBlock;
   setBlock = function(x,d,z,t){ if(!inside(x,z)) return; return os(x,d,z,t); };
   ['btnMine','btnFunny'].forEach(function(id){ var b = document.getElementById(id); if(b) b.style.display = 'none'; });
@@ -3673,6 +3675,11 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
     if((b[0] >= SHOP.x-2.2 && b[1] <= SHOP.x+2.2 && b[4] >= SHOP.z-2 && b[5] <= SHOP.z+2) || (b[0] >= ROCKET_HOME.x-1.4 && b[1] <= ROCKET_HOME.x+1.4 && b[4] >= ROCKET_HOME.z-1.4 && b[5] <= ROCKET_HOME.z+1.4)) solids.splice(si,1); }
   openShop = function(){}; updateShop = function(){};
   PICKS.length = PICKS.findIndex(function(p){ return /MIGHTY/.test(p.name); }) + 1;
+  /* the Core Chamber has walls (and the Heart is not minable) */
+  heartMined = true;
+  var wm = new THREE.MeshLambertMaterial({color:0x6b2410, emissive:0x3a1206}), cy = -(D+5.5);
+  [[X0-.5,(Z0+Z1)/2,1,Z1-Z0+2],[X1+.5,(Z0+Z1)/2,1,Z1-Z0+2],[(X0+X1)/2,Z0-.5,X1-X0,1],[(X0+X1)/2,Z1+.5,X1-X0,1]].forEach(function(w){
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w[2],12,w[3]), wm); m.position.set(w[0], cy, w[1]); scene.add(m); });
   /* no badges */
   award = function(){}; checkBadges = function(){};
   var mb = document.getElementById('menubadges'); if(mb && mb.parentElement) mb.parentElement.style.display = 'none';
