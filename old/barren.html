@@ -3726,7 +3726,7 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   var mb = document.getElementById('menubadges'); if(mb && mb.parentElement) mb.parentElement.style.display = 'none';
   /* beyond the barrier the ground under the grass shows as nothing: you can look, you cannot cross */
   var ob = baseBlock;
-  baseBlock = function(x,d,z){ if(d > 0 && !inside(x,z)) return 0; return ob(x,d,z); };
+  baseBlock = function(x,d,z){ if(d > 0 && !inside(x,z)) return 0; var r = ob(x,d,z); if(r && BLOCKS[r-1] && BLOCKS[r-1].ore) return layerAtDepth[d] + 1; return r; };   /* and no ores */
   fillWindow(Math.floor(P.x), Math.floor(P.z));
   openInv = function(){};   /* no inventory, no crafting */
   /* no loot and no drops */
