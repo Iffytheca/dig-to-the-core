@@ -1545,7 +1545,7 @@ const ALL_LAYERS = [
   {name:'Hot Metal',  th:6, h:170, v:550,  base:[214,138,72], amp:34, sp:[[255,232,170],[150,78,38]],       p:.25, glow:.75},
   {name:'Silicate Rock', th:6, h:62,  v:120,  base:[112,126,84],  amp:24, sp:[[176,196,104],[78,92,58],[210,140,70]], p:.24, glow:.1},
   {name:'Deeper Core',  th:8, h:560, v:2000, base:[186,222,255], amp:36, sp:[[255,255,255],[110,170,255]],        p:.3,  glow:1},
-  {name:'Even Deeper Core',  th:8, h:900, v:5000, base:[214,176,255], amp:36, sp:[[255,255,255],[255,150,235]],        p:.3,  glow:1},
+  {name:'Even Deeper Core', extra:1, stairs:1, th:8, h:900, v:5000, base:[214,176,255], amp:36, sp:[[255,255,255],[255,150,235]],        p:.3,  glow:1},
   // ---- optional extra layers (toggle them in the main menu) ----
   {name:'Sand',         extra:1, th:3, h:1.5, v:3,   base:[222,200,140],amp:18, sp:[[240,224,170],[196,172,112]], p:.15, glow:0},
   {name:'Gravel',       extra:1, th:3, h:4.5, v:10,  base:[120,116,110],amp:40, sp:[[160,156,150],[80,76,72]],    p:.3,  glow:0},
@@ -1625,7 +1625,7 @@ const MEME_LAYERS = [
   {name:'Goated Core',       th:8, h:560, v:2000, base:[255,220,120], amp:36, sp:[[255,255,255],[255,180,60]],              p:.3,  glow:1,   quips:['Goated.','The core is goated.','Certified goat.']},
   {name:'Certified Core',    th:7, h:520, v:1000, base:[255,236,150], amp:40, sp:[[255,255,232],[255,186,66]],              p:.3,  glow:1,   quips:['Certified. Official. Real.','You are the main character.','Core: certified.']}
 ];
-const LAYERS = (MEME ? MEME_LAYERS.slice() : HILARIOUS ? FUNNY_LAYERS.slice() : ALL_LAYERS.filter(l=>!l.extra || chosenExtras.indexOf(l.name)>=0)).sort((a,b)=>a.h-b.h);
+const LAYERS = (MEME ? MEME_LAYERS.slice() : HILARIOUS ? FUNNY_LAYERS.slice() : ALL_LAYERS.filter(l=>l.stairs ? (function(){ try{ return localStorage.getItem('digcore_stairs') === '1'; }catch(e){ return false; } })() : (!l.extra || chosenExtras.indexOf(l.name)>=0))).sort((a,b)=>a.h-b.h);
 /* LN-memelayers end */
 /* LN-illum start (layers) */
 const ILLUM_LAYER_DEFS = [
@@ -2011,7 +2011,7 @@ const REAL_ORES = [
   {cat:'crystal',  name:'Emerald',  hosts:['Rock','Hard Rock','Bedrock'],                     veins:4,  size:[1,3], v:300,  col:[60,230,120],  p:.4,  glow:.45},
   {cat:'crystal',  name:'Sapphire', hosts:['Bedrock','Silicate Rock','Hot Rock'],             veins:4,  size:[1,3], v:380,  col:[70,120,255],  p:.4,  glow:.5},
   {cat:'crystal',  name:'Ruby',     hosts:['Silicate Rock','Hot Rock','Magma'],               veins:4,  size:[1,3], v:500,  col:[255,60,84],   p:.4,  glow:.55},
-  {cat:'crystal',  name:'Core',     hosts:['Core','Deeper Core','Even Deeper Core'],                             veins:5,  size:[1,3], v:2500, col:[255,255,210], p:.45, glow:.9},
+  {cat:'crystal',  name:'Core',     hosts:['Core','Deeper Core'],                             veins:5,  size:[1,3], v:2500, col:[255,255,210], p:.45, glow:.9},
   // ---- treasure (value is a gamble: half to double) ----
   {cat:'treasure', name:'Treasure Chest', hosts:['Dirt','Clay','Rock','Hard Rock','Bedrock','Hot Rock'], veins:2, size:[1,1], v:750,  col:[255,196,60], p:.55, glow:.15},
   {cat:'treasure', name:'Ancient Relic',  hosts:['Hard Rock','Silicate Rock','Magma','Hot Metal'],       veins:1, size:[1,1], v:1800, col:[255,236,140],p:.55, glow:.4},
@@ -2673,7 +2673,7 @@ function resetProgress(){
   const alsoUnlocks = confirm('Also forget the secret pickaxes you unlocked?\n(They are shared between the normal world and Hilarious Mode.)\n\nOK = forget them too, Cancel = keep them');
   edits.clear(); editsDirty = false;                       // so nothing is written back while the page reloads
   try{
-    localStorage.removeItem(SAVE_KEY); localStorage.removeItem(EDIT_KEY);
+    localStorage.removeItem(SAVE_KEY); localStorage.removeItem(EDIT_KEY); ['digcore_stairs','digcore_chaos_unlocked','digcore_chaos','digcore_extra_unlocked','digcore_extra'].forEach(k=>localStorage.removeItem(k)); localStorage.removeItem(EDIT_KEY + '_shift');
     if(alsoUnlocks) localStorage.removeItem(UNLOCK_KEY);
   }catch(e){}
   location.reload();
@@ -3266,7 +3266,14 @@ function baseBlock(x,d,z){
 }
 const edits = new Map();                  // mined blocks: key -> 0 (saved, see saveEdits)
 const EDIT_KEY = SAVE_KEY + '_edits3';       // flat list: key, value, key, value ... (value 0 = mined, otherwise a placed block type)
-try{ const a = JSON.parse(localStorage.getItem(EDIT_KEY)||'[]'); for(let i=0;i+1<a.length;i+=2) edits.set(a[i], a[i+1]); }catch(e){}
+try{ const a = JSON.parse(localStorage.getItem(EDIT_KEY)||'[]');
+  /* the Even Deeper Core adds one block type after the layers, so saved block ids above the last layer move by one when it appears or goes away */
+  const want = LAYERS.some(l=>l.stairs) ? 1 : 0, have = +(localStorage.getItem(EDIT_KEY + '_shift') || 0), L = LAYERS.filter(l=>!l.stairs).length;
+  for(let i=0;i+1<a.length;i+=2){ let v = a[i+1];
+    if(v > 0 && want !== have){ if(want > have){ if(v > L) v++; } else { if(v === L+1) v = 0; else if(v > L+1) v--; } }
+    edits.set(a[i], v); }
+  if(want !== have){ editsDirty = true; try{ localStorage.setItem(EDIT_KEY + '_shift', String(want)); }catch(e){} }
+}catch(e){}
 let editsDirty = false, editsT = 0;
 function saveEdits(){
   if(!editsDirty) return;
@@ -4849,7 +4856,7 @@ function unlockChaos(){
   refreshChaosBtn();
   setTimeout(()=>{ toast('CHAOS MODE UNLOCKED! Switch it on in the main menu.'); [200,150,100].forEach((f,i)=>setTimeout(()=>blip(f,.3,.2,'sawtooth'), i*180)); }, 1500);
 }
-document.getElementById('extras').innerHTML = ALL_LAYERS.filter(l=>l.extra).map(l=>
+document.getElementById('extras').innerHTML = ALL_LAYERS.filter(l=>l.extra && !l.stairs).map(l=>
   '<label style="cursor:pointer"><input type="checkbox" data-n="'+l.name+'"'+(chosenExtras.indexOf(l.name)>=0?' checked':'')+'> '+l.name+(l.funny?' \uD83E\uDD21':'')+' <span style="opacity:.55;font-size:11px">(hardness '+l.h+')</span></label>').join('');
 document.getElementById('extras').addEventListener('click', ev=>ev.stopPropagation());
 document.getElementById('funnyAll').onclick = ()=>{
@@ -28126,7 +28133,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     ['w3','The World','The Great Dirt Shortage of Year 3','Once, all the dirt in the world went missing. It turned out it was just under the grass the whole time. Nobody had looked.','scroll'],
     ['w4','The World','Why Rocks Get Harder Deeper Down','The deeper rocks are older, and old rocks have had more time to work out at the rock gym.','scroll'],
     ['w5','The World','The Core','Scientists say the Core is hot metal. The Core says it is just warm, and a little shy. Please knock before entering.','deep'],
-    ['w6','The World','The Deeper Core','Below the Core is the Deeper Core. Below that is the Even Deeper Core. People used to say nobody had gone further because the stairs were broken. The stairs are fixed now. Keep digging.','deep'],
+    ['w6','The World','The Deeper Core','Below the Core is the Deeper Core. Below that is the Even Deeper Core. ' + ((function(){ try{ return localStorage.getItem('digcore_stairs') === '1'; }catch(e){ return false; } })() ? 'People used to say nobody had gone further because the stairs were broken. The stairs are fixed now. Keep digging.' : 'Nobody has gone further, because the stairs are broken.'),'deep'],
     ['w7','The World','The Cheese Core Theory','Some miners believe the centre of the world is made of cheese. They are called Cheese Core Truthers. They are always hungry.','scroll'],
     ['b1','The Bobs','Who Is Bob?','Nobody knows where the first Bob came from. The second Bob came from the first Bob asking "can there be two of me?" There could. There were. There are now thousands.','scroll'],
     ['b2','The Bobs','The Bob Election','Bob ran for mayor against Bob. Bob won. Bob demanded a recount. Bob still won.','scroll'],
@@ -29148,6 +29155,51 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__oldVersions = {V, open:()=>{ pan.style.display = 'flex'; }};
 })();
 /* LN-oldversions end */
+/* LN-stairs start: the broken stairs in the Core Chamber. Fixing them (F, $250,000) is the only way the Even Deeper Core appears (Irfan 2026-10-30 16:15) */
+(function(){
+  const COST = 250000;
+  const FIXED = (()=>{ try{ return localStorage.getItem('digcore_stairs') === '1'; }catch(e){ return false; } })();
+  if(FIXED) return;
+  let grp = null, wasSeen = false, hinted = false, busy = false;
+  function build(){
+    const g = new THREE.Group();
+    const mat = new THREE.MeshLambertMaterial({color:0xb9a98c}), rub = new THREE.MeshLambertMaterial({color:0x6e6252});
+    for(let i = 0; i < 8; i++){
+      if(i === 3 || i === 5){                                   // missing steps: a little rubble instead
+        for(let k = 0; k < 4; k++){ const r = new THREE.Mesh(new THREE.BoxGeometry(.3+Math.random()*.3,.25,.3+Math.random()*.3), rub); r.position.set(i*.9+(Math.random()-.5)*.5, .12, (Math.random()-.5)*1.4); r.rotation.y = Math.random()*3; g.add(r); }
+        continue;
+      }
+      const h = .55*(i+1), s = new THREE.Mesh(new THREE.BoxGeometry(.9,h,2.2), mat); s.position.set(i*.9, h/2, 0); g.add(s);
+    }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex('Broken stairs  (F to fix: $'+COST.toLocaleString()+')',512,64,null,'#ffffff','bold 30px Arial'), fog:false, depthWrite:false, transparent:true}));
+    sp.scale.set(5,.6,1); sp.position.set(1.5, 6.3, 0); g.add(sp);
+    scene.add(g); return g;
+  }
+  const _step = step;
+  step = function(dt){
+    _step(dt);
+    if(chamberSeen && !wasSeen){
+      wasSeen = true; hinted = false;
+      if(!grp) grp = build();
+      grp.visible = true; grp.position.set(heart.position.x - 12, CH_TOP, heart.position.z);
+    }
+    if(!chamberSeen && wasSeen){ wasSeen = false; if(grp) grp.visible = false; }
+    if(grp && grp.visible && !hinted && Math.hypot(P.x - grp.position.x - 3, P.z - grp.position.z) < 6){ hinted = true; toast('The stairs in the Core are broken. Press F near them to fix them ($'+COST.toLocaleString()+').'); }
+  };
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || !grp || !grp.visible || busy || !locked) return;
+    if(Math.hypot(P.x - grp.position.x - 3, P.z - grp.position.z) > 6) return;
+    e.stopImmediatePropagation();
+    if(save.coins < COST){ toast('Fixing the stairs costs $'+COST.toLocaleString()+'. Come back with more.'); return; }
+    busy = true; save.coins -= COST; persist();
+    try{ localStorage.setItem('digcore_stairs', '1'); }catch(err){}
+    toast('You fixed the stairs! A new layer opens below the Deeper Core...');
+    shake = .3; blip(330,.3,.15,'triangle'); setTimeout(()=>blip(660,.4,.15,'triangle'), 200);
+    setTimeout(()=>location.reload(), 3500);
+  }, true);
+})();
+/* LN-stairs end */
+
 
 
 
