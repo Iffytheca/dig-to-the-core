@@ -115,7 +115,7 @@
         <kbd>W A S D</kbd> move &nbsp; <kbd>Space</kbd> jump &nbsp; <kbd>Shift</kbd> run<br>
         <kbd>Hold left click</kbd> dig the block you aim at<br>
          &nbsp; <kbd>R</kbd> teleport to the surface<br>
-        <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause &nbsp;  &nbsp; <kbd>G</kbd> switch gun &nbsp; <kbd>T</kbd> reload &nbsp; <kbd>I</kbd> inventory &amp; crafting &nbsp; <kbd>Right-click</kbd> place a block &nbsp; <kbd>Wheel / 1-9</kbd> pick block
+        <kbd>E</kbd> exit to this main menu &nbsp; <kbd>Esc</kbd> pause &nbsp;  &nbsp; <kbd>G</kbd> switch gun &nbsp; <kbd>T</kbd> reload &nbsp;  &nbsp; <kbd>Right-click</kbd> place a block &nbsp; <kbd>Wheel / 1-9</kbd> pick block
       </div>
     </div>
     <div style="margin-top:14px;text-align:left">
@@ -657,7 +657,7 @@ function createBlockMesh(L,i){
     const top = new THREE.MeshLambertMaterial({map:makeTex(L, 1)});
     const side = new THREE.MeshLambertMaterial({map:makeTex(soil, 2, L.base)});
     const bottom = new THREE.MeshLambertMaterial({map:makeTex(soil, 3)});
-    mat = [side, side, top, bottom, side, side];     // +x -x +y -y +z -z
+    mat = top;     // first version: the grass is just a plain green block on every side
   } else {
     const tex = L.custom ? makeCustomTex(L) : makeTex(L, i+1);
     mat = new THREE.MeshLambertMaterial({map:tex});
@@ -3690,7 +3690,7 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   openInv = function(){};   /* no inventory, no crafting */
   /* no loot and no drops */
   addItem = function(){}; rollMaterial = function(){};
-  window.__dig.collides = collides; window.__dig.inside = inside;
+  window.__dig.breakBlock2 = breakBlock; window.__dig.collides = collides; window.__dig.inside = inside;
 })();
 
 })();
