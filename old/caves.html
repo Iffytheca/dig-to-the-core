@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>/* OLD VERSION: its own save, so the newest game's save is never touched */(function(){var P='old_v5_',S=Storage.prototype,g=S.getItem,st=S.setItem,r=S.removeItem,k=S.key;S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return st.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};S.clear=function(){var a=[];for(var i=0;i<this.length;i++){var q=k.call(this,i);if(q&&q.indexOf(P)===0)a.push(q)}for(var j=0;j<a.length;j++)r.call(this,a[j])};try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject()}}catch(e){}addEventListener('DOMContentLoaded',function(){var b=document.createElement('button');b.textContent='OLD VERSION: Caves, Mum\'s room and Bob Mode (Oct 26)   |   BACK TO NEWEST';b.style.cssText='position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:99999;padding:6px 14px;font:700 13px system-ui,sans-serif;color:#fff;background:rgba(120,60,10,.9);border:2px solid #ffb060;border-radius:10px;cursor:pointer';b.onclick=function(e){e.stopPropagation();location.href=location.protocol==='file:'?'../dig-to-the-core.html':'../'};document.body.appendChild(b)});})();</script>
+<head><script>/* OLD VERSION: its own save, so the newest game's save is never touched */(function(){var P='old_caves_',S=Storage.prototype,g=S.getItem,st=S.setItem,r=S.removeItem,k=S.key;S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return st.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};S.clear=function(){var a=[];for(var i=0;i<this.length;i++){var q=k.call(this,i);if(q&&q.indexOf(P)===0)a.push(q)}for(var j=0;j<a.length;j++)r.call(this,a[j])};try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject()}}catch(e){}addEventListener('DOMContentLoaded',function(){var b=document.createElement('button');b.textContent='OLD VERSION: Caves, acid and big caverns (Oct 26)   |   BACK TO NEWEST';b.style.cssText='position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:99999;padding:6px 14px;font:700 13px system-ui,sans-serif;color:#fff;background:rgba(120,60,10,.9);border:2px solid #ffb060;border-radius:10px;cursor:pointer';b.onclick=function(e){e.stopPropagation();location.href=location.protocol==='file:'?'../dig-to-the-core.html':'../'};document.body.appendChild(b)});})();</script>
 
 <meta charset="utf-8">
 <title>Dig to the Core</title>
@@ -384,7 +384,6 @@ const BIGHEAD = (()=>{ try{ return localStorage.getItem('digcore_bighead') === '
 const MODE_FLAGS = {};                                   // key -> localStorage flag name, filled by registerMode
 function modeFlag(flag){ try{ return localStorage.getItem(flag) === '1'; }catch(e){ return false; } }
 /* LN-modes-core end */
-const BOBMODE = modeFlag('digcore_bob');   /* LN-bobmode flag */
 /* LN-space start (flag) */
 const SPACE = modeFlag('digcore_space');
 if(SPACE){ if(!window.__layersOwner) window.__layersOwner = 'space'; if(!window.__planetOwner) window.__planetOwner = 'space'; }
@@ -2280,16 +2279,12 @@ const CAVE = (function(){
     {k:'gold',     name:'Gold Rush Cave',w:1, col:'#ffd84a', b:[['Gold Vein Rock',30,600,[110,95,60],[255,210,60],.1],["Fool's Gold",15,1,[200,170,60],[255,230,120],.15],['Gold Nugget Block',50,2000,[255,200,40],[255,240,150],.35],['Giant Gold Ore',55,3500,[110,95,60],[255,220,40],.5]]},
     {k:'slime',    name:'Slime Cave',    w:1.5, col:'#7aff9a', b:[['Slime Block',5,25,[90,200,90],[150,255,150],.15],['Slimy Rock',12,8,[70,100,70],[110,200,110],0],['Slime Crystal',40,450,[60,255,120],[200,255,200],.5],['Slime Jade Ore',30,900,[70,100,70],[60,255,170],.5]]}
   ];
-  const MODE_CAVES = {"funny":[{"k":"funny_cheese","name":"Cheese Cave","w":2,"col":"#ffd84a","deco":"gold","b":[["Swiss Cheese Wall",16,10,[250,210,90],[200,160,40],0],["Moldy Cheese",9,4,[200,210,120],[120,160,60],0.05],["Golden Cheddar Gem",56,735,[255,200,40],[255,240,160],0.55],["Cheesium Ore",50,2373,[250,210,90],[255,230,80],0.35],["Brie Crystal Ore",50,1773,[250,210,90],[255,250,220],0.35]]},{"k":"funny_candy","name":"Candy Cave","w":2,"col":"#ff8ad8","deco":"crystal","b":[["Candy Rock",16,6,[250,150,200],[255,255,255],0],["Gummy Block",8,7,[120,220,120],[255,120,120],0.05],["Lollipop Gem",59,909,[255,80,160],[255,240,120],0.55],["Sugar Crystal Ore",45,999,[250,150,200],[255,255,255],0.35],["Gumdrop Ore",33,2673,[250,150,200],[255,60,120],0.35]]},{"k":"funny_bouncy","name":"Bouncy Castle Cave","w":1.5,"col":"#7ad0ff","deco":"slime","b":[["Bouncy Wall",18,5,[80,170,255],[255,230,60],0],["Inflatable Block",11,8,[255,90,90],[255,255,255],0.05],["Party Balloon Gem",61,939,[255,60,200],[255,255,120],0.55],["Confetti Ore",28,2487,[80,170,255],[255,120,40],0.35],["Balloon Ore",49,2636,[80,170,255],[120,255,200],0.35]]},{"k":"funny_pizza","name":"Pizza Cave","w":1.5,"col":"#ff9a3a","deco":"lava","b":[["Pizza Crust Rock",14,7,[210,150,80],[180,60,30],0],["Pepperoni Block",13,6,[190,50,40],[230,110,90],0.05],["Golden Pizza Slice",65,562,[255,200,60],[255,120,40],0.55],["Pepperonium Ore",34,1445,[210,150,80],[220,40,40],0.35],["Mozzarella Ore",49,2700,[210,150,80],[255,250,230],0.35]],"pool":"lava"},{"k":"funny_sock","name":"Lost Sock Cave","w":2,"col":"#b0a0ff","deco":"mossy","b":[["Sock Fluff Rock",19,11,[170,160,200],[230,220,255],0],["Smelly Sock Block",12,3,[140,150,90],[200,210,120],0.05],["Matching Pair Gem",49,1041,[140,120,255],[255,255,255],0.55],["Lint Ore",53,2915,[170,160,200],[210,210,230],0.35],["Odd Sock Ore",63,1305,[170,160,200],[255,120,200],0.35]]},{"k":"funny_jelly","name":"Jelly Cave","w":1.5,"col":"#ff5a7a","deco":"slime","b":[["Wobbly Jelly Rock",19,12,[230,60,100],[255,150,170],0],["Custard Block",12,4,[250,220,120],[255,240,180],0.05],["Jelly Bean Gem",63,758,[120,60,255],[255,120,60],0.55],["Wobblium Ore",63,2336,[230,60,100],[255,80,140],0.35],["Sprinkle Ore",65,1577,[230,60,100],[120,220,255],0.35]]}],"chaos":[{"k":"chaos_glitch","name":"Glitch Cave","w":1.5,"col":"#ff40ff","deco":"crystal","b":[["Glitched Rock",18,5,[60,60,70],[255,0,255],0],["Missing Texture Block",15,5,[255,0,255],[0,0,0],0.05],["Error Gem",49,446,[0,255,200],[255,0,120],0.55],["Bug Ore",35,2999,[60,60,70],[0,255,0],0.35],["Pixel Ore",43,2456,[60,60,70],[255,255,0],0.35]]},{"k":"chaos_burning","name":"Burning Ruins Cave","w":2,"col":"#ff6a20","deco":"lava","b":[["Scorched Brick",23,7,[70,40,30],[255,90,20],0],["Ash Block",12,5,[90,90,90],[140,140,140],0.05],["Ember Gem",48,495,[255,120,20],[255,230,120],0.55],["Cinder Ore",63,783,[70,40,30],[255,60,0],0.35],["Smoulder Ore",42,500,[70,40,30],[255,170,60],0.35]],"pool":"lava"},{"k":"chaos_toxic","name":"Toxic Waste Cave","w":2,"col":"#a8ff3a","deco":"acid","b":[["Radioactive Rock",19,10,[70,90,40],[180,255,40],0],["Sludge Block",14,3,[80,70,40],[140,160,40],0.05],["Glowing Barrel Gem",48,402,[100,255,60],[230,255,140],0.55],["Radium Ore",59,1845,[70,90,40],[160,255,60],0.35],["Mutant Ore",35,664,[70,90,40],[200,120,255],0.35]],"pool":"acid"},{"k":"chaos_clown","name":"Clown Cave","w":1.5,"col":"#ff4040","deco":"mushroom","b":[["Clown Paint Rock",21,7,[240,240,240],[255,40,40],0],["Juggling Ball Block",8,4,[255,60,60],[60,120,255],0.05],["Red Nose Gem",47,479,[255,30,30],[255,170,170],0.55],["Honk Ore",61,867,[240,240,240],[255,220,40],0.35],["Pie Ore",40,1352,[240,240,240],[255,250,230],0.35]]},{"k":"chaos_bacon","name":"Bacon Cave","w":1.5,"col":"#ff8a7a","deco":"gold","b":[["Bacon Rock",20,11,[180,70,60],[250,200,170],0],["Greasy Block",13,6,[160,120,60],[230,200,120],0.05],["Crispy Bacon Gem",64,466,[210,90,60],[255,220,180],0.55],["Baconium Ore",49,1278,[180,70,60],[230,90,70],0.35],["Sizzle Ore",53,2728,[180,70,60],[255,180,90],0.35]]},{"k":"chaos_upside","name":"Upside Down Cave","w":1.5,"col":"#8a8aff","deco":"frost","b":[["Inverted Stone",15,7,[50,60,120],[150,170,255],0],["Topsy Block",10,8,[120,90,160],[200,170,255],0.05],["Gravity Gem",67,467,[90,120,255],[255,255,255],0.55],["Flipium Ore",59,2909,[50,60,120],[170,140,255],0.35],["Backwards Ore",38,1353,[50,60,120],[255,160,220],0.35]]}],"meme":[{"k":"meme_troll","name":"Troll Cave","w":2,"col":"#e0e0e0","deco":"regular","b":[["Trollface Rock",19,5,[210,210,210],[60,60,60],0],["Problem Block",9,6,[180,180,190],[255,255,255],0.05],["Troll Gem",53,810,[240,240,255],[40,40,40],0.55],["Cool Story Ore",65,2619,[210,210,210],[120,200,255],0.35],["U Mad Ore",61,2516,[210,210,210],[255,90,90],0.35]]},{"k":"meme_rickroll","name":"Rickroll Cave","w":1.5,"col":"#ff7ab0","deco":"crystal","b":[["Never Gonna Rock",20,8,[120,80,140],[255,120,180],0],["Give You Up Block",9,4,[90,60,110],[255,200,230],0.05],["Rick Gem",46,859,[255,90,170],[255,240,120],0.55],["Let You Down Ore",59,2943,[120,80,140],[255,140,200],0.35],["Run Around Ore",55,2448,[120,80,140],[140,220,255],0.35]]},{"k":"meme_doge","name":"Doge Cave","w":2,"col":"#f0c060","deco":"gold","b":[["Such Rock",18,11,[220,180,110],[255,240,200],0],["Very Block",10,6,[200,150,80],[255,220,150],0.05],["Wow Gem",62,941,[255,210,90],[255,255,255],0.55],["Much Ore",34,2858,[220,180,110],[255,200,60],0.35],["Shiba Ore",56,2830,[220,180,110],[240,140,60],0.35]]},{"k":"meme_stonks","name":"Stonks Cave","w":1.5,"col":"#40d080","deco":"gold","b":[["Chart Rock",22,9,[40,60,90],[60,220,120],0],["Not Stonks Block",15,5,[60,40,50],[230,60,60],0.05],["Stonks Gem",66,725,[60,255,140],[255,255,255],0.55],["Profit Ore",56,616,[40,60,90],[60,230,120],0.35],["To The Moon Ore",57,2855,[40,60,90],[200,220,255],0.35]]},{"k":"meme_nyan","name":"Nyan Cave","w":1.5,"col":"#ff9aff","deco":"crystal","b":[["Poptart Rock",14,5,[230,180,140],[255,120,200],0],["Rainbow Trail Block",12,8,[255,80,80],[80,160,255],0.05],["Nyan Gem",58,809,[255,120,255],[255,255,120],0.55],["Rainbow Ore",45,855,[230,180,140],[255,150,60],0.35],["Sparkle Ore",51,2266,[230,180,140],[255,255,255],0.35]]},{"k":"meme_grumpy","name":"Grumpy Cat Cave","w":1.5,"col":"#a0a0c0","deco":"mossy","b":[["Grumpy Rock",20,9,[130,120,120],[200,190,180],0],["No Block",12,3,[100,90,90],[160,150,150],0.05],["Grump Gem",67,578,[150,140,200],[255,255,255],0.55],["Meh Ore",31,2825,[130,120,120],[180,180,200],0.35],["Frown Ore",33,1141,[130,120,120],[120,140,220],0.35]]}],"spooky":[{"k":"spooky_haunted","name":"Haunted Cave","w":2,"col":"#b0a0ff","deco":"frost","b":[["Haunted Stone",17,6,[60,55,80],[170,150,255],0],["Ghostly Block",9,8,[200,210,230],[255,255,255],0.05],["Spirit Gem",55,470,[160,140,255],[240,240,255],0.55],["Ectoplasm Ore",47,2050,[60,55,80],[120,255,140],0.35],["Phantom Ore",48,719,[60,55,80],[200,190,255],0.35]]},{"k":"spooky_bone","name":"Bone Cave","w":2,"col":"#e8e0c8","deco":"regular","b":[["Bone Wall",20,7,[210,200,170],[150,140,110],0],["Skull Block",9,7,[230,225,200],[40,40,40],0.05],["Skeleton Key Gem",50,549,[240,220,140],[255,255,220],0.55],["Calcium Ore",39,1394,[210,200,170],[255,255,240],0.35],["Marrow Ore",56,738,[210,200,170],[220,120,100],0.35]]},{"k":"spooky_pumpkin","name":"Pumpkin Cave","w":1.5,"col":"#ff8a2a","deco":"mushroom","b":[["Pumpkin Rock",23,7,[200,100,30],[255,170,50],0],["Rotten Pumpkin Block",12,7,[110,80,40],[160,140,60],0.05],["Jack-o-Lantern Gem",52,620,[255,140,20],[255,240,120],0.55],["Candy Corn Ore",50,2665,[200,100,30],[255,200,40],0.35],["Gourd Ore",53,739,[200,100,30],[120,200,60],0.35]]},{"k":"spooky_spider","name":"Spider Cave","w":1.5,"col":"#c0c0c0","deco":"mossy","b":[["Cobweb Rock",14,10,[80,80,90],[230,230,240],0],["Web Block",15,5,[200,200,210],[255,255,255],0.05],["Spider Eye Gem",68,829,[200,30,40],[255,120,120],0.55],["Silk Ore",51,1284,[80,80,90],[250,250,255],0.35],["Venom Ore",62,2186,[80,80,90],[140,255,80],0.35]]},{"k":"spooky_witch","name":"Witch Cave","w":1.5,"col":"#a040ff","deco":"acid","b":[["Cauldron Rock",22,10,[50,40,60],[150,60,255],0],["Potion Block",9,5,[90,40,120],[120,255,120],0.05],["Wizard Gem",48,382,[170,80,255],[255,200,255],0.55],["Hex Ore",66,1052,[50,40,60],[200,80,255],0.35],["Newt Eye Ore",56,1007,[50,40,60],[120,220,120],0.35]],"pool":"acid"},{"k":"spooky_crypt","name":"Crypt Cave","w":1.5,"col":"#808890","deco":"regular","b":[["Tombstone Rock",23,6,[110,115,120],[80,85,90],0],["Coffin Block",9,7,[70,45,30],[140,100,60],0.05],["Moonstone Gem",56,460,[210,220,255],[255,255,255],0.55],["Grave Silver Ore",43,985,[110,115,120],[210,210,220],0.35],["Bat Wing Ore",65,2093,[110,115,120],[90,60,120],0.35]]}],"ocean":[{"k":"ocean_coral","name":"Coral Cave","w":2,"col":"#ff7a8a","deco":"crystal","b":[["Coral Wall",22,8,[230,110,120],[255,190,160],0],["Sea Sponge Block",14,8,[240,200,80],[255,240,150],0.05],["Pink Pearl Gem",51,565,[255,180,200],[255,255,255],0.55],["Coralite Ore",33,2796,[230,110,120],[255,90,110],0.35],["Starfish Ore",67,2736,[230,110,120],[255,150,60],0.35]]},{"k":"ocean_wreck","name":"Shipwreck Cave","w":1.5,"col":"#c09060","deco":"gold","b":[["Wreck Plank Rock",19,7,[110,80,50],[160,120,70],0],["Barnacle Block",15,4,[140,140,130],[220,220,210],0.05],["Pirate Gold Gem",61,669,[255,210,60],[255,250,180],0.55],["Doubloon Ore",36,1427,[110,80,50],[255,200,40],0.35],["Anchor Iron Ore",65,1460,[110,80,50],[90,100,110],0.35]]},{"k":"ocean_kelp","name":"Kelp Cave","w":2,"col":"#40c070","deco":"mossy","b":[["Kelp Rock",14,8,[40,90,60],[80,170,90],0],["Seaweed Block",10,3,[30,110,50],[90,200,100],0.05],["Sea Glass Gem",58,570,[120,230,200],[230,255,250],0.55],["Seagreen Ore",51,2371,[40,90,60],[60,220,140],0.35],["Urchin Ore",67,1325,[40,90,60],[120,40,140],0.35]]},{"k":"ocean_pearl","name":"Pearl Cave","w":1.5,"col":"#f0f0ff","deco":"frost","b":[["Nacre Rock",16,8,[210,215,230],[255,240,250],0],["Clam Shell Block",13,4,[230,220,200],[255,250,235],0.05],["Giant Pearl Gem",52,706,[250,250,255],[255,230,240],0.55],["Mother of Pearl Ore",53,695,[210,215,230],[255,220,255],0.35],["Oyster Ore",34,2665,[210,215,230],[200,190,170],0.35]]},{"k":"ocean_abyss","name":"Abyss Cave","w":1.5,"col":"#3a5aff","deco":"mushroom","b":[["Abyss Stone",22,9,[20,25,60],[60,90,255],0],["Anglerfish Lamp Block",14,6,[30,40,80],[255,240,120],0.05],["Deep Sapphire Gem",51,441,[40,80,255],[160,200,255],0.55],["Bioluminite Ore",64,2244,[20,25,60],[80,255,255],0.35],["Pressure Ore",56,2288,[20,25,60],[100,120,200],0.35]]},{"k":"ocean_sunken","name":"Sunken Castle Cave","w":1.5,"col":"#e0c890","deco":"regular","b":[["Sunken Sandstone",19,8,[200,180,120],[160,140,90],0],["Sea Brick Block",11,4,[150,170,170],[200,220,220],0.05],["Trident Gem",46,986,[80,200,255],[255,230,120],0.55],["Atlantis Ore",34,2634,[200,180,120],[90,230,255],0.35],["Mermaid Scale Ore",67,1540,[200,180,120],[120,255,200],0.35]]}],"robot":[{"k":"robot_circuit","name":"Circuit Cave","w":2,"col":"#40ff90","deco":"crystal","b":[["Circuit Board Rock",16,8,[20,70,40],[60,255,140],0],["Chip Block",11,3,[30,30,35],[200,200,210],0.05],["Processor Gem",68,787,[80,255,160],[220,255,230],0.55],["Silicon Ore",62,1141,[20,70,40],[150,170,200],0.35],["Copper Trace Ore",65,2381,[20,70,40],[230,140,60],0.35]]},{"k":"robot_scrap","name":"Scrap Cave","w":2,"col":"#a0a0a0","deco":"regular","b":[["Scrap Metal Rock",15,7,[110,105,100],[160,90,50],0],["Rusty Block",8,8,[140,80,40],[200,120,60],0.05],["Shiny Bolt Gem",62,442,[220,220,230],[255,255,255],0.55],["Bolt Ore",53,2719,[110,105,100],[200,200,210],0.35],["Spring Ore",60,2938,[110,105,100],[170,190,210],0.35]]},{"k":"robot_oil","name":"Oil Cave","w":1.5,"col":"#5a5a70","deco":"regular","b":[["Oily Rock",15,7,[35,35,45],[90,80,120],0],["Grease Block",10,3,[60,55,40],[110,100,60],0.05],["Black Gold Gem",53,908,[30,30,40],[255,210,80],0.55],["Petroleum Ore",32,1225,[35,35,45],[80,70,110],0.35],["Gasket Ore",32,922,[35,35,45],[150,40,40],0.35]]},{"k":"robot_server","name":"Server Room Cave","w":1.5,"col":"#60b0ff","deco":"frost","b":[["Server Rack Rock",18,12,[40,45,60],[60,160,255],0],["Cooling Fan Block",14,3,[80,90,110],[200,220,255],0.05],["Data Crystal Gem",61,931,[100,200,255],[255,255,255],0.55],["Byte Ore",33,1283,[40,45,60],[80,180,255],0.35],["Cache Ore",57,2775,[40,45,60],[255,120,200],0.35]]},{"k":"robot_laser","name":"Laser Cave","w":1.5,"col":"#ff3040","deco":"crystal","b":[["Laser Grid Rock",17,6,[40,20,25],[255,40,60],0],["Mirror Block",15,4,[190,200,210],[255,255,255],0.05],["Ruby Laser Gem",67,897,[255,30,60],[255,180,190],0.55],["Photon Ore",29,684,[40,20,25],[255,80,90],0.35],["Prism Shard Ore",51,2876,[40,20,25],[255,200,255],0.35]]},{"k":"robot_battery","name":"Battery Cave","w":1.5,"col":"#ffe040","deco":"slime","b":[["Battery Rock",22,11,[60,60,70],[255,220,40],0],["Charged Block",9,8,[40,40,50],[120,255,120],0.05],["Power Cell Gem",66,924,[255,230,60],[255,255,200],0.55],["Lithium Ore",60,1945,[60,60,70],[220,230,240],0.35],["Volt Ore",31,1657,[60,60,70],[255,240,60],0.35]],"pool":"acid"}],"dino":[{"k":"dino_fossil","name":"Fossil Cave","w":2,"col":"#d8c8a0","deco":"regular","b":[["Fossil Rock",22,6,[170,150,110],[240,230,200],0],["Trilobite Block",8,7,[140,120,90],[200,180,140],0.05],["Dino Bone Gem",60,869,[240,230,200],[255,255,240],0.55],["Ammonite Ore",60,577,[170,150,110],[230,200,150],0.35],["Raptor Claw Ore",55,449,[170,150,110],[200,190,170],0.35]]},{"k":"dino_amber","name":"Amber Cave","w":1.5,"col":"#ffaa30","deco":"gold","b":[["Amber Rock",16,10,[160,100,30],[255,170,40],0],["Tree Sap Block",10,6,[200,130,40],[255,200,90],0.05],["Mosquito Amber Gem",64,1016,[255,160,30],[255,230,140],0.55],["Resin Ore",40,2453,[160,100,30],[255,180,60],0.35],["Ancient Bug Ore",39,877,[160,100,30],[120,90,40],0.35]]},{"k":"dino_volcano","name":"Volcano Nest Cave","w":1.5,"col":"#ff5a20","deco":"lava","b":[["Basalt Rock",20,11,[50,45,45],[255,90,30],0],["Pumice Block",14,3,[150,140,130],[200,190,180],0.05],["Dragon Egg Gem",69,403,[255,90,40],[255,220,120],0.55],["Magmasaur Ore",40,2039,[50,45,45],[255,70,20],0.35],["Sulfur Ore",48,2763,[50,45,45],[240,230,60],0.35]],"pool":"lava"},{"k":"dino_jungle","name":"Jungle Cave","w":2,"col":"#50c040","deco":"mossy","b":[["Vine Rock",20,12,[60,90,40],[110,190,60],0],["Giant Leaf Block",13,3,[40,130,40],[120,220,90],0.05],["Jade Gem",56,539,[60,200,120],[200,255,220],0.55],["Fern Ore",40,1900,[60,90,40],[90,220,90],0.35],["Orchid Ore",65,1076,[60,90,40],[255,120,220],0.35]]},{"k":"dino_nest","name":"Egg Nest Cave","w":1.5,"col":"#f0e0c0","deco":"mushroom","b":[["Nest Twig Rock",19,8,[130,100,60],[180,150,100],0],["Eggshell Block",12,6,[240,235,215],[200,190,160],0.05],["Golden Egg Gem",45,746,[255,210,60],[255,250,200],0.55],["Shell Ore",65,581,[130,100,60],[250,245,230],0.35],["Yolk Ore",55,2125,[130,100,60],[255,200,40],0.35]]},{"k":"dino_tarpit","name":"Tar Pit Cave","w":1.5,"col":"#505050","deco":"regular","b":[["Tar Rock",22,10,[30,28,25],[70,60,50],0],["Sticky Tar Block",8,8,[20,20,20],[60,60,60],0.05],["Mammoth Tooth Gem",66,529,[230,220,190],[255,255,240],0.55],["Bitumen Ore",48,1501,[30,28,25],[80,70,60],0.35],["Oil Shale Ore",33,1510,[30,28,25],[100,90,80],0.35]]}],"iceage":[{"k":"iceage_glacier","name":"Glacier Cave","w":2,"col":"#8ad8ff","deco":"frost","b":[["Glacier Ice",16,7,[150,200,240],[220,240,255],0],["Frozen Gravel",10,3,[150,160,170],[200,210,220],0.05],["Glacier Diamond Gem",68,579,[200,240,255],[255,255,255],0.55],["Permafrost Ore",39,2776,[150,200,240],[120,170,220],0.35],["Frostbite Ore",56,2940,[150,200,240],[80,140,255],0.35]]},{"k":"iceage_mammoth","name":"Mammoth Cave","w":2,"col":"#c09070","deco":"regular","b":[["Woolly Rock",17,12,[130,95,70],[180,140,100],0],["Tusk Block",8,3,[240,230,210],[200,190,170],0.05],["Ivory Gem",51,932,[250,245,230],[255,255,255],0.55],["Mammoth Hair Ore",46,1147,[130,95,70],[160,110,70],0.35],["Frozen Fur Ore",38,1793,[130,95,70],[210,230,250],0.35]]},{"k":"iceage_aurora","name":"Aurora Cave","w":1.5,"col":"#60ffd0","deco":"crystal","b":[["Aurora Rock",15,8,[40,60,90],[90,255,200],0],["Polar Glow Block",15,8,[50,80,110],[200,120,255],0.05],["Northern Light Gem",55,489,[90,255,210],[220,140,255],0.55],["Aurorite Ore",62,1415,[40,60,90],[120,255,220],0.35],["Starlight Ore",60,903,[40,60,90],[255,255,200],0.35]]},{"k":"iceage_snowman","name":"Snowman Cave","w":1.5,"col":"#f4f8ff","deco":"frost","b":[["Snowball Rock",18,7,[230,235,245],[200,210,230],0],["Carrot Nose Block",8,4,[240,130,40],[255,180,80],0.05],["Coal Button Gem",62,637,[40,40,45],[120,120,130],0.55],["Frosty Ore",37,2190,[230,235,245],[200,230,255],0.35],["Sleet Ore",65,2120,[230,235,245],[170,200,230],0.35]]},{"k":"iceage_sabre","name":"Sabretooth Den Cave","w":1.5,"col":"#e0b060","deco":"regular","b":[["Den Rock",20,10,[120,100,80],[170,150,120],0],["Claw Mark Block",13,4,[110,90,70],[230,220,200],0.05],["Fang Gem",65,821,[250,245,235],[255,220,150],0.55],["Fang Ore",32,1669,[120,100,80],[250,240,220],0.35],["Cave Painting Ore",35,1408,[120,100,80],[200,90,50],0.35]]},{"k":"iceage_crevasse","name":"Blue Crevasse Cave","w":1.5,"col":"#3a8aff","deco":"frost","b":[["Deep Blue Ice",14,8,[50,110,200],[120,180,255],0],["Slush Block",8,8,[170,200,220],[220,235,250],0.05],["Frozen Heart Gem",58,367,[80,160,255],[255,255,255],0.55],["Cryo Ore",58,2925,[50,110,200],[100,200,255],0.35],["Arctic Ore",35,1666,[50,110,200],[180,220,255],0.35]]}],"space":[{"k":"space_meteor","name":"Meteor Cave","w":2,"col":"#ff8a40","deco":"lava","b":[["Meteorite Rock",17,12,[60,50,50],[255,120,40],0],["Space Rock Block",14,5,[90,85,95],[150,145,160],0.05],["Shooting Star Gem",60,977,[255,220,120],[255,255,255],0.55],["Meteor Iron Ore",53,1561,[60,50,50],[150,140,150],0.35],["Star Metal Ore",29,1529,[60,50,50],[255,200,90],0.35]],"pool":"lava"},{"k":"space_alien","name":"Alien Hive Cave","w":1.5,"col":"#80ff40","deco":"slime","b":[["Alien Goo Rock",19,7,[50,80,40],[140,255,60],0],["Hive Block",10,5,[70,100,60],[180,220,80],0.05],["Alien Egg Gem",56,920,[120,255,80],[230,255,180],0.55],["Xeno Ore",35,457,[50,80,40],[150,255,60],0.35],["Probe Ore",29,872,[50,80,40],[180,180,200],0.35]],"pool":"acid"},{"k":"space_zerog","name":"Zero Gravity Cave","w":1.5,"col":"#c080ff","deco":"crystal","b":[["Floating Rock",21,9,[80,70,110],[180,140,255],0],["Antigrav Block",14,8,[60,50,90],[120,255,255],0.05],["Graviton Gem",57,416,[190,140,255],[255,255,255],0.55],["Zero-G Ore",29,493,[80,70,110],[200,160,255],0.35],["Quantum Ore",31,1745,[80,70,110],[120,255,255],0.35]]},{"k":"space_mooncheese","name":"Moon Cheese Cave","w":2,"col":"#f0e080","deco":"gold","b":[["Moon Rock",19,6,[180,180,170],[220,220,200],0],["Moon Cheese Block",12,6,[240,220,120],[255,240,160],0.05],["Moon Gem",65,782,[230,230,255],[255,255,255],0.55],["Lunar Ore",39,1421,[180,180,170],[210,210,230],0.35],["Crater Ore",64,1283,[180,180,170],[150,150,160],0.35]]},{"k":"space_nebula","name":"Nebula Cave","w":1.5,"col":"#ff60c0","deco":"crystal","b":[["Nebula Rock",21,8,[60,30,80],[255,90,200],0],["Stardust Block",8,7,[90,60,120],[255,220,255],0.05],["Nebula Gem",61,604,[255,80,200],[120,160,255],0.55],["Cosmic Ore",40,981,[60,30,80],[255,120,220],0.35],["Pulsar Ore",58,2823,[60,30,80],[120,200,255],0.35]]},{"k":"space_blackhole","name":"Black Hole Cave","w":1,"col":"#8060c0","deco":"frost","b":[["Event Horizon Rock",17,8,[15,10,25],[120,80,200],0],["Dark Matter Block",8,8,[25,20,35],[80,60,120],0.05],["Singularity Gem",50,761,[20,10,30],[255,255,255],0.55],["Dark Matter Ore",56,2449,[15,10,25],[90,60,160],0.35],["Wormhole Ore",48,1702,[15,10,25],[160,120,255],0.35]]}]}, NORMAL_EXTRA = {"regular":[["Cave Silver Ore",39,2501,[110,110,118],[210,210,220],0.35],["Cave Coal Ore",54,2055,[110,110,118],[30,30,30],0.35]],"frost":[["Icicle Ore",51,2540,[110,110,118],[200,240,255],0.35]],"mossy":[["Lichen Ore",59,501,[110,110,118],[180,220,120],0.35]],"lava":[["Ember Ore",51,2646,[110,110,118],[255,120,30],0.35]],"acid":[["Toxic Lime Ore",52,2348,[110,110,118],[180,255,60],0.35]],"crystal":[["Opal Ore",48,2268,[110,110,118],[230,200,255],0.35],["Moonstone Ore",50,1755,[110,110,118],[210,220,255],0.35]],"mushroom":[["Truffle Ore",50,2811,[110,110,118],[120,80,50],0.35]],"gold":[["Platinum Ore",49,1589,[110,110,118],[230,230,240],0.35],["Pyrite Ore",43,784,[110,110,118],[230,200,90],0.35]],"slime":[["Gloop Ore",43,2094,[110,110,118],[100,255,150],0.35]]};
-  const CAVE_SET = window.__layersOwner || (MEME ? 'meme' : HILARIOUS ? 'funny' : LN_WASTE ? 'chaos' : 'normal');   // the mode that owns the layers owns the caves too
-  if(MODE_CAVES[CAVE_SET]){ T.length = 0; MODE_CAVES[CAVE_SET].forEach(t=>T.push(t)); }
-  else T.forEach(t=>(NORMAL_EXTRA[t.k] || []).forEach(q=>{ q[3] = t.b[0][3]; t.b.push(q); }));
   const TW = T.reduce((s,t)=>s+t.w,0);
   // the blocks: kept in save.customBlocks (like Cooled Lava) so their ids never move between sessions
   T.forEach(t=>{ t.ids = t.b.map((q,i)=>{
     let j = BLOCKS.findIndex(b=>b.name === q[0]);
     if(j < 0 && (save.customBlocks || []).length < 120 && BLOCKS.length < 250){            // same as registerCustomBlock, which cannot run this early
-      const spec = {name:q[0], h:q[1], v:q[2], c1:q[3], c2:q[4], glow:q[5], pattern:i >= 3 ? 'ore' : t.k === 'crystal' && i === 0 ? 'tile' : 'plain', cave:t.k};
+      const spec = {name:q[0], h:q[1], v:q[2], c1:q[3], c2:q[4], glow:q[5], pattern:i === 3 ? 'ore' : t.k === 'crystal' && i === 0 ? 'tile' : 'plain', cave:t.k};
       save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
       const B = specToBlock(spec); BLOCKS.push(B); meshes.push(createBlockMesh(B, BLOCKS.length-1)); j = BLOCKS.length-1;
     }
@@ -2347,7 +2342,7 @@ const CAVE = (function(){
           return 0;
         }
         if(hash3(x>>1, d>>1, z>>1, 741) < (a.c.big ? .17 : .11) && hash3(x, d, z, 743) < .7){   // ores come in little clumps
-          if(ids.length > 3 && hash3(x>>1, d>>1, z>>1, 745) < .5){ const o = ids[3 + Math.floor(hash3(x>>1, d>>1, z>>1, 749)*(ids.length-3))]; if(o) return o; }   // the cave's own ores
+          if(ids[3] && hash3(x>>1, d>>1, z>>1, 745) < .45) return ids[3];
           const o = layerOre(x, d, z); if(o) return o;
         }
         const h = hash3(x, d, z, 709), id = h < .08 ? ids[2] : h < .3 ? ids[1] : ids[0];
@@ -3335,7 +3330,7 @@ function updateMining(dt){
   }
   if(tt && (!hit || tt.dist < hit.t)){
     cur = null; hlEdges.visible = crack.visible = false; setCrack(0);
-    blockName.textContent = tt.tree.special ? 'Suspicious Tree' : 'Tree';
+    blockName.textContent = 'Tree';
     if(mouseDown){
       if(chopT.tree === tt.tree) chopT.p += dt; else chopT = {tree:tt.tree, p:dt};
       barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, chopT.p/((tt.tree.special && nw.st && nw.tree === tt.tree) ? 1 : (mineAny ? .4 : 1.6))*100)+'%';
@@ -3679,7 +3674,7 @@ function fightAttack(dt){
     hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
     const pw = PICKS[save.equipped].power; let dmg = (pw >= 1e6 || mineAny) ? 1e12 : (pw*1.4 + 8)*dt*(1 + gear.dmg);   // the world-breaking pickaxes one-shot anything
     dmg = maBossDmg(t, dmg);
-    if(t.k === 'bob'){ window.__bobs && window.__bobs.hit(t.bob, Math.min(dmg, 1e6)); } else if(t.k === 'mzc'){ window.__mzHit && window.__mzHit(t.ch, Math.min(dmg, 1e6)); } else if(t.k === 'bguy'){ window.__bguy && window.__bguy.hurtGuy(Math.min(dmg, 1e6)); }
+    if(t.k === 'bob'){ window.__bobs && window.__bobs.hit(t.bob, Math.min(dmg, 1e6)); } else if(t.k === 'bguy'){ window.__bguy && window.__bguy.hurtGuy(Math.min(dmg, 1e6)); }
     else if(t.k === 'c') mineCorpse(t.corpse, dmg); else if(t.k === 'n') nw.hp -= dmg; else if(t.k === 's') sk.hp -= dmg; else if(t.k === 'e') damageEnemy(t.e, dmg); else if(t.k === 'a') damageAnimal(t.a, dmg); else if(t.k === 'p') pt.hp -= dmg; else beast.hp -= dmg;
     if(Math.random() < dt*10){ blip(180+Math.random()*80,.06,.07,'square'); burst(t.c.x, t.c.y, t.c.z, 9, 1); }
     return true;
@@ -8248,7 +8243,7 @@ const LAVA = (function(){
   function coolCell(x, d, z){
     const id = coolId(); if(!id) return false;
     const j = at(x,d,z); if(j >= 0){ if(SRC[j] === 1) markGone(ek(x,d,z)); del(j); }
-    setBlock(x, d, z, (window.__coolPick && window.__coolPick()) || id);   // water + lava = Stone, sometimes Obsidian
+    setBlock(x, d, z, id);
     steam(x+.5, -d, z+.5, 5); blip(1500,.25,.05,'sawtooth'); setTimeout(()=>blip(400,.2,.05,'sine'), 80);
     save.lavaCooled = (save.lavaCooled||0) + 1;
     return true;
@@ -8267,7 +8262,7 @@ const LAVA = (function(){
       if(w >= 0) FLW.del(w);
       coolCell(x, d, z);
     }
-    if(cn && !save.lavaCoolTold){ save.lavaCoolTold = true; toast('Tssss! Water and lava made STONE. Sometimes it makes OBSIDIAN!'); }
+    if(cn && !save.lavaCoolTold){ save.lavaCoolTold = true; toast(cp('lavaCooledToast','Tssss! Water turned the lava into Cooled Lava. Now you can walk on it.')); }
   }
   // ---------- flow: one slow step every 0.6 s, spreads only about 3 blocks
   function step(){
@@ -14054,7 +14049,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   document.body.appendChild(mzHud);
   function toStart(){ P.x = MZ.x + mzStart.x; P.z = MZ.z + mzStart.z; P.y = MZ.y + .05; P.vx = P.vy = P.vz = 0; P.yaw = Math.PI*1.25; }
   function enter(why){
-    makeMaze(); CHASERS.forEach(c=>{ c.dead = false; c.hp = 150; c.g.visible = true; }); placeChasers(); mzOn = true; mzG.visible = true; mzHud.style.display = 'block'; toStart();
+    makeMaze(); placeChasers(); mzOn = true; mzG.visible = true; mzHud.style.display = 'block'; toStart();
     toast('You are in THE MAZE! Find the green EXIT. Burt Macklin, Made in China Guy, Albert Einstein and Nikola Tesla are coming for you!');
     blip(200,.3,.15,'square'); setTimeout(()=>blip(150,.4,.15,'square'),200);
   }
@@ -14079,7 +14074,6 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     exitDoor.material.color.setHSL(.33, 1, .45 + Math.sin(now/200)*.12);
     if(Math.hypot(lx - mzExit.x, lz - mzExit.z) < 1.3){ leave(true); return; }
     for(const c of CHASERS){
-      if(c.dead) continue;
       if(c.wait > 0){ c.wait -= dt; continue; }
       c.repath -= dt;
       if(c.repath <= 0 || !c.path.length){ c.repath = .6; c.path = bfs(cellOf(c.x, c.z), pc); }
@@ -14192,131 +14186,6 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   })(performance.now());
   window.__doorroom = {goIn, goOut, inRoom, openMumChest, talkMum:()=>toast("Basement Guy's Mum: "+MUM[mumI++ % MUM.length]), DR};
   /* LN-doorroom end */
-  /* LN-mumroom start: Mum's secret room can be mined, the maze walls can be mined, the maze chasers can be beaten (Irfan 2026-10-26) */
-  {
-    const FARm = new THREE.Matrix4().makeTranslation(0,-99999,0), tM = new THREE.Matrix4(), tC = new THREE.Color(), unitG = new THREE.BoxGeometry(1,1,1);
-    const ray = new THREE.Raycaster(), rdir = new THREE.Vector3();
-    // ---------- Mum's room: the walls and floor become tiles you can mine (the ceiling stays)
-    save.mumMined = save.mumMined || {};
-    const MM = save.mumMined, shellR = dRoom.children.slice(0, 6);
-    [0,2,3,4,5].forEach(i=>{ shellR[i].visible = false; shellR[i].layers.set(1); });
-    dRoom.children.forEach(m=>{ if(m.isMesh && m.geometry.parameters && Math.abs(m.geometry.parameters.height - .04) < 1e-6){ m.visible = false; m.layers.set(1); } });   // the old carpet stripes
-    const oldS = [[DR.x-RW,DR.x+RW,DR.y-.4,DR.y,DR.z-RW,DR.z+RW],[DR.x-RW,DR.x+RW,DR.y,DR.y+RH,DR.z-RW-.15,DR.z-RW+.15],[DR.x-RW,DR.x+RW,DR.y,DR.y+RH,DR.z+RW-.15,DR.z+RW+.15],
-      [DR.x-RW-.15,DR.x-RW+.15,DR.y,DR.y+RH,DR.z-RW,DR.z+RW],[DR.x+RW-.15,DR.x+RW+.15,DR.y,DR.y+RH,DR.z-RW,DR.z+RW]];
-    for(let i=solids.length-1;i>=0;i--){ const s = solids[i]; if(oldS.some(o=>o.every((v,j)=>Math.abs(v - s[j]) < 1e-6))) solids.splice(i,1); }
-    const SW = RW*2 + 2.3, SY = (RH - 1)/2, SHt = RH + 1.6;                                       // the bedrock box all around (cannot be mined)
-    [[0,-1.15,0,SW,.3,SW],[0,SY,-(RW+1),SW,SHt,.3],[0,SY,RW+1,SW,SHt,.3],[-(RW+1),SY,0,.3,SHt,SW],[RW+1,SY,0,.3,SHt,SW]].forEach(q=>{
-      box(q[3],q[4],q[5],0x2a2a30,q[0],q[1],q[2],dRoom);
-      solids.push([DR.x+q[0]-q[3]/2, DR.x+q[0]+q[3]/2, DR.y+q[1]-q[4]/2, DR.y+q[1]+q[4]/2, DR.z+q[2]-q[5]/2, DR.z+q[2]+q[5]/2]);
-    });
-    const MK = {paper:{name:"Mum's Wallpaper", drop:'Wooden Plank', need:1, cols:[0x6a3a7a,0x7a4488,0x62346f]}, brick:{name:"Mum's Brick Wall", drop:'Stone', need:1.4, cols:[0x8a4a3a,0x7a4032,0x944e3e], secret:.04},
-      carpet:{name:"Mum's Carpet", drop:'Cloth Scrap', need:.8, cols:[0x7a3a5a,0x5a2a4a]}, boards:{name:"Mum's Floorboards", drop:'Wooden Plank', need:1, cols:[0x6a4a2a,0x5a3e22], secret:.05}};
-    const MT = [], rows = 4, rhh = RH/rows;
-    const addT = (id,kind,lx,ly,lz,sx,sy,sz)=>MT.push({id,kind,lx,ly,lz,sx,sy,sz,alive:!MM[id]});
-    for(let c=0;c<10;c++) for(let r=0;r<rows;r++){
-      const a = -RW + .5 + c, y = rhh*(r+.5);
-      addT('pn'+c+'_'+r,'paper', a,y,-RW, 1,rhh,.3); addT('ps'+c+'_'+r,'paper', a,y,RW, 1,rhh,.3); addT('pw'+c+'_'+r,'paper', -RW,y,a, .3,rhh,1); addT('pe'+c+'_'+r,'paper', RW,y,a, .3,rhh,1);
-      addT('bn'+c+'_'+r,'brick', a,y,-(RW+.5), 1,rhh,.7); addT('bs'+c+'_'+r,'brick', a,y,RW+.5, 1,rhh,.7); addT('bw'+c+'_'+r,'brick', -(RW+.5),y,a, .7,rhh,1); addT('be'+c+'_'+r,'brick', RW+.5,y,a, .7,rhh,1);
-    }
-    for(let i=0;i<10;i++) for(let k=0;k<10;k++){ const x = -RW + .5 + i, z = -RW + .5 + k; addT('c'+i+'_'+k,'carpet', x,-.2,z, 1,.4,1); addT('f'+i+'_'+k,'boards', x,-.7,z, 1,.6,1); }
-    const MIM = {};
-    Object.keys(MK).forEach(k=>{
-      const L = MT.filter(t=>t.kind === k), im = new THREE.InstancedMesh(unitG, new THREE.MeshLambertMaterial({color:0xffffff}), L.length);
-      L.forEach((t,i)=>{ t.im = im; t.ii = i; tM.makeScale(t.sx*.995, t.sy*.995, t.sz*.995); tM.setPosition(t.lx, t.ly, t.lz); im.setMatrixAt(i, t.alive ? tM : FARm);
-        const cs = MK[k].cols; tC.setHex(k === 'carpet' ? cs[Math.floor((t.lz + RW)/2) % 2] : cs[(Math.abs(Math.round(t.lx*3 + t.ly*5 + t.lz*7))) % cs.length]); im.setColorAt(i, tC); });
-      im.instanceMatrix.needsUpdate = true; if(im.instanceColor) im.instanceColor.needsUpdate = true; im.frustumCulled = false; dRoom.add(im); MIM[k] = im;
-    });
-    const MBUCK = new Map(); MT.forEach(t=>{ const kk = Math.floor(t.lx)*1000 + Math.floor(t.lz); if(!MBUCK.has(kk)) MBUCK.set(kk, []); MBUCK.get(kk).push(t); });
-    const _colR = collides;
-    collides = function(px, py, pz){
-      if(Math.abs(py - DR.y) < 8 && Math.abs(px - DR.x) < RW+2 && Math.abs(pz - DR.z) < RW+2){
-        const x = px - DR.x, y = py - DR.y, z = pz - DR.z;
-        for(let bi=Math.floor(x)-2; bi<=Math.floor(x)+1; bi++) for(let bk=Math.floor(z)-2; bk<=Math.floor(z)+1; bk++){
-          const L = MBUCK.get(bi*1000 + bk); if(L) for(const t of L){
-            if(!t.alive) continue;
-            if(x+HW > t.lx-t.sx/2 && x-HW < t.lx+t.sx/2 && y+HH > t.ly-t.sy/2 && y < t.ly+t.sy/2 && z+HW > t.lz-t.sz/2 && z-HW < t.lz+t.sz/2) return true;
-          }
-        }
-      }
-      return _colR(px, py, pz);
-    };
-    const MUMSAY = ['Mum: "Oi! That is my wallpaper!"', 'Mum: "I just had that carpet cleaned!"', 'Mum: "Are you digging through my room? Wipe your feet at least."', 'Mum: "My son gets that from you, does he?"', 'Mum: "Put that brick back! No? Fine. Have a cookie."'];
-    let mumN = 0;
-    function mineMum(t){
-      t.alive = false; MM[t.id] = 1; t.im.setMatrixAt(t.ii, FARm); t.im.instanceMatrix.needsUpdate = true;
-      const K = MK[t.kind]; addItem(K.drop, 1);
-      if(K.secret && Math.random() < K.secret && window.__bguy){ const S = window.__bguy.SECRETS, n = S[Math.floor(Math.random()*S.length)]; addItem(n, 1); toast('Hidden in Mum\'s room: '+n+'!'); blip(990,.15,.1,'triangle'); }
-      else if(++mumN % 7 === 1) toast(MUMSAY[Math.floor(Math.random()*MUMSAY.length)]);
-      if(Object.keys(MM).length === 60 && !save.mumNews){ save.mumNews = 1; news('BREAKING: Somebody is digging up Basement Guy\'s Mum\'s room. She has offered them a cookie.'); }
-      burst(DR.x + t.lx, DR.y + t.ly, DR.z + t.lz, 0, 8); blip(220 + Math.random()*80,.07,.08,'square');
-      persist();
-    }
-    let mP = 0, mKey = '';
-    function aimMum(){
-      rdir.set(0,0,0); camera.getWorldDirection(rdir); ray.set(camera.position, rdir); ray.far = mineAny ? 10 : 5.5; ray.camera = camera;
-      const objs = []; dRoom.traverse(o=>{ if(o.isMesh && o.layers.test(ray.layers)) objs.push(o); });
-      const h = ray.intersectObjects(objs, false)[0]; if(!h || !h.object.isInstancedMesh) return null;
-      const k = Object.keys(MIM).find(k=>MIM[k] === h.object); if(!k) return null;
-      const t = MT.filter(q=>q.kind === k)[h.instanceId]; return t && t.alive ? t : null;
-    }
-    // ---------- the maze: inside walls can be mined, the chasers can be beaten
-    const CH_HP = 150, CH_DROP = {burt:"Burt Macklin's FBI Badge", china:'Giant Wind-up Key', einstein:"Einstein's Chalk", tesla:'Tiny Tesla Coil'};
-    BADGES.push({id:'mazehunter', icon:'MH', name:'Chaser Chaser', desc:'Beat all four maze chasers.'});
-    CHASERS.forEach(c=>{ c.hp = CH_HP; c.dead = false; });
-    function hurtCh(c, dmg){
-      if(!c || c.dead) return;
-      c.hp -= dmg; c.wait = Math.max(c.wait || 0, .25);
-      c.g.traverse(m=>{ if(m.isMesh && m.material && m.material.emissive){ m.material.emissive.setHex(0x661111); setTimeout(()=>m.material.emissive.setHex(0x000000), 120); } });
-      if(c.hp > 0) return;
-      c.dead = true; c.g.visible = false; burst(MZ.x + c.x, MZ.y + 1.2, MZ.z + c.z, 9, 30); shake = .1; blip(90,.5,.2,'sawtooth');
-      save.coins += 2000; addItem(CH_DROP[c.k] || 'Stone', 1); persist(); refreshShopIfOpen();
-      toast(c.name+' is beaten! +$2,000 and '+CH_DROP[c.k]+'.');
-      if(CHASERS.every(q=>q.dead)){ award('mazehunter'); setTimeout(()=>toast('All four chasers are beaten! The maze is all yours. They will be back next time.'), 2200); news('BREAKING: Burt Macklin, Made in China Guy, Albert Einstein and Nikola Tesla all lose to one miner. Burt says "this is not over".'); }
-    }
-    window.__mzHit = hurtCh;
-    const _ftM = fightTargets;
-    fightTargets = function(){ const l = _ftM(); if(mzOn && realm === 0) CHASERS.forEach(c=>{ if(!c.dead) l.push({k:'mzc', ch:c, c:new THREE.Vector3(MZ.x + c.x, MZ.y + 1.2, MZ.z + c.z), r:.7}); }); return l; };
-    const _ghM = gunTargetHit;
-    gunTargetHit = function(t, d){ if(t && t.k === 'mzc'){ hurtCh(t.ch, Math.min(d, 1e6)); return; } return _ghM(t, d); };
-    function aimMaze(){
-      camera.getWorldDirection(rdir); ray.set(camera.position, rdir); ray.far = mineAny ? 10 : 5.5; ray.camera = camera;
-      const objs = [wallIM]; CHASERS.forEach(c=>{ if(!c.dead) c.g.traverse(m=>{ if(m.isMesh) objs.push(m); }); });
-      const h = ray.intersectObjects(objs, false)[0]; if(!h) return null;
-      if(h.object === wallIM){ const id = h.instanceId, gx = id % MG, gz = (id/MG)|0; if(!grid || grid[id] !== 1) return null;
-        return (gx <= 0 || gz <= 0 || gx >= MG-1 || gz >= MG-1) ? {edge:true, key:'edge'} : {id, key:'w'+id}; }
-      const c = CHASERS.find(c=>{ let f = false; c.g.traverse(m=>{ if(m === h.object) f = true; }); return f; });
-      return c ? {ch:c, key:'c'+c.k} : null;
-    }
-    function mineWall(id){
-      grid[id] = 0; wallIM.setMatrixAt(id, FARm); wallIM.instanceMatrix.needsUpdate = true;
-      const p = cellPos(id % MG, (id/MG)|0); burst(MZ.x + p.x, MZ.y + 1.5, MZ.z + p.z, 0, 10); blip(180 + Math.random()*60,.08,.1,'square');
-      addItem('Stone', 1); save.mazeMined = (save.mazeMined||0) + 1;
-      if(save.mazeMined === 1) toast('You dug through a maze wall! The chasers can use your shortcut too...');
-    }
-    // ---------- mining both places
-    const _umR = updateMining;
-    updateMining = function(dt){
-      if(realm === 0 && (inRoom() || mzOn)){
-        const a = inRoom() ? (()=>{ const t = aimMum(); return t ? {t, key:t.id, name:MK[t.kind].name, need:MK[t.kind].need} : null; })() : aimMaze();
-        if(a){
-          cur = null; hlEdges.visible = crack.visible = false;
-          if(a.edge){ blockName.textContent = 'Outer maze wall (much too strong to mine)'; barwrap.style.display = 'none'; mP = 0; return; }
-          const need0 = a.ch ? .35 : a.t ? a.need : 1.2, need = mineAny ? need0*.25 : need0;
-          blockName.textContent = a.ch ? a.ch.name+'  ·  '+Math.max(0, Math.ceil(a.ch.hp))+' / '+CH_HP+' HP  ·  hold click to hit' : a.t ? a.name+'  ·  hold click to mine (Mum is watching)' : 'Maze wall  ·  hold click to mine';
-          if(mouseDown){
-            if(a.key !== mKey){ mKey = a.key; mP = 0; }
-            mP += dt; swingT += dt; barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, mP/need*100)+'%';
-            if(mP >= need){ mP = 0; barwrap.style.display = 'none';
-              if(a.ch){ hurtCh(a.ch, mineAny ? 1e9 : 12 + PICKS[save.equipped].power*.6); mP = need*.4; } else if(a.t) mineMum(a.t); else mineWall(a.id); }
-          } else { mP = 0; mKey = ''; barwrap.style.display = 'none'; }
-          return;
-        }
-      }
-      return _umR(dt);
-    };
-    window.__mumroom = {MT, MK, mineMum, aimMum, hurtCh, mineWall, aimMaze};
-  }
-  /* LN-mumroom end */
   window.__mf = {MF, MEME_ALL, FUNNY_ALL, SPECIAL, KEY, giveMF, randomMF, giveSpecial, goDown, goUp, openChest, nearAct, HATCH, BASE, inBase, mfRoll, breakHatch:()=>{ save.hatchBroken = true; showBroken(); if(!sk.on) shopMad(); }};
   if(window.__dig) window.__dig.mf = window.__mf;
 })();
@@ -14808,7 +14677,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   const M = col=>new THREE.MeshLambertMaterial({color:col});
   function tag(text){
     const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
-    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0,8,256,48); g.fillStyle = '#ffe14a'; let fs = 34; g.font = '900 34px system-ui,sans-serif'; while(g.measureText(text).width > 246 && fs > 14){ fs -= 2; g.font = '900 '+fs+'px system-ui,sans-serif'; } g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 33);
+    g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0,8,256,48); g.fillStyle = '#ffe14a'; g.font = '900 34px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 128, 33);
     const t = new THREE.CanvasTexture(c), sp = new THREE.Sprite(new THREE.SpriteMaterial({map:t, depthTest:true})); sp.scale.set(1.4,.35,1); return sp;
   }
   function bubble(b, text){
@@ -14819,239 +14688,34 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 42);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c)})); sp.scale.set(2.6,.5,1); sp.position.y = 2.75; b.g.add(sp); b.bub = sp; b.bubT = 3.2;
   }
-  /* LN-bobnight start: Bobs only come out at night, many kinds of Bob, the Bob King, Bob Mode (Irfan 2026-10-26) */
-  const BX = (w,h,d,col,x,y,z)=>[w,h,d,col,x,y,z];
-  const VARS = {
-    bob:       {name:'Bob', hp:30, spd:3.1, dmg:2},
-    tiny:      {name:'Tiny Bob', hp:12, spd:4.6, dmg:1, size:.55, shirt:0xffd030, coin:15},
-    big:       {name:'Big Bob', hp:110, spd:2.2, dmg:5, size:1.8, shirt:0x8a4a2a, coin:80, push:1},
-    sling:     {name:'Slingshot Bob', hp:24, spd:3, dmg:2, shoot:'pebble', shirt:0x2a9a5a, acc:[BX(.06,.32,.06,0x6b4a2a,.33,.55,.14), BX(.46,.06,.44,0x2a9a5a,0,1.6,0)]},
-    popper:    {name:'Party Popper Bob', hp:16, spd:4, dmg:6, pop:1, shirt:0xff4fd8, noProp:1, acc:[BX(.26,.14,.26,0xffd030,0,1.7,0), BX(.16,.14,.16,0x4fe7f0,0,1.83,0), BX(.07,.12,.07,0xff2a2a,0,1.95,0)], cries:['Party time!','Surprise party!','I am going to POP!']},
-    medic:     {name:'Medic Bob', hp:28, spd:2.8, dmg:1, heal:1, shirt:0xffffff, hat:0xffffff, acc:[BX(.22,.06,.02,0xe02020,0,.95,.16), BX(.06,.22,.02,0xe02020,0,.95,.16)], cries:['Hold still, Bob!','I have plasters!','Bob down! Bob down!']},
-    ninja:     {name:'Ninja Bob', hp:25, spd:4.4, dmg:3, hop:1, shirt:0x151515, pants:0x151515, skin:0x151515, noProp:1, acc:[BX(.46,.06,.44,0xd02020,0,1.56,0), BX(.04,.3,.04,0xd02020,0,1.5,-.24)], cries:['Hi-yah!','You did not see me.','Silent but Bob.']},
-    shield:    {name:'Shield Bob', hp:60, spd:2.6, dmg:2, armor:.5, shirt:0x606a78, acc:[BX(.56,.62,.06,0x9aa0a8,0,.95,.3), BX(.12,.12,.04,0x6a7078,0,.95,.34)], cries:['My bin lid protects me!','Ha! Shield!']},
-    // mode Bobs
-    clown:     {name:'Clown Bob', hp:30, spd:3.2, dmg:2, shoot:'pie', shirt:0xff40a0, skin:0xffffff, acc:[BX(.09,.09,.06,0xff2020,0,1.4,.23), BX(.1,.2,.38,0xff8a20,-.25,1.5,0), BX(.1,.2,.38,0xff8a20,.25,1.5,0)], cries:['Pie time!','Honk honk!','Cream pie, coming up!']},
-    zombie:    {name:'Zombie Bob', hp:50, spd:2.3, dmg:3, shirt:0x556b2f, pants:0x3a3a2a, skin:0x7fb069, cries:['Basemeeeent...','Bobs... never... sleep...','Hungry for... soup...']},
-    troll:     {name:'Troll Bob', hp:30, spd:3, dmg:2, blink:1, skin:0xe8e8e8, acc:[BX(.34,.06,.02,0x111111,0,1.31,.215), BX(.26,.04,.02,0xffffff,0,1.34,.215)], cries:['Problem?','Surprise!','You fell for it!']},
-    ghost:     {name:'Ghost Bob', hp:20, spd:3.4, dmg:2, fly:1, ghost:1, noProp:1, shirt:0xeef4ff, pants:0xeef4ff, skin:0xeef4ff, cries:['Boo! I mean... Bob!','Whooo is in the basement?','I am see-through!']},
-    skeleton:  {name:'Skeleton Bob', hp:26, spd:3, dmg:2, shoot:'bone', shirt:0xf0eee0, pants:0xf0eee0, skin:0xf0eee0, noProp:1, acc:[BX(.4,.04,.02,0x333333,0,.98,.16), BX(.4,.04,.02,0x333333,0,.86,.16), BX(.4,.04,.02,0x333333,0,1.1,.16)], cries:['I have a bone to pick with you!','Rattle rattle!']},
-    diver:     {name:'Diver Bob', hp:40, spd:2.6, dmg:2, shoot:'bubble', noProp:1, shirt:0x2a4a8a, acc:[BX(.56,.56,.54,0xc09040,0,1.45,0), BX(.32,.3,.02,0x88ccff,0,1.45,.28)], cries:['Blub blub!','Bubble attack!']},
-    pirate:    {name:'Pirate Bob', hp:35, spd:3.2, dmg:3, noProp:1, shirt:0xf0f0f0, acc:[BX(.12,.1,.02,0x111111,-.1,1.47,.215), BX(.6,.14,.36,0x111111,0,1.7,0), BX(.04,.55,.04,0xcccccc,.33,.55,.22), BX(.52,.08,.32,0xc02020,0,1.08,0)], cries:['Arr! Give me yer basement!','Shiver me Bobs!']},
-    bobbot:    {name:'Bob-Bot 3000', hp:45, spd:2.8, dmg:2, shoot:'laser', skin:0xa0a8b0, shirt:0x707880, pants:0x505860, noProp:1, acc:[BX(.3,.06,.03,0xff2020,0,1.47,.22), BX(.04,.3,.04,0x333333,0,1.78,0), BX(.1,.1,.1,0xff2020,0,1.95,0)], cries:['BEEP. BONK MODE ON.','ERROR: BASEMENT NOT FOUND.']},
-    caveman:   {name:'Caveman Bob', hp:45, spd:2.8, dmg:4, noProp:1, shirt:0xc89040, acc:[BX(.14,.14,.02,0x5a3a10,-.12,.98,.16), BX(.12,.12,.02,0x5a3a10,.1,.8,.16), BX(.46,.12,.44,0x4a2a10,0,1.66,0), BX(.14,.62,.14,0x6b4a2a,.36,.7,.18)], cries:['Ugg! Bob smash!','Bob find shiny rock!']},
-    snowbob:   {name:'Snow Bob', hp:30, spd:3, dmg:1, shoot:'snow', noProp:1, shirt:0x4060c0, acc:[BX(.46,.12,.44,0xd02020,0,1.2,0), BX(.46,.2,.44,0xffffff,0,1.68,0), BX(.12,.12,.12,0xffffff,0,1.84,0)], cries:['Snowball fight!','Brrr! Bonk!']},
-    yeti:      {name:'Yeti Bob', hp:90, spd:2.4, dmg:5, size:1.6, noProp:1, shirt:0xf0f4ff, pants:0xf0f4ff, skin:0xd8e4f0, push:1, cries:['ROOOAR! I mean, hello.','Yeti Bob wants a hug. A HARD hug.']},
-    alien:     {name:'Alien Bob', hp:30, spd:3.3, dmg:2, shoot:'zap', noProp:1, skin:0x7fe070, shirt:0x7040c0, acc:[BX(.14,.12,.02,0x111111,-.1,1.47,.215), BX(.14,.12,.02,0x111111,.1,1.47,.215), BX(.04,.32,.04,0x7fe070,-.14,1.78,0), BX(.04,.32,.04,0x7fe070,.14,1.78,0), BX(.09,.09,.09,0xffe14a,-.14,1.96,0), BX(.09,.09,.09,0xffe14a,.14,1.96,0)], cries:['Take me to your basement!','Zap zap!']},
-    // biome Bobs
-    mummy:     {name:'Mummy Bob', hp:45, spd:2.2, dmg:3, noProp:1, skin:0xe8dcc0, shirt:0xe8dcc0, pants:0xe8dcc0, acc:[BX(.44,.03,.42,0xb8a888,0,1.36,0), BX(.52,.03,.32,0xb8a888,0,.82,0), BX(.52,.03,.32,0xb8a888,0,1.02,0)], cries:['Mmmmf! Mmf mmf!','I am all wrapped up!']},
-    sandbob:   {name:'Sandy Bob', hp:26, spd:3.3, dmg:1, shoot:'sand', shirt:0xe0c070, hat:0xe0c070, acc:[BX(.36,.08,.02,0x111111,0,1.47,.22)], cries:['Sand in your eyes!','It is hot out here!']},
-    climber:   {name:'Climber Bob', hp:40, spd:3, dmg:2, hop:1, noProp:1, shirt:0x2a7ad0, acc:[BX(.48,.16,.46,0xffd030,0,1.68,0), BX(.36,.36,.14,0xa04020,0,1,-.22)], cries:['I climbed a whole mountain for this!','Yodel-Bob-ee-hoo!']},
-    boulder:   {name:'Boulder Bob', hp:50, spd:2.2, dmg:4, shoot:'rock', rate:3.2, shirt:0x7a6a5a, acc:[BX(.6,.6,.5,0x8a8a8a,0,1.3,-.42)], cries:['Rock and roll!','Heads up!']},
-    snorkel:   {name:'Snorkel Bob', hp:28, spd:3.4, dmg:2, noProp:1, shirt:0x30b0c0, acc:[BX(.4,.14,.04,0x30c0ff,0,1.47,.22), BX(.04,.36,.04,0xffd030,.2,1.62,.1), BX(.2,.04,.34,0x30c0ff,-.12,.02,.1), BX(.2,.04,.34,0x30c0ff,.12,.02,.1)], cries:['Splish splash, Bob attack!','My flippers are slappy!']},
-    fisher:    {name:'Fisher Bob', hp:30, spd:2.8, dmg:2, shoot:'fish', noProp:1, shirt:0x3a7a4a, acc:[BX(.5,.14,.48,0x5a7a3a,0,1.66,0), BX(.03,.9,.03,0x6b4a2a,.34,1.1,.25)], cries:['Fish slap!','I caught a miner!']},
-    farmer:    {name:'Farmer Bob', hp:35, spd:2.9, dmg:3, noProp:1, shirt:0x3a5ad0, acc:[BX(.8,.04,.8,0xe8d080,0,1.64,0), BX(.36,.16,.36,0xe8d080,0,1.72,0), BX(.04,.8,.04,0x8a6a3a,.34,.75,.2), BX(.22,.04,.04,0xb0b0b0,.34,1.15,.2)], cries:['Get off my field!','Moo. I mean, Bob.']},
-    lumberjack:{name:'Lumberjack Bob', hp:50, spd:2.7, dmg:4, noProp:1, shirt:0xc02020, acc:[BX(.52,.04,.32,0x111111,0,.8,0), BX(.52,.04,.32,0x111111,0,1.0,0), BX(.36,.14,.04,0x6a3a10,0,1.28,.21), BX(.46,.12,.44,0xc02020,0,1.66,0), BX(.04,.5,.04,0x6b4a2a,.34,.6,.2), BX(.04,.18,.16,0xcccccc,.34,.82,.28)], cries:['Timber!','I chop trees AND miners!']},
-    hiker:     {name:'Hiker Bob', hp:32, spd:3.4, dmg:2, shirt:0xe07020, acc:[BX(.4,.44,.2,0x3a6a3a,0,1,-.24), BX(.04,1,.04,0x8a6a3a,-.34,.6,.2)], cries:['Up the hill, down the hill, BONK!','Nice view. Bonk!']},
-    mudbob:    {name:'Mud Bob', hp:40, spd:2.4, dmg:2, shoot:'mud', skin:0x6a4a2a, shirt:0x5a3a1a, pants:0x4a2a10, hat:0x5a3a1a, cries:['Mud pie!','Squelch!']},
-    lavabob:   {name:'Lava Bob', hp:40, spd:3, dmg:3, shoot:'fire', glow:1, skin:0x3a2a2a, shirt:0x2a1a1a, pants:0x2a1a1a, acc:[BX(.3,.04,.02,0xff8a20,0,1.32,.215), BX(.52,.04,.32,0xff5a10,0,.95,0)], cries:['Hot hot hot!','I am a bit toasty.']},
-    // the big one
-    king:      {name:'The Bob King', hp:400, spd:2, dmg:8, size:2.4, king:1, push:1, coin:2000, noProp:1, shirt:0x7a1fa0, acc:[BX(.48,.14,.46,0xffd030,0,1.7,0), BX(.08,.14,.08,0xffd030,-.18,1.82,.18), BX(.08,.14,.08,0xffd030,.18,1.82,.18), BX(.08,.14,.08,0xffd030,0,1.82,.18), BX(.08,.08,.04,0xff2a6a,0,1.72,.24), BX(.6,.8,.04,0xc02020,0,1,-.2)], cries:['BOW BEFORE THE BOB KING!','Bobs! Get the miner!','I am the Bobbiest Bob of all!']}
-  };
-  Object.keys(VARS).forEach(k=>{ VARS[k].id = k; });
-  const MODE_BOBS = {funny:['clown'], chaos:['zombie'], meme:['troll'], spooky:['ghost','skeleton'], ocean:['diver','pirate'], robot:['bobbot'], dino:['caveman'], iceage:['snowbob','yeti'], space:['alien']};
-  const BIOME_BOBS = {desert:['mummy','sandbob'], snow:['snowbob','yeti'], mountain:['climber','boulder'], hills:['hiker'], valley:['farmer'], river:['snorkel','fisher'], lake:['fisher','snorkel'],
-    forest:['lumberjack'], swamp:['mudbob'], volcano:['lavabob'], beach:['snorkel','sandbob'], plains:['farmer','hiker']};
-  const GEN = ['tiny','big','sling','popper','medic','ninja','shield'];
-  window.__bobVariants = {VARS, MODE_BOBS, BIOME_BOBS, GEN};      // the biome update adds to these
-  function modesOn(){
-    const l = [];
-    if(HILARIOUS) l.push('funny'); if(CHAOS || EXTRA) l.push('chaos'); if(MEME) l.push('meme'); if(SPOOKY) l.push('spooky'); if(OCEAN) l.push('ocean');
-    if(ROBOT) l.push('robot'); if(DINO) l.push('dino'); if(ICEAGE) l.push('iceage'); if(SPACE) l.push('space');
-    return l;
-  }
-  const rnd = a=>a[Math.floor(Math.random()*a.length)];
-  function pickVar(x, z){
-    const biome = window.__biomeAt ? window.__biomeAt(x, z) : null;
-    const local = [].concat(...modesOn().map(m=>MODE_BOBS[m] || []), (biome && BIOME_BOBS[biome]) || []);
-    const r = Math.random();
-    if(BOBMODE) return VARS[rnd(Object.keys(VARS).filter(k=>k !== 'king'))];
-    if(r < .3) return VARS.bob;
-    if(local.length && r < .68) return VARS[rnd(local)];
-    return VARS[rnd(GEN)];
-  }
-  // --- night
-  let wasNight = false, nightN = save.bobNights || 0, nightKO = false, kingDue = false, kingT = 0;
-  function hourNow(){ return (tod*24 + 6) % 24; }
-  function nightNow(){ const h = hourNow(); return h >= 20 || h < 5 || sunGone > 0; }
-  function CAP(){ return BOBMODE ? 40 : 24; }
-  function swarmN(){
-    if(!nightNow()) return 2 + Math.floor(Math.random()*3);                       // Bob Mode daytime: small groups
-    return (BOBMODE ? 6 : 4) + Math.floor(Math.random()*(4 + Math.min(6, Math.floor(nightN/2))));   // bigger every night
-  }
-  const DAWN = ['The sun! Bedtime!','Too bright! Run!','Mummy, it is morning!','Bobs hate mornings!','My eyes! Home, Bobs!'];
-  function dawn(){
-    scX = P.x; scZ = P.z;                                                          // they all run away from you
-    bobs.forEach(b=>{ if(b.v && b.v.king) return; b.scared = 1; if(b.st === 'land') b.st = 'walk'; bubble(b, rnd(DAWN)); });
-    bobs.filter(b=>b.v && b.v.king).forEach(b=>{ news('NEWS: The Bob King saw the sunrise and stomped home in a huff.'); burst(b.x, b.y+2, b.z, 0, 20); removeBob(b); });
-    if(nightN > 0 && realm === 0){
-      if(!nightKO){
-        const r = Math.min(5000, 250*nightN); save.coins += r; save.nightsSurvived = (save.nightsSurvived||0) + 1;
-        toast('Good morning! You survived Night '+nightN+'.  +$'+r.toLocaleString()); news('NEWS: A miner survived Night '+nightN+' of the Bobs. The Bobs say they "let" them.');
-        if(save.nightsSurvived >= 5) award('nightsurvivor'); persist(); refreshShopIfOpen();
-      } else toast('Good morning. The Bobs got you last night, but the sun chased them away.');
-    }
-  }
-  function nightTick(dt){
-    pjTick(dt);
-    const n = nightNow();
-    if(n && !wasNight){
-      nightN++; save.bobNights = nightN; nightKO = false; spawnT = 5 + Math.random()*5; kingDue = BOBMODE || nightN % 3 === 0; kingT = 45 + Math.random()*30; persist();
-      news('NIGHT '+nightN+': The sun went down. The Bobs are coming out. Stay safe, miner.');
-      if(P.y > -3) toast('Night '+nightN+' has fallen. The Bobs come out at night. Survive until morning!');
-      blip(160,.3,.12,'sawtooth');
-    }
-    if(!n && wasNight) dawn();
-    wasNight = n;
-    if(n){
-      spawnT -= dt; if(spawnT <= 0){ spawnT = (BOBMODE ? 18 : 28) + Math.random()*(BOBMODE ? 14 : 24); spawnGroup(); }
-      if(kingDue){ kingT -= dt; if(kingT <= 0){ kingDue = false; spawnKing(); } }
-    } else if(BOBMODE){ spawnT -= dt; if(spawnT <= 0){ spawnT = 45 + Math.random()*30; spawnGroup(); } }
-  }
-  const _ko = knockOut;
-  knockOut = function(){ if(nightNow()) nightKO = true; return _ko.apply(this, arguments); };
-  // --- making Bobs outside a swarm (the King and his helpers)
-  function mk(v, x, z, st){
-    const name = v.id === 'bob' ? rnd(NAMES) : v.name, parts = buildBob(name, v);
-    const b = Object.assign(parts, {name, v, hp:v.hp, hpMax:v.hp, x, z, y:0, vy:0, vx:0, vz:0, st:'land', t:0, life:200, yaw:Math.random()*6.283, trip:0, quipT:3 + Math.random()*5, flash:0, target:'wander', wx:0, wz:0});
-    scene.add(b.g); bobs.push(b);
-    if(st === 'fall'){ b.st = 'fall'; b.y = 30; } else land(b);
-    return b;
-  }
-  function retag(b){
-    if(b.nt){ b.g.remove(b.nt); b.nt.material.map.dispose(); }
-    b.nt = tag(b.name+'  '+Math.max(0, Math.ceil(b.hp))+' HP'); b.nt.position.y = 2.15; b.g.add(b.nt);
-  }
-  function spawnKing(){
-    if(realm !== 0) return null;
-    const ang = Math.random()*6.283, k = mk(VARS.king, P.x + Math.cos(ang)*14, P.z + Math.sin(ang)*14, 'fall');
-    retag(k); shake = Math.max(shake, .08);
-    toast('THE BOB KING HAS ARRIVED! He is big, he is angry, and he brought friends.');
-    news('BREAKING: The Bob King has landed. He says the basement is "his by royal Bob law".');
-    blip(110,.4,.18,'sawtooth'); setTimeout(()=>blip(90,.5,.18,'sawtooth'), 300);
-    return k;
-  }
-  function kingDown(b){
-    addItem("Bob King's Crown", 1); award('bobking');
-    news('BREAKING: The Bob King has been bonked! The Bobs are electing a new king. Every Bob voted for himself.');
-  }
-  ITEM_COL["Bob King's Crown"] = [255,208,48];
-  BADGES.push({id:'bobking', icon:'BK', name:'King Bonker', desc:'Bonk the Bob King.'}, {id:'nightsurvivor', icon:'NS', name:'Night Survivor', desc:'Survive 5 nights of Bobs.'});
-  // --- what each kind of Bob does when it hunts you
-  function huntAI(b, pd, dt){
-    const v = b.v, sz = v.size || 1, cries = v.cries || CRIES;
-    let x = P.x, z = P.z, s = v.spd;
-    if(v.pop && pd < 1.8){ popBob(b); return {gone:true}; }
-    if(v.heal){ b.healT = (b.healT == null ? 3 : b.healT) - dt;
-      if(b.healT <= 0){ b.healT = 3; let n = 0; bobs.forEach(o=>{ if(o !== b && o.hp < o.hpMax && Math.hypot(o.x-b.x, o.z-b.z) < 6){ o.hp = Math.min(o.hpMax, o.hp + 8); n++; if(o.v && o.v.king) retag(o); } });
-        if(n){ burst(b.x, b.y+1.2, b.z, 0, 5); if(Math.random() < .4) bubble(b, rnd(cries)); } } }
-    if(v.blink){ b.blinkT = (b.blinkT == null ? 4 : b.blinkT) - dt;
-      if(b.blinkT <= 0 && pd > 5){ b.blinkT = 6 + Math.random()*3; burst(b.x, b.y+1, b.z, 0, 8); const a = Math.random()*6.283; b.x = P.x + Math.cos(a)*3; b.z = P.z + Math.sin(a)*3; burst(b.x, 1, b.z, 0, 8); bubble(b, rnd(cries)); } }
-    if(v.king){ b.sumT = (b.sumT == null ? 6 : b.sumT) - dt;
-      if(b.sumT <= 0){ b.sumT = 10; if(bobs.length < CAP()){ for(let i=0;i<2;i++) mk(VARS.tiny, b.x + (Math.random()-.5)*3, b.z + (Math.random()-.5)*3); bubble(b, 'Bobs! Assemble!'); } } }
-    if(v.shoot){
-      if(pd < 5){ x = b.x + (b.x - P.x); z = b.z + (b.z - P.z); s = v.spd*.8; }      // too close: back away
-      else if(pd < 11) s = .01;                                                       // good spot: stand and throw
-      if(pd < 16 && b.atkT <= 0){ b.atkT = v.rate || 2.2; throwAt(b); if(Math.random() < .25) bubble(b, rnd(cries)); }
-    } else if(pd < 1.3*sz && b.atkT <= 0){
-      b.atkT = v.king ? 1.8 : 1.4; hurtPlayer(v.dmg); b.armR.rotation.x = -2;
-      if(v.push){ const k = 7/(pd || 1); P.vx += (P.x - b.x)*k; P.vz += (P.z - b.z)*k; P.vy = Math.max(P.vy, 5); P.ground = false; }
-      if(Math.random() < .35) bubble(b, rnd(cries));
-    }
-    return {x, z, s};
-  }
-  function popBob(b){
-    burst(b.x, b.y+1, b.z, 0, 30); blip(900,.08,.12,'square'); setTimeout(()=>blip(1200,.1,.1,'square'),70);
-    if(Math.hypot(P.x-b.x, P.z-b.z) < 2.4) hurtPlayer(b.v.dmg);
-    if(Math.random() < .3) news('NEWS: '+b.name+' popped. Witnesses report confetti "everywhere, even in my ears".');
-    removeBob(b);
-  }
-  function bobY(b){
-    if(b.st !== 'walk') return 0;
-    if(b.v.fly) return .5 + Math.sin(b.t*2.2)*.25;
-    if(b.v.hop) return Math.abs(Math.sin(b.t*7))*.55;
-    return 0;
-  }
-  // --- things Bobs throw
-  const PJ = [], PJK = {pebble:[0x8a8a8a,.12], pie:[0xf3e3b8,.22], bone:[0xf5f5f0,.14], bubble:[0x88ccff,.22], laser:[0xff3030,.09,1], zap:[0x60ff60,.09,1], snow:[0xffffff,.17],
-    sand:[0xe0c070,.13], rock:[0x7a7a7a,.3], fish:[0x6ab0e0,.17], mud:[0x5a3a1a,.17], fire:[0xff7a20,.15,1]};
-  const SPLAT = {pie:['rgba(255,245,220,.85)','A cream pie to the face!'], mud:['rgba(90,58,26,.8)','Splat! Mud everywhere.'], sand:['rgba(224,192,112,.75)','Sand in your eyes!'],
-    snow:['rgba(255,255,255,.8)','Brrr! You got snowballed. You are slowed down.'], fish:['rgba(106,176,224,.6)','You were slapped by a fish.'], bubble:['rgba(136,204,255,.5)','Pop! Bubble in the face.']};
-  let splatEl = null, splatT = 0, slowT = 0, splatSaid = {};
-  function splat(k){
-    const s = SPLAT[k]; if(!s) return;
-    if(!splatEl){ splatEl = document.createElement('div'); splatEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .2s'; document.body.appendChild(splatEl); }
-    splatEl.style.background = 'radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, '+s[0]+' 100%)'; splatEl.style.opacity = '1'; splatT = 1.3;
-    if(!splatSaid[k]){ splatSaid[k] = 1; toast(s[1]); }
-  }
-  function throwAt(b){
-    const k = b.v.shoot, d = PJK[k] || PJK.pebble, sz = b.v.size || 1, sy = b.y + 1.3*sz;
-    const m = new THREE.Mesh(d[2] ? new THREE.BoxGeometry(d[1], d[1], d[1]*6) : new THREE.SphereGeometry(d[1], 8, 6), d[2] ? new THREE.MeshBasicMaterial({color:d[0]}) : new THREE.MeshLambertMaterial({color:d[0]}));
-    const tx = P.x + P.vx*.25, ty = P.y + 1.1, tz = P.z + P.vz*.25, dx = tx - b.x, dy = ty - sy, dz = tz - b.z;
-    const sp = d[2] ? 16 : k === 'bubble' ? 6 : 11, T = Math.max(.2, Math.hypot(dx, dy, dz)/sp), g = (d[2] || k === 'bubble') ? 0 : 12;
-    const p = {m, k, beam:!!d[2], x:b.x, y:sy, z:b.z, vx:dx/T, vy:dy/T + .5*g*T, vz:dz/T, g, t:0, dmg:b.v.dmg};
-    m.position.set(p.x, p.y, p.z); if(p.beam) m.lookAt(tx, ty, tz); scene.add(m); PJ.push(p);
-    b.armR.rotation.x = -2.4; blip(p.beam ? 880 : 300, .06, .05, p.beam ? 'square' : 'triangle');
-  }
-  function dropPJ(i){ const p = PJ[i]; scene.remove(p.m); p.m.geometry.dispose(); p.m.material.dispose(); PJ.splice(i, 1); }
-  function clearPJ(){ for(let i=PJ.length-1;i>=0;i--) dropPJ(i); }
-  function pjTick(dt){
-    if(splatT > 0){ splatT -= dt; if(splatT <= 0 && splatEl) splatEl.style.opacity = '0'; }
-    if(slowT > 0){ slowT -= dt; P.vx *= .9; P.vz *= .9; }
-    for(let i=PJ.length-1;i>=0;i--){
-      const p = PJ[i]; p.t += dt; p.vy -= p.g*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.z += p.vz*dt; p.m.position.set(p.x, p.y, p.z); if(!p.beam) p.m.rotation.x += dt*8;
-      if(Math.hypot(p.x - P.x, p.y - (P.y + 1), p.z - P.z) < .75){
-        hurtPlayer(p.dmg); splat(p.k); if(p.k === 'snow') slowT = 2.5; if(p.k === 'rock') shake = Math.max(shake, .06);
-        burst(p.x, p.y, p.z, 0, 4); dropPJ(i); continue;
-      }
-      if(p.t > 4 || (p.y < 0 && get(Math.floor(p.x), Math.floor(-p.y), Math.floor(p.z)))){ burst(p.x, p.y, p.z, 0, 3); dropPJ(i); }
-    }
-  }
-  /* LN-bobnight end (helpers) */
-  function buildBob(name, v){
-    v = v || VARS.bob;
+  function buildBob(name){
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-    const shirt = v.shirt != null ? v.shirt : [0x3a6ad0,0x3ab04a,0xe0a020,0xb040c0,0xe05050][Math.floor(Math.random()*5)], PA = v.pants != null ? v.pants : 0x2a3a6a, SK = v.skin != null ? v.skin : 0xf0c8a0;
+    const shirt = [0x3a6ad0,0x3ab04a,0xe0a020,0xb040c0,0xe05050][Math.floor(Math.random()*5)];
     const bx = (w,h,d,col,x,y,z,p)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), M(col)); m.position.set(x,y,z); m.castShadow = true; (p||body).add(m); return m; };
-    const legL = bx(.18,.6,.18,PA,-.12,.3,0), legR = bx(.18,.6,.18,PA,.12,.3,0);
+    const legL = bx(.18,.6,.18,0x2a3a6a,-.12,.3,0), legR = bx(.18,.6,.18,0x2a3a6a,.12,.3,0);
     bx(.5,.6,.3,shirt,0,.9,0); const armL = bx(.14,.55,.14,shirt,-.33,.92,0), armR = bx(.14,.55,.14,shirt,.33,.92,0);
-    const head = bx(.42,.42,.4,SK,0,1.42,0);
+    const head = bx(.42,.42,.4,0xf0c8a0,0,1.42,0);
     bx(.1,.1,.02,0xffffff,-.1,1.47,.21); bx(.1,.1,.02,0xffffff,.1,1.47,.21); bx(.05,.05,.02,0x111111,-.08,1.46,.225); bx(.05,.05,.02,0x111111,.12,1.48,.225);   // derpy eyes
     bx(.2,.04,.02,0x8a3020,0,1.3,.21);
-    const hat1 = bx(.44,.1,.42,v.hat != null ? v.hat : 0xe03c3c,0,1.68,0), hat2 = bx(.06,.12,.06,0x222222,0,1.78,0); const prop = bx(.6,.03,.08,0xffd030,0,1.85,0);
-    if(v.noProp) hat1.visible = hat2.visible = prop.visible = false;
-    (v.acc || []).forEach(a=>bx(a[0],a[1],a[2],a[3],a[4],a[5],a[6]));
-    if(v.glow) body.traverse(o=>{ if(o.material && o.material.emissive) o.material.emissive.setHex(0x5a1800); });
-    if(v.ghost) body.traverse(o=>{ if(o.material){ o.material.transparent = true; o.material.opacity = .5; } });
-    if(v.size) g.scale.setScalar(v.size);
+    bx(.44,.1,.42,0xe03c3c,0,1.68,0); bx(.06,.12,.06,0x222222,0,1.78,0); const prop = bx(.6,.03,.08,0xffd030,0,1.85,0);
     const nt = tag(name); nt.position.y = 2.15; g.add(nt);
     const chute = new THREE.Group(); g.add(chute); chute.visible = false;
     const can = new THREE.Mesh(new THREE.SphereGeometry(1.3,12,6,0,Math.PI*2,0,Math.PI/2), new THREE.MeshLambertMaterial({color:0xff6a30, side:THREE.DoubleSide})); can.position.y = 3.4; can.scale.y = .6; chute.add(can);
     [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(q=>{ const l = new THREE.Mesh(new THREE.BoxGeometry(.02,1.9,.02), M(0xdddddd)); l.position.set(q[0]*.55,2.6,q[1]*.55); l.rotation.set(q[1]*.3,0,-q[0]*.3); chute.add(l); });
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(.55,.55,1.9,12), M(0x8a5a2a)); barrel.position.y = .95; barrel.visible = false; g.add(barrel);
     const flame = new THREE.Mesh(new THREE.ConeGeometry(.3,1.2,8), new THREE.MeshBasicMaterial({color:0xffa030})); flame.position.y = -.5; flame.rotation.x = Math.PI; flame.visible = false; g.add(flame);
-    return {g, body, legL, legR, armL, armR, head, prop, chute, barrel, flame, nt};
+    return {g, body, legL, legR, armL, armR, head, prop, chute, barrel, flame};
   }
   function ground(x, z){ return get(Math.floor(x), 0, Math.floor(z)) ? 0 : -1; }    // top of the surface block, or a hole
   function spawnGroup(force){
-    if(realm !== 0 || bobs.length > CAP() || performance.now() < scaredUntil) return;
+    if(realm !== 0 || bobs.length > 24 || performance.now() < scaredUntil) return;
     const a = force && force.k ? force : ARRIVE[Math.floor(Math.random()*ARRIVE.length)];
-    const n = force && force.n ? force.n : swarmN();          // a swarm, bigger every night
-    const near = P.y > -3 && Math.random() < .92, cx = near ? P.x : SHOP.x, cz = near ? P.z : SHOP.z;
+    const n = force && force.n ? force.n : 4 + Math.floor(Math.random()*5);          // a swarm
+    const near = P.y > -3 && Math.random() < .7, cx = near ? P.x : SHOP.x, cz = near ? P.z : SHOP.z;
     const ang = Math.random()*6.283, r = 10 + Math.random()*8, bx = cx + Math.cos(ang)*r, bz = cz + Math.sin(ang)*r;
     for(let i=0;i<n;i++){
-      const v = pickVar(bx, bz), name = v.id === 'bob' ? NAMES[Math.floor(Math.random()*NAMES.length)] : v.name, parts = buildBob(name, v);
-      const b = Object.assign(parts, {name, v, hp:v.hp, hpMax:v.hp, x:bx + (Math.random()-.5)*3, z:bz + (Math.random()-.5)*3, y:0, vy:0, vx:0, vz:0, st:a.k, t:0, life:120 + Math.random()*40,
+      const name = NAMES[Math.floor(Math.random()*NAMES.length)], parts = buildBob(name);
+      const b = Object.assign(parts, {name, hp:30, x:bx + (Math.random()-.5)*3, z:bz + (Math.random()-.5)*3, y:0, vy:0, vx:0, vz:0, st:a.k, t:0, life:120 + Math.random()*40,
         yaw:Math.random()*6.283, trip:0, quipT:2 + Math.random()*5, flash:0, target:Math.random() < .6 ? 'hatch' : 'wander', wx:0, wz:0});
       if(a.k === 'parachute'){ b.y = 22 + i*2.5; b.chute.visible = true; }
       else if(a.k === 'fall'){ b.y = 30 + i*3; }
@@ -15068,12 +14732,12 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   function removeBob(b){ scene.remove(b.g); const i = bobs.indexOf(b); if(i >= 0) bobs.splice(i,1); }
   function hit(b, dmg){
     if(bobs.indexOf(b) < 0) return;
-    b.hp -= dmg*(b.v && b.v.armor || 1); b.flash = .15; if(b.v && b.v.king) retag(b); b.trip = Math.max(b.trip, .4);
+    b.hp -= dmg; b.flash = .15; b.trip = Math.max(b.trip, .4);
     if(b.hp > 0){ if(Math.random() < .3) bubble(b, ['Ow!','Hey!','That tickles.','Why?!','I am telling my mum.'][Math.floor(Math.random()*5)]); return; }
     burst(b.x, b.y+1, b.z, 0, 18); blip(520,.12,.1,'square'); setTimeout(()=>blip(260,.2,.1,'square'),90);
-    const cz = b.v && b.v.coin || 25; save.coins += cz; save.bobsBonked = (save.bobsBonked||0) + 1; if(b.v && b.v.king) kingDown(b);
+    save.coins += 25; save.bobsBonked = (save.bobsBonked||0) + 1;
     if(Math.random() < .5) addItem("Bob's Propeller Hat", 1);
-    toast(b.name+' was bonked back home!  +$'+cz.toLocaleString()); persist(); refreshShopIfOpen();
+    toast(b.name+' was bonked back home!  +$25'); persist(); refreshShopIfOpen();
     if(save.bobsBonked % 5 === 1) news('NEWS: Miner bonks '+b.name+'. '+b.name+' says it did not hurt. It did.');
     if(save.bobsBonked >= 10) award('bobbonker');
     removeBob(b);
@@ -15082,7 +14746,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   const _ft = fightTargets;
   fightTargets = function(){
     const l = _ft();
-    if(realm === 0) bobs.forEach(b=>{ if(b.st === 'walk' || b.st === 'land') { const sz = b.v && b.v.size || 1; l.push({k:'bob', bob:b, c:new THREE.Vector3(b.x, b.y+sz, b.z), r:.6*sz}); } });
+    if(realm === 0) bobs.forEach(b=>{ if(b.st === 'walk' || b.st === 'land') l.push({k:'bob', bob:b, c:new THREE.Vector3(b.x, b.y+1, b.z), r:.6}); });
     return l;
   };
   const _gh = gunTargetHit;
@@ -15095,8 +14759,8 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     requestAnimationFrame(tick);
     const dt = Math.min(.1, (now - last)/1000); last = now;
     if(startEl.style.display === 'flex' || won) return;
-    if(realm !== 0){ if(bobs.length) bobs.slice().forEach(removeBob); clearPJ(); return; }
-    nightTick(dt);
+    if(realm !== 0){ if(bobs.length) bobs.slice().forEach(removeBob); return; }
+    spawnT -= dt; if(spawnT <= 0){ spawnT = 50 + Math.random()*50; spawnGroup(); }
     for(const b of bobs.slice()){
       b.t += dt; b.life -= dt;
       if(b.bubT > 0){ b.bubT -= dt; if(b.bubT <= 0 && b.bub){ b.g.remove(b.bub); b.bub = null; } }
@@ -15115,13 +14779,15 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
         else {
           b.body.rotation.x = 0;
           let tx, tz, spd = 1.6;
-          const pd = Math.hypot(P.x - b.x, P.z - b.z), hunt = !b.scared && realm === 0 && Math.abs(P.y) < 3 && pd < (nightNow() ? 45 : 28);
+          const pd = Math.hypot(P.x - b.x, P.z - b.z), hunt = !b.scared && realm === 0 && Math.abs(P.y) < 3 && pd < 28;
           b.atkT = (b.atkT || 0) - dt;
           if(b.scared){                                                      // run from the smelly feet, then vanish
             const ax = b.x - scX, az = b.z - scZ, ad = Math.hypot(ax, az) || 1; tx = b.x + ax/ad*10; tz = b.z + az/ad*10; spd = 5;
             b.scared += dt; if(b.scared > 6){ burst(b.x, .5, b.z, 0, 6); removeBob(b); continue; }
           }
-          else if(hunt){ const o = huntAI(b, pd, dt); if(o.gone) continue; tx = o.x; tz = o.z; spd = o.s; }
+          else if(hunt){ tx = P.x; tz = P.z; spd = 3.1;
+            if(pd < 1.3 && b.atkT <= 0){ b.atkT = 1.4; hurtPlayer(2); b.armR.rotation.x = -2; if(Math.random() < .35) bubble(b, CRIES[Math.floor(Math.random()*CRIES.length)]); }
+          }
           else if(b.target === 'hatch' && window.__mf){ tx = window.__mf.HATCH.x; tz = window.__mf.HATCH.z; }
           else { if(!b.wx || Math.hypot(b.wx-b.x, b.wz-b.z) < 1){ b.wx = b.x + (Math.random()-.5)*16; b.wz = b.z + (Math.random()-.5)*16; } tx = b.wx; tz = b.wz; }
           const dx = tx - b.x, dz = tz - b.z, d = Math.hypot(dx, dz);
@@ -15134,17 +14800,17 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
           }
           const sw = Math.sin(b.t*9)*.5; b.legL.rotation.x = sw; b.legR.rotation.x = -sw; b.armL.rotation.x = -sw; b.armR.rotation.x = sw;
           if(Math.random() < dt*(hunt ? .03 : .08)){ b.trip = 1.2; bubble(b, ['Whoops!','Who put the ground there?','I tripped on air.'][Math.floor(Math.random()*3)]); }
-          if(!b.v.fly && !b.v.king && ground(b.x, b.z) < 0){ news('NEWS: '+b.name+' walked into a hole. '+b.name+' says the hole started it.'); burst(b.x, 0, b.z, 0, 8); removeBob(b); continue; }
+          if(ground(b.x, b.z) < 0){ news('NEWS: '+b.name+' walked into a hole. '+b.name+' says the hole started it.'); burst(b.x, 0, b.z, 0, 8); removeBob(b); continue; }
         }
         b.quipT -= dt; if(b.quipT <= 0){ b.quipT = 6 + Math.random()*8; bubble(b, QUIPS[Math.floor(Math.random()*QUIPS.length)]); }
         if(!b.scared && Math.hypot(P.x-b.x, P.z-b.z) < 6 && Math.random() < dt*.15) bubble(b, CRIES[Math.floor(Math.random()*CRIES.length)]);
       }
-      if(b.life <= 0 && b.st === 'walk' && !nightNow() && !b.v.king){ news('NEWS: '+b.name+' got bored and went home. Experts expect more Bobs.'); removeBob(b); continue; }
-      b.g.position.set(b.x, b.y + bobY(b), b.z); b.g.rotation.y = b.st === 'walk' || b.st === 'land' ? b.yaw : b.g.rotation.y;
+      if(b.life <= 0 && b.st === 'walk'){ news('NEWS: '+b.name+' got bored and went home. Experts expect more Bobs.'); removeBob(b); continue; }
+      b.g.position.set(b.x, b.y, b.z); b.g.rotation.y = b.st === 'walk' || b.st === 'land' ? b.yaw : b.g.rotation.y;
     }
   }
   requestAnimationFrame(tick);
-  window.__bobs = {bobs, spawnGroup, hit, removeBob, ARRIVE, scare, VARS, mk, spawnKing, nightNow, PJ, dawn, setHour:h=>{ tod = ((((h - 6) % 24) + 24) % 24)/24; }, info:()=>({nightN, wasNight, spawnT, kingDue, kingT})};
+  window.__bobs = {bobs, spawnGroup, hit, removeBob, ARRIVE, scare};
   if(window.__dig) window.__dig.bobs = window.__bobs;
 })();
 /* LN-bobs end */
@@ -15266,23 +14932,6 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   if(window.__dig) window.__dig.fishfeet = window.__fishfeet;
 })();
 /* LN-fishfeet end */
-/* LN-bobmode start: Bob Mode. Bobs day and night, every kind of Bob anywhere, the Bob King every night, and the shopkeeper is a Bob now (Irfan 2026-10-26) */
-registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
-(function(){
-  if(!BOBMODE) return;
-  try{
-    npcHead.children.forEach(c=>{ if(c.position.y >= .43) c.visible = false; });          // off with the old hat
-    const M = c=>new THREE.MeshLambertMaterial({color:c});
-    const hat = new THREE.Mesh(new THREE.BoxGeometry(.48,.12,.48), M(0xe03c3c)); hat.position.y = .52; npcHead.add(hat);
-    const pole = new THREE.Mesh(new THREE.BoxGeometry(.06,.14,.06), M(0x222222)); pole.position.y = .64; npcHead.add(pole);
-    const prop = new THREE.Mesh(new THREE.BoxGeometry(.7,.03,.09), M(0xffd030)); prop.position.y = .72; npcHead.add(prop);
-    (function spin(){ requestAnimationFrame(spin); prop.rotation.y += .25; })();
-  }catch(e){}
-  const Q = window.__newsQ = window.__newsQ || [];
-  Q.push('NEWS: The shopkeeper says his name has always been Bob. Nobody believes him. Everybody is a Bob now.');
-  setTimeout(()=>toast('BOB MODE! Bobs everywhere, day and night. Every kind of Bob. The Bob King comes every night. Survive!'), 2500);
-})();
-/* LN-bobmode end */
 /* LN-acid start: acid works just like the flowing water, but it is green and deadly (Irfan 2026-10-26) */
 if(typeof ITEM_COL === 'object') ITEM_COL['Acid'] = [120,230,40];
 const ACID = (function(){
@@ -15493,189 +15142,6 @@ const ACID = (function(){
 })();
 window.__acid = ACID;
 /* LN-acid end */
-/* LN-elements start: water + lava makes stone, ice and snow melt, fire you can mine, Newton says thank you (Irfan 2026-10-26) */
-(function(){
-  // ---------- water + lava = Stone (most of the time) or Obsidian
-  let STONE = 0, OBS = 0;
-  function blockId(name, spec){ let i = BLOCKS.findIndex(b=>b.name === name); if(i < 0){ i = registerCustomBlock(spec); if(i >= 0) persist(); } return i >= 0 ? i+1 : 0; }
-  window.__coolPick = function(){
-    if(!STONE) STONE = blockId('Stone', {name:'Stone', h:12, v:4, c1:[124,124,130], c2:[96,96,104], glow:0, pattern:'plain'});
-    if(!OBS) OBS = blockId('Obsidian', {name:'Obsidian', h:120, v:150, c1:[26,16,40], c2:[90,50,140], glow:.05, pattern:'plain'});
-    return Math.random() < .75 ? STONE : (OBS || STONE);
-  };
-  // ---------- ice and snow melt (next to lava, next to fire, and in the sun)
-  const MELT = new Map(); let meltN = -1;
-  function scanMelt(){
-    if(meltN === BLOCKS.length) return; meltN = BLOCKS.length; MELT.clear();
-    BLOCKS.forEach((b,i)=>{ const n = b.name || ''; if(/gem|ore|crystal|diamond|sapphire|cream|golem|statue|emerald|opal/i.test(n)) return;
-      if(/(^|\s)ice(\s|$)/i.test(n)) MELT.set(i+1, 'ice'); else if(/(^|\s)snow(\s|$)/i.test(n)) MELT.set(i+1, 'snow'); });
-  }
-  scanMelt();
-  let meltTold = 0;
-  function melt(x, d, z, why){
-    const id = get(x, d, z), k = MELT.get(id); if(!k) return false;
-    setBlock(x, d, z, 0); if(d === 0) checkTreeSupport(x, z);
-    if((k === 'ice' || Math.random() < .35) && FLW.at(x, d, z) < 0) FLW.pour(x, d, z, 8, 1);       // ice turns into water, snow mostly just goes
-    burst(x+.5, -d-.5, z+.5, id-1, 6); if(Math.random() < .5) blip(900 + Math.random()*300, .08, .04, 'sine');
-    if(!(meltTold & why)){ meltTold |= why; toast(why === 1 ? 'The lava is melting the ice!' : why === 2 ? 'The fire is melting the ice!' : 'The sun is melting the ice and snow!'); }
-    return true;
-  }
-  function sunUp(){ return realm === 0 && skyMat.uniforms.day.value > .5 && !(typeof sunGone !== 'undefined' && sunGone); }
-  function sunMelt(){
-    if(!sunUp() || P.x >= UPPER_EDGE || P.y < -8) return;
-    for(let q=0;q<60;q++){
-      const x = Math.floor(P.x + (Math.random()-.5)*36), z = Math.floor(P.z + (Math.random()-.5)*36);
-      for(let d=-14; d<=3; d++){
-        const id = get(x, d, z); if(!id) continue;
-        if(MELT.has(id) && Math.random() < .2 && !(ICEAGE && !((edits.get(ek(x,d,z))||0) > 0))) melt(x, d, z, 4);   // in the Ice Age it is too cold: only blocks you put down melt
-        break;
-      }
-    }
-  }
-  const N6 = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
-  function lavaMelt(){
-    const L = window.__lava; if(!L || !L.count() || realm !== 0) return;
-    let k = 0;
-    for(let i=0;i<L.count() && k < 10;i++){
-      const x = L.X[i], d = L.Y[i], z = L.Z[i];
-      if(Math.abs(x-P.x) > 26 || Math.abs(z-P.z) > 26) continue;
-      for(const o of N6){ if(MELT.has(get(x+o[0], d+o[1], z+o[2])) && Math.random() < .5 && melt(x+o[0], d+o[1], z+o[2], 1)) k++; }
-    }
-  }
-  // ---------- fire
-  const FIRES = [], FCAP = 24;
-  const FLAM = /wood|plank|log|leaf|leaves|grass|hay|moss|mushroom|carpet|cloth|wool|paper|straw|mycelium|furniture|sofa|crate|barrel/i;
-  const fM = [new THREE.MeshBasicMaterial({color:0xff5a10, transparent:true, opacity:.9}), new THREE.MeshBasicMaterial({color:0xffb020, transparent:true, opacity:.9}), new THREE.MeshBasicMaterial({color:0xfff2a0})];
-  const fG = new THREE.ConeGeometry(.24, .8, 6); fG.translate(0, .4, 0);
-  const fLight = new THREE.PointLight(0xff7a20, 0, 9, 1.6); scene.add(fLight);
-  if(typeof ITEM_COL === 'object') ITEM_COL['Fire'] = [255,120,30];
-  const fireAt = (x,d,z)=>FIRES.find(f=>f.x === x && f.d === d && f.z === z);
-  const flammable = id=>id > 0 && FLAM.test((BLOCKS[id-1] || {}).name || '');
-  function addFire(x, d, z, life){
-    if(FIRES.length >= FCAP || fireAt(x,d,z) || get(x,d,z) || d < -48 || d >= D) return null;
-    if(FLW.at(x,d,z) >= 0 || (window.__lava && window.__lava.at(x,d,z) >= 0) || (window.__acid && window.__acid.at(x,d,z) >= 0)) return null;
-    const g = new THREE.Group(); g.position.set(x+.5, -d-1, z+.5);
-    const parts = [[0,0,0,1.1,0],[.18,0,.1,.75,0],[-.16,0,-.12,.8,0],[0,0,0,.7,1],[.08,0,-.06,.5,1],[0,0,0,.35,2]].map(q=>{ const m = new THREE.Mesh(fG, fM[q[4]]); m.position.set(q[0],q[1],q[2]); m.scale.setScalar(q[3]); g.add(m); return m; });
-    scene.add(g);
-    const f = {x, d, z, g, parts, life:life || 40 + Math.random()*40, spreadT:3 + Math.random()*2, meltT:1, seed:Math.random()*10};
-    FIRES.push(f); return f;
-  }
-  function killFire(f, steam){ scene.remove(f.g); const i = FIRES.indexOf(f); if(i >= 0) FIRES.splice(i,1); if(steam){ burst(f.x+.5, -f.d-.5, f.z+.5, 0, 6); blip(1400,.2,.04,'sawtooth'); } }
-  function lavaIgnite(){
-    const L = window.__lava; if(!L || !L.count() || realm !== 0 || FIRES.length >= FCAP) return;
-    for(let q=0;q<6;q++){
-      const i = Math.floor(Math.random()*L.count()), x = L.X[i], d = L.Y[i], z = L.Z[i];
-      if(Math.abs(x-P.x) > 30 || Math.abs(z-P.z) > 30) continue;
-      const o = [[1,0],[-1,0],[0,1],[0,-1]][Math.floor(Math.random()*4)], nx = x + o[0], nz = z + o[1], nd = d;
-      const below = get(nx, nd+1, nz);
-      if(!get(nx, nd, nz) && below && Math.random() < (flammable(below) ? .5 : .08)) addFire(nx, nd, nz);
-    }
-  }
-  // ---------- mining fire (it gives you Fire, carry it and put it down again)
-  const _fd = new THREE.Vector3(); let fk = null, fp = 0;
-  function aimFire(){
-    if(!FIRES.length) return null;
-    camera.getWorldDirection(_fd);
-    const ox = camera.position.x, oy = camera.position.y, oz = camera.position.z;
-    for(let t=.2, reach = mineAny ? 10 : 5.5; t<=reach; t+=.05){
-      const wx = ox+_fd.x*t, wy = oy+_fd.y*t, wz = oz+_fd.z*t, i = Math.floor(wx), d = Math.floor(-wy), k = Math.floor(wz);
-      if(d >= -48 && d < D && get(i,d,k)) return null;
-      const f = fireAt(i,d,k); if(f && wy < -d-1+.85) return f;
-    }
-    return null;
-  }
-  const _umF = updateMining;
-  updateMining = function(dt){
-    if(realm === 0 && !shopOpen && FIRES.length){
-      const f = aimFire();
-      if(f){
-        cur = null; prog = 0; crack.visible = false; setCrack(0);
-        hlEdges.position.set(f.x+.5, -f.d-.5, f.z+.5); hlEdges.visible = true;
-        blockName.textContent = 'Fire  (hold click to mine it. Hot!)';
-        if(mouseDown){
-          if(fk !== f){ fk = f; fp = 0; }
-          fp += dt; swingT += dt; barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, fp/.45*100)+'%';
-          if(fp >= .45){ fp = 0; fk = null; barwrap.style.display = 'none'; killFire(f); addItem('Fire', 1); hotAuto('i:Fire'); updateHotbar(); hurtPlayer(2); toast('You mined the fire! Ow, hot. Put it down again from a carry slot.'); blip(500,.1,.08,'sawtooth'); persist(); }
-        } else { fp = 0; fk = null; barwrap.style.display = 'none'; swingT = 0; }
-        return;
-      }
-    }
-    fp = 0; fk = null;
-    return _umF(dt);
-  };
-  const _hpF = hotPlace;
-  hotPlace = function(){
-    const r = hotArr()[save.hotSel], hi = hotInfo(r);
-    if(!hi || hi.kind !== 'item' || hi.name !== 'Fire') return _hpF();
-    const t = placeTarget();
-    if(!t || get(t.x,t.d,t.z)){ blip(90,.1,.1,'sawtooth'); toast(t ? 'Something is already there.' : 'Aim at the ground to put the fire down.'); return; }
-    if(!consumeRef(r,1)) return;
-    if(!addFire(t.x, t.d, t.z)){ addItem('Fire', 1, true); toast('The fire will not light there.'); return; }
-    toast('Fwoosh! A fire. It melts ice and snow. Water puts it out.'); blip(300,.15,.1,'sawtooth'); persist(); updateHotbar();
-  };
-  // ---------- every frame
-  let last = performance.now(), slowT = 0, hurtT = 0, warnT = 0;
-  (function tick(now){
-    requestAnimationFrame(tick);
-    const dt = Math.min(.1, (now - last)/1000); last = now;
-    if(startEl.style.display === 'flex') return;
-    slowT -= dt;
-    if(slowT <= 0){ slowT = .5; scanMelt(); lavaMelt(); sunMelt(); if(Math.random() < .5) lavaIgnite(); }
-    if(hurtT > 0) hurtT -= dt; if(warnT > 0) warnT -= dt;
-    let best = 1e9, bf = null;
-    for(let i=FIRES.length-1;i>=0;i--){
-      const f = FIRES[i];
-      if(Math.abs(f.x - P.x) > 70 || Math.abs(f.z - P.z) > 70 || realm !== 0){ killFire(f); continue; }
-      f.parts.forEach((m,j)=>{ const s = .85 + .25*Math.sin(now/90 + j*1.7 + f.seed); m.scale.y = s*(j < 3 ? 1.1 : j < 5 ? .7 : .4); m.rotation.y += dt*(j%2 ? 2 : -2); });
-      if(get(f.x, f.d, f.z) || FLW.at(f.x, f.d, f.z) >= 0 || FLW.at(f.x, f.d-1, f.z) >= 0){ killFire(f, true); continue; }   // water or a block puts it out
-      const below = get(f.x, f.d+1, f.z);
-      if(!below && !(window.__lava && window.__lava.at(f.x, f.d+1, f.z) >= 0)) f.life = Math.min(f.life, 2);
-      f.life -= dt;
-      if(f.life <= 0){ if(flammable(below) && Math.random() < .5){ setBlock(f.x, f.d+1, f.z, 0); burst(f.x+.5, -f.d-1.5, f.z+.5, below-1, 8); } killFire(f); continue; }
-      f.meltT -= dt;
-      if(f.meltT <= 0){ f.meltT = 1; for(const o of N6) if(Math.random() < .35) melt(f.x+o[0], f.d+o[1], f.z+o[2], 2); }
-      f.spreadT -= dt;
-      if(f.spreadT <= 0){ f.spreadT = 3 + Math.random()*2;
-        if(Math.random() < .2){ const o = N6[Math.floor(Math.random()*6)], nx = f.x+o[0], nd = f.d+o[1], nz = f.z+o[2]; if(flammable(get(nx, nd+1, nz))) addFire(nx, nd, nz); } }
-      const fx = f.x+.5, fz = f.z+.5, fy = -f.d-1;
-      const q = (fx-P.x)*(fx-P.x) + (fz-P.z)*(fz-P.z) + (fy-P.y)*(fy-P.y); if(q < best){ best = q; bf = f; }
-      if(Math.abs(fx-P.x) < .75 && Math.abs(fz-P.z) < .75 && P.y > fy - .3 && P.y < fy + .9 && hurtT <= 0){
-        hurtT = .5; hurtPlayer(4); if(warnT <= 0){ warnT = 2.5; toast('You are standing in fire! Ouch! Get out!'); } blip(140,.08,.1,'sawtooth');
-      }
-    }
-    if(bf && best < 200){ fLight.position.set(bf.x+.5, -bf.d-.3, bf.z+.5); fLight.intensity = 1.1 + Math.sin(now/70)*.25; } else fLight.intensity = 0;
-  })(performance.now());
-  // ---------- Newton: mine the floating suspicious tree before he does and he says thank you
-  BADGES.push({id:'newtonfriend', icon:'NT', name:"Newton's Helper", desc:'Mine the floating suspicious tree before Newton does. He says thank you.'});
-  const _snE = startNewton;
-  startNewton = function(t){
-    _snE(t);
-    if(t && nw.tree === t && nw.st === 1 && !HILARIOUS){                         // the floating tree can be mined again
-      let found = false; for(let i=0;i<treeMeshes.length;i++) if(treeMeshes[i].userData.tree === t){ found = true; break; }
-      if(!found) t.g.traverse(m=>{ if(m.isMesh){ m.userData.tree = t; treeMeshes.push(m); } });
-    }
-  };
-  function thanks(t){
-    for(let i=treeMeshes.length-1;i>=0;i--) if(treeMeshes[i].userData.tree === t) treeMeshes.splice(i,1);
-    t.g.visible = false; t.dead = true; burst(t.x, t.g.position.y+2.5, t.z, 0, 40); shake = .1;
-    apples.forEach(a=>{ a.on = false; a.m.visible = false; });
-    if(!newtonG.visible){ newtonG.position.copy(nw.stand); newtonG.visible = true; portalG.scale.setScalar(1); }
-    if(typeof xq !== 'undefined' && xq.on && typeof xqAbort === 'function') xqAbort();
-    nArmR.rotation.x = 0; nw.st = 5; nw.t = 0;
-    addItem('Wood', 4); addItem("Newton's Apple", 1); save.coins += 5000; persist(); refreshShopIfOpen(); award('newtonfriend');
-    toast('Isaac Newton: "You mined the floating tree for me! Thank you! Gravity is safe again."');
-    setTimeout(()=>toast('Newton thanked you with $5,000 and one of his apples. Then he went home.'), 2600);
-    [523,659,784,1047].forEach((f,i)=>setTimeout(()=>blip(f,.2,.12,'triangle'), i*120));
-  }
-  const _ctE = chopTree;
-  chopTree = function(t){
-    if(t && t.special && !HILARIOUS && nw.tree === t && (nw.st === 1 || nw.st === 2 || nw.st === 3 || nw.st === 11) && !(typeof xq !== 'undefined' && xq.float)){ thanks(t); return; }
-    return _ctE(t);
-  };
-  // (Irfan 2026-10-26, later: letting Newton kill the tree starts his boss fight as before; no free pass through the portal)
-  window.__elements = {FIRES, addFire, killFire, melt, MELT, sunMelt, lavaMelt, thanks, coolPick:window.__coolPick};
-})();
-/* LN-elements end */
 /* LN-caves start (run): cave decorations, lava and acid pools, slime bounce, discovering caves */
 (function(){
   const C = CAVE, built = new Map(), deco = new Map();   // deco: anchor block key -> meshes
@@ -15727,9 +15193,9 @@ window.__acid = ACID;
       }
       const below = C.at(x, d+1, z), above = C.at(x, d-1, z), h = hash3(x, d, z, 811);
       if(below && below.s >= 1 && get(x, d+1, z) && h < dF && !(c.t.pool && below.dy > 0)){
-        const g = new THREE.Group(); g.position.set(x + .5, -d - 1, z + .5); g.rotation.y = h*40; FLOOR[c.t.deco || c.t.k](g, hash3(x,d,z,813)); o.g.add(g); addDeco(ek(x, d+1, z), g, o);
+        const g = new THREE.Group(); g.position.set(x + .5, -d - 1, z + .5); g.rotation.y = h*40; FLOOR[c.t.k](g, hash3(x,d,z,813)); o.g.add(g); addDeco(ek(x, d+1, z), g, o);
       } else if(above && above.s >= 1 && get(x, d-1, z) && h > 1 - dF){
-        const g = new THREE.Group(); g.position.set(x + .5, -d, z + .5); g.rotation.y = h*40; CEIL[c.t.deco || c.t.k](g, hash3(x,d,z,815)); o.g.add(g); addDeco(ek(x, d-1, z), g, o);
+        const g = new THREE.Group(); g.position.set(x + .5, -d, z + .5); g.rotation.y = h*40; CEIL[c.t.k](g, hash3(x,d,z,815)); o.g.add(g); addDeco(ek(x, d-1, z), g, o);
       }
     }
     return o;
@@ -15793,9 +15259,9 @@ window.__acid = ACID;
       if(a.c.key !== curKey){
         curKey = a.c.key; const t = a.c.t;
         if(!save.caves[t.k]){
-          save.caves[t.k] = Date.now(); const n = C.T.filter(q=>save.caves[q.k]).length; persist();
+          save.caves[t.k] = Date.now(); const n = Object.keys(save.caves).length; persist();
           toast('You discovered '+(a.c.big ? 'a MASSIVE ' : /^[AEIOU]/.test(t.name) ? 'an ' : 'a ')+t.name.toUpperCase()+'! ('+n+' of '+C.T.length+' kinds of cave found)'); blip(660,.12,.1,'triangle'); setTimeout(()=>blip(990,.18,.1,'triangle'),120);
-          news('NEWS: A miner has discovered a '+t.name+'. '+({regular:'It is a cave. Experts are amazed.', frost:'Bring a scarf.', mossy:'It smells like a wet sock. A nice one.', lava:'The lava is hot. Scientists confirm.', acid:'Do NOT drink the green stuff.', crystal:'Very sparkly. Too sparkly?', mushroom:'Some of the mushrooms are taller than you.', gold:'Some of the gold is fake. Some is not. Good luck.', slime:'Boing boing boing.'})[t.k] || 'Nobody has ever seen one like it.');
+          news('NEWS: A miner has discovered a '+t.name+'. '+({regular:'It is a cave. Experts are amazed.', frost:'Bring a scarf.', mossy:'It smells like a wet sock. A nice one.', lava:'The lava is hot. Scientists confirm.', acid:'Do NOT drink the green stuff.', crystal:'Very sparkly. Too sparkly?', mushroom:'Some of the mushrooms are taller than you.', gold:'Some of the gold is fake. Some is not. Good luck.', slime:'Boing boing boing.'})[t.k]);
           if(n >= C.T.length) award('caveexplorer');
         } else toast(a.c.big ? 'MASSIVE '+t.name.toUpperCase()+'!' : t.name);
       }

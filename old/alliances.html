@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><script>/* OLD VERSION: its own save, so the newest game's save is never touched */(function(){var P='old_v12_',S=Storage.prototype,g=S.getItem,st=S.setItem,r=S.removeItem,k=S.key;S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return st.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};S.clear=function(){var a=[];for(var i=0;i<this.length;i++){var q=k.call(this,i);if(q&&q.indexOf(P)===0)a.push(q)}for(var j=0;j<a.length;j++)r.call(this,a[j])};try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject()}}catch(e){}addEventListener('DOMContentLoaded',function(){var b=document.createElement('button');b.textContent='OLD VERSION: Aliens build houses, religions and the Lore Book (Oct 29)   |   BACK TO NEWEST';b.style.cssText='position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:99999;padding:6px 14px;font:700 13px system-ui,sans-serif;color:#fff;background:rgba(120,60,10,.9);border:2px solid #ffb060;border-radius:10px;cursor:pointer';b.onclick=function(e){e.stopPropagation();location.href=location.protocol==='file:'?'../dig-to-the-core.html':'../'};document.body.appendChild(b)});})();</script>
+<head><script>/* OLD VERSION: its own save, so the newest game's save is never touched */(function(){var P='old_alliances_',S=Storage.prototype,g=S.getItem,st=S.setItem,r=S.removeItem,k=S.key;S.getItem=function(x){return g.call(this,P+x)};S.setItem=function(x,v){return st.call(this,P+x,v)};S.removeItem=function(x){return r.call(this,P+x)};S.clear=function(){var a=[];for(var i=0;i<this.length;i++){var q=k.call(this,i);if(q&&q.indexOf(P)===0)a.push(q)}for(var j=0;j<a.length;j++)r.call(this,a[j])};try{if(navigator.serviceWorker)navigator.serviceWorker.register=function(){return Promise.reject()}}catch(e){}addEventListener('DOMContentLoaded',function(){var b=document.createElement('button');b.textContent='OLD VERSION: Country money and alliances (Oct 29)   |   BACK TO NEWEST';b.style.cssText='position:fixed;bottom:6px;left:50%;transform:translateX(-50%);z-index:99999;padding:6px 14px;font:700 13px system-ui,sans-serif;color:#fff;background:rgba(120,60,10,.9);border:2px solid #ffb060;border-radius:10px;cursor:pointer';b.onclick=function(e){e.stopPropagation();location.href=location.protocol==='file:'?'../dig-to-the-core.html':'../'};document.body.appendChild(b)});})();</script>
 
 <meta charset="utf-8">
 <title>Deep Chaos Diggers</title>
@@ -213,7 +213,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 105 (Oct 29)';
+  window.__BUILD = 'Build 108 (Oct 29)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -18990,18 +18990,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function cityTag(n){
     const txt = 'Population '+n.pop.length+'  |  Houses '+(n.houses||0)+(n.colonyOf ? '  |  Colony of '+((save.nations.find(o=>o.id === n.colonyOf) || {}).name || 'a far away land') : '')+(n.techs && n.techs.length ? '  |  Inventions '+n.techs.length : '')+(n.war ? '  |  AT WAR' : '');
     const R = n.res || {}, txt2 = 'Wood '+(R.wood||0)+'   Stone '+(R.stone||0)+'   Food '+(R.food||0)+'   Iron '+(R.iron||0)+'   Gold '+(R.gold||0)+'   Gems '+(R.gems||0);
-    const key = txt+'#'+txt2;
+    const txt3 = window.__natl ? (window.__natl.fill(n), window.__natl.line(n)) : '';
+    const key = txt+'#'+txt2+'#'+txt3;
     let t = ctags[n.id];
     if(t && t.txt === key) return t.sp;
     if(t){ scene.remove(t.sp); t.sp.material.map.dispose(); }
-    const cv = document.createElement('canvas'); cv.width = 768; cv.height = 128; const x = cv.getContext('2d');
+    const cv = document.createElement('canvas'); cv.width = 768; cv.height = txt3 ? 180 : 128; const x = cv.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; x.font = 'bold 30px system-ui,sans-serif';
     let fs = 30; while(x.measureText(txt).width > 750 && fs > 14){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; }
     x.strokeText(txt, 384, 32); x.fillStyle = n.war ? '#ffb0a0' : '#bff5ff'; x.fillText(txt, 384, 32);
     fs = 28; x.font = 'bold 28px system-ui,sans-serif'; while(x.measureText(txt2).width > 750 && fs > 14){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; }
     x.strokeText(txt2, 384, 94); x.fillStyle = '#ffe08a'; x.fillText(txt2, 384, 94);
+    if(txt3){ fs = 26; x.font = 'bold 26px system-ui,sans-serif'; while(x.measureText(txt3).width > 750 && fs > 12){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; } x.strokeText(txt3, 384, 150); x.fillStyle = '#b8ffb0'; x.fillText(txt3, 384, 150); }
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
-    sp.scale.set(13, 2.17, 1); sp.position.set((n.fx||n.x)+2, n.G + 7.9, n.fz||n.z); scene.add(sp);
+    sp.scale.set(13, 13*cv.height/768, 1); sp.position.set((n.fx||n.x)+2, n.G + 7.9, n.fz||n.z); scene.add(sp);
     ctags[n.id] = {sp, txt:key}; return sp;
   }
   // ---- friends, enemies and families moving about
@@ -28246,6 +28248,257 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__lore = {LORE, unlock, open:openL, close:closeL, got};
 })();
 /* LN-lore end */
+/* LN-babahw start: Baba Caka gives you homework every morning. Do it before night and he goes home happy. Skip it and he is MAD (Irfan 2026-10-29) */
+(function(){
+  const BB = window.__baba; if(!BB) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
+  const TASKS = [
+    {k:'mine',  n:[30, 50, 80], txt:n=>'Mine ' + n + ' blocks'},
+    {k:'deep',  n:[10, 20],     txt:n=>'Mine ' + n + ' blocks deeper than 20 m'},
+    {k:'eat',   n:[2, 3],       txt:n=>'Eat ' + n + ' snacks (Baba Caka says growing miners need food)'},
+    {k:'place', n:[10, 20],     txt:n=>'Place ' + n + ' blocks (practise your building)'},
+    {k:'coins', n:[500, 2000],  txt:n=>'Earn $' + n.toLocaleString()},
+    {k:'lore',  n:[1],          txt:n=>'Find ' + n + ' Lore Scroll (reading is important)'}
+  ];
+  const H = save.babaHW = save.babaHW || {};
+  function newHW(){
+    const a = pick(TASKS); let b = pick(TASKS); while(b === a) b = pick(TASKS);
+    H.tasks = [a, b].map(t=>({k:t.k, n:pick(t.n), have:0}));
+    H.coins0 = save.coins || 0; H.placed0 = save.placed || 0; H.lore0 = Object.keys(save.lore || {}).length;
+    H.active = true; H.hide = false; persist();
+    toast('Baba Caka left a note: "HOMEWORK! ' + H.tasks.map(t=>TASKS.find(q=>q.k === t.k).txt(t.n)).join(', and ') + '. Due tonight. OOH OOH!"');
+    draw();
+  }
+  const done = ()=>H.tasks && H.tasks.every(t=>t.have >= t.n);
+  // ---- progress
+  const _bb = breakBlock;
+  breakBlock = function(h){ const r = _bb.apply(this, arguments); try{ if(H.active && H.tasks){ H.tasks.forEach(t=>{ if(t.k === 'mine') t.have++; if(t.k === 'deep' && h && h.d >= 20) t.have++; }); draw(); } }catch(e){} return r; };
+  const _er = eatRef;
+  eatRef = function(ref){ const nm = typeof ref === 'string' && ref.slice(0, 2) === 'i:' ? ref.slice(2) : null, had = nm && save.inv ? save.inv[nm] || 0 : 0; const r = _er.apply(this, arguments);
+    try{ if(nm && H.active && H.tasks && (save.inv[nm] || 0) < had) H.tasks.forEach(t=>{ if(t.k === 'eat') t.have++; }); draw(); }catch(e){} return r; };
+  function poll(){
+    if(!H.active || !H.tasks) return;
+    H.tasks.forEach(t=>{
+      if(t.k === 'coins') t.have = Math.max(t.have, (save.coins || 0) - H.coins0);
+      if(t.k === 'place') t.have = Math.max(0, (save.placed || 0) - H.placed0);
+      if(t.k === 'lore') t.have = Math.max(0, Object.keys(save.lore || {}).length - H.lore0);
+    });
+    if(done() && !H.toldDone){ H.toldDone = true; persist(); toast('HOMEWORK DONE! Baba Caka will be so proud tonight.'); blip(880, .1, .08, 'triangle'); setTimeout(()=>blip(1320, .15, .08, 'triangle'), 120); }
+  }
+  // ---- the homework card (top left, under the buttons)
+  const box = document.createElement('div');
+  box.style.cssText = 'position:absolute;top:356px;right:14px;z-index:29;max-width:300px;padding:8px 30px 8px 10px;background:rgba(60,20,20,.82);color:#fff;border:2px solid #ff6a6a;border-radius:10px;font:13px/1.35 system-ui,sans-serif;pointer-events:auto;display:none';
+  document.body.appendChild(box);
+  let mini = null;
+  function draw(){
+    const show = H.active && H.tasks && !H.hide && realm === 0 && startEl.style.display !== 'flex';
+    box.style.display = show ? 'block' : 'none';
+    if(mini) mini.style.display = H.active && H.tasks && H.hide && startEl.style.display !== 'flex' ? 'block' : 'none';
+    if(!show) return;
+    const html = '<b style="color:#ff9a9a">HOMEWORK from Baba Caka</b> <span style="opacity:.75">(due tonight)</span>' +
+      H.tasks.map(t=>{ const ok = t.have >= t.n; return '<div style="' + (ok ? 'color:#8aff8a' : '') + '">' + (ok ? '[done] ' : '[ ] ') + TASKS.find(q=>q.k === t.k).txt(t.n) + '  ' + (t.k === 'coins' ? '$' + Math.min(t.have, t.n).toLocaleString() + '/$' + t.n.toLocaleString() : Math.min(t.have, t.n) + '/' + t.n) + '</div>'; }).join('') +
+      (H.mad ? '<div style="color:#ffd040;margin-top:3px">Baba Caka is MAD about yesterday!</div>' : '') +
+      '<button id="hwX" style="position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:5px;background:#8a2a2a;color:#fff;font:900 12px system-ui;cursor:pointer">X</button>';
+    if(box.innerHTML !== html) box.innerHTML = html;
+  }
+  box.addEventListener('click', e=>{ if(e.target.id === 'hwX'){ e.stopPropagation(); H.hide = true; persist(); draw(); } });
+  mini = document.createElement('button'); mini.textContent = 'HOMEWORK';
+  mini.style.cssText = 'position:absolute;top:356px;right:14px;z-index:29;padding:4px 10px;font:700 12px system-ui,sans-serif;color:#fff;background:rgba(140,40,40,.85);border:2px solid rgba(255,255,255,.4);border-radius:8px;cursor:pointer;display:none;pointer-events:auto';
+  mini.onclick = e=>{ e.stopPropagation(); H.hide = false; persist(); draw(); };
+  document.body.appendChild(mini);
+  // ---- the MAD sign over Baba Caka
+  let madSign = null;
+  function setMad(on){
+    if(on && !madSign){
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 80; const x = cv.getContext('2d');
+      x.fillStyle = 'rgba(200,0,0,.9)'; x.fillRect(6, 6, 500, 68); x.font = 'bold 36px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('MAD: NO HOMEWORK!', 256, 41);
+      madSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); madSign.scale.set(3.4, .53, 1); madSign.position.y = 3.85; BB.g.add(madSign);
+    }
+    if(madSign) madSign.visible = !!on;
+  }
+  // ---- day and night
+  let wasNight = BB.isNight(), happyNight = false, madTries = 99;
+  if(!H.tasks && !wasNight) setTimeout(newHW, 8000);
+  function tick(){
+    if(realm !== 0) { draw(); return; }
+    poll();
+    const nt = BB.isNight();
+    if(nt && !wasNight){                       // night falls: homework is due
+      if(H.active && H.tasks){
+        if(done()){
+          happyNight = true; H.mad = false; save.coins += 2000; persist();
+          toast('Baba Caka checked your homework: ALL DONE! "OOH OOH, good miner!" He gives you $2,000 and stays home tonight.');
+          newsQ('NEWS: Baba Caka was seen smiling for the first time ever. A miner did all their homework.');
+          try{ window.__lore && window.__lore.unlock && window.__lore.unlock('k4', 'Lore of the night'); }catch(e){}
+        } else {
+          happyNight = false; H.mad = true; persist();
+          toast('BABA CAKA IS MAD! You did not do your homework! He is coming RIGHT NOW!');
+          newsQ('SPOOKY NEWS: Baba Caka is very mad tonight. Somebody did not do their homework. Everybody hide your pencils.');
+          madTries = 0;
+        }
+        H.active = false; H.toldDone = false; persist();
+      }
+    }
+    if(!nt && wasNight){ setMad(false); H.mad = false; happyNight = false; newHW(); }
+    wasNight = nt;
+    if(nt && happyNight && BB.B.on) BB.leave('Baba Caka waves at you, remembers your finished homework, and goes back to sleep.');
+    if(nt && H.mad && !BB.B.on && madTries < 20){ madTries++; try{ BB.arrive(); }catch(e){} }
+    setMad(nt && H.mad && BB.B.on);
+    draw();
+  }
+  setInterval(()=>{ try{ if(!won) tick(); }catch(e){ console.warn('LN-babahw', e); } }, 1000);
+  window.__babaHW = {H, newHW, tick, done};
+})();
+/* LN-babahw end */
+/* LN-national start: every country gets its own random currency, national animal and national food (Irfan 2026-10-29) */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const CUR_A = ['Moo','Quack','Squeak','Bob','Banana','Pickle','Sock','Cheese','Wobble','Bubble','Oink','Honk','Pebble','Biscuit','Sparkle','Turnip','Noodle','Button','Jelly','Thunder'];
+  const CUR_B = ['Dollar','Coin','Buck','Bill','Penny','Pound','Token','Crown','Shell','Nugget'];
+  const FOOD_A = ['Bob','Moon','Cheesy','Duck','Grandma','Volcano','Rainbow','Sneezy','Royal','Midnight','Bubble','Thunder','Wobbly','Happy','Lazy','Disco'];
+  const FOOD_B = ['Meat','Potato','Noodle','Carrot','Bean','Rice','Mushroom','Pumpkin','Corn','Turnip','Jelly','Fish','Egg','Banana','Pickle','Cabbage'];
+  const FOOD_C = ['Curry','Pie','Soup','Stew','Pancakes','Tacos','Pizza','Sandwich','Dumplings','Cake','Noodles','Burger','Smoothie','Omelette','Waffles','Kebab'];
+  const ANIM_EXTRA = ['Kiwi','Penguin','Sleepy Cat','Golden Duck','Moon Bunny','Dancing Goat','Giant Snail','Flying Pig','Grumpy Owl','Disco Llama','Polite Shark','Tiny Horse'];
+  function animalNames(){
+    const L = [];
+    try{ for(const k in AD){ const d = AD[k]; if(d && d.name && !d.boss && !d.foe && L.indexOf(d.name) < 0 && /^[A-Za-z ]+$/.test(d.name)) L.push(d.name); } }catch(e){}
+    return L.concat(ANIM_EXTRA);
+  }
+  function fill(n){
+    if(n.natl) return false;
+    const a = pick(CUR_A), b = pick(CUR_B);
+    n.natl = {cur:a + ' ' + b, rate:+(Math.pow(10, Math.random()*4 - 1)).toFixed(2), animal:pick(animalNames()), food:pick(FOOD_A) + ' ' + pick(FOOD_B) + ' ' + pick(FOOD_C), visited:false};
+    return true;
+  }
+  const plural = s=>/[sy]$/.test(s) ? s : s + 's';
+  function line(n){
+    const N = n && n.natl; if(!N) return '';
+    return 'Money: ' + plural(N.cur) + ' (1 coin = ' + N.rate.toLocaleString() + ')   Animal: ' + N.animal + '   Food: ' + N.food;
+  }
+  const towns = ()=>(save.nations || []).filter(n=>n);
+  function fillAll(){ let ch = false; towns().forEach(n=>{ if(fill(n)) ch = true; }); if(ch) persist(); }
+  fillAll();
+  // visiting a country: a welcome sign, and a free plate of the national food the first time
+  const seenT = {};
+  let newsT = 120;
+  setInterval(()=>{
+    try{
+      fillAll();
+      if(realm !== 0 || won) return;
+      for(const n of towns()){
+        if(!n.natl || Math.hypot(P.x - n.x, P.z - n.z) > 28) continue;
+        if(seenT[n.id] && performance.now() - seenT[n.id] < 180000) continue;
+        seenT[n.id] = performance.now();
+        const N = n.natl;
+        toast('Welcome to ' + n.name + '! Money: ' + plural(N.cur) + ' (1 coin = ' + N.rate.toLocaleString() + '). National animal: ' + N.animal + '. National food: ' + N.food + '.');
+        if(!N.visited){ N.visited = true; save.foodPower = save.foodPower || {}; if(!save.foodPower[N.food]) save.foodPower[N.food] = 6; addItem(N.food, 1); persist();
+          setTimeout(()=>toast('The people of ' + n.name + ' gave you a plate of ' + N.food + '! Press E to eat it.'), 3500); }
+        break;
+      }
+      // the money goes up and down
+      newsT -= 2; if(newsT <= 0){ newsT = 150 + Math.random()*120;
+        const L = towns().filter(n=>n.natl); if(L.length){ const n = pick(L), N = n.natl, up = Math.random() < .5, f = 1 + Math.random()*.6;
+          N.rate = +(up ? N.rate/f : N.rate*f).toFixed(2); persist();
+          newsQ('MONEY NEWS: The ' + N.cur + ' of ' + n.name + ' went ' + (up ? 'UP' : 'DOWN') + '! ' + pick(up ? ['People are buying extra ' + N.food + '.', 'The ' + N.animal + ' on the coin looks proud.', 'Stonks!'] : ['Someone sat on the money printer.', 'The ' + N.animal + ' on the coin looks sad.', 'Not stonks.'])); }
+        else if(L.length > 1){ }
+        if(Math.random() < .35 && L.length){ const n = pick(L); newsQ('FOOD NEWS: ' + n.name + ' held a ' + n.natl.food + ' festival. ' + pick(['Nobody could finish it.', 'The ' + n.natl.animal + ' ate the leftovers.', 'It won a prize for being the most ' + n.natl.food + ' ever.'])); }
+      }
+    }catch(e){ console.warn('LN-national', e); }
+  }, 2000);
+  window.__natl = {fill, line, fillAll};
+})();
+/* LN-national end */
+/* LN-alliance start: countries form alliances; allies send soldiers to help in wars, and an alliance breaks if two members go to war (Irfan 2026-10-29) */
+(function(){
+  const W = window.__wars; if(!W) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const NA = ['Pancake','Sock','Banana','Friendship','Sandwich','Rubber Duck','Pillow','Biscuit','Moon','Thunder','Cheese','Bubble','Waffle','Golden Spoon','Sleepy','Mighty Pickle'];
+  const NB = ['Pact','Alliance','Union','League','Club','Team','Treaty','Squad','Brotherhood','Friendship Circle'];
+  const A = save.alliances = save.alliances || {list:[], next:1, formT:90};
+  const towns = ()=>(save.nations || []).filter(n=>n && n.pop && n.pop.length);
+  const byId = id=>(save.nations || []).find(n=>n && n.id === id);
+  const allyOf = n=>A.list.find(a=>a.members.indexOf(n.id) >= 0);
+  const COLS = [0x40c040, 0xe0a020, 0xa040e0, 0x20c0c0, 0xe04090, 0xffffff];
+  function name(){ for(let k=0;k<20;k++){ const nm = 'The ' + pick(NA) + ' ' + pick(NB); if(!A.list.some(a=>a.name === nm)) return nm; } return 'The Alliance Number ' + A.next; }
+  function form(){
+    const T = towns().filter(n=>!n.war); if(T.length < 2) return null;
+    const loners = T.filter(n=>!allyOf(n));
+    // join an existing alliance, or start a new one with another country
+    if(loners.length && A.list.length && Math.random() < .45){
+      const al = pick(A.list), n = pick(loners); if(al.members.length < 4){ al.members.push(n.id); persist();
+        newsQ('NEWS: ' + n.name + ' joined ' + al.name + '! ' + pick(['They brought snacks.', 'The welcome party had a bouncy castle.', 'Everyone signed a very long piece of paper.']), true);
+        if(Math.hypot(P.x - n.x, P.z - n.z) < 120) toast(n.name + ' joined ' + al.name + '!'); return al; }
+    }
+    if(loners.length < 2) return null;
+    const a = pick(loners); let b = pick(loners); for(let k=0;k<10 && b === a;k++) b = pick(loners); if(a === b) return null;
+    const al = {id:A.next++, name:name(), members:[a.id, b.id], col:pick(COLS), born:Date.now()};
+    A.list.push(al); persist();
+    newsQ('BREAKING: ' + a.name + ' and ' + b.name + ' formed an alliance: ' + al.name + '! ' + pick(['They promised to help each other in every war.', 'They shook hands. Then paws. Then hooves.', 'They swapped national foods. ' + ((a.natl && a.natl.food) || 'Soup') + ' for ' + ((b.natl && b.natl.food) || 'cake') + '.']), true);
+    if(Math.hypot(P.x - a.x, P.z - a.z) < 120 || Math.hypot(P.x - b.x, P.z - b.z) < 120) toast('ALLIANCE! ' + a.name + ' and ' + b.name + ' formed ' + al.name + '.');
+    return al;
+  }
+  function breakUp(al, why){
+    A.list = A.list.filter(x=>x !== al); persist();
+    newsQ('BREAKING: ' + al.name + ' has broken up! ' + why, true);
+  }
+  function cleanup(){
+    A.list.forEach(al=>{ al.members = al.members.filter(id=>{ const n = byId(id); return n && n.pop && n.pop.length; }); });
+    const dead = A.list.filter(al=>al.members.length < 2); dead.forEach(al=>A.list = A.list.filter(x=>x !== al));
+  }
+  // allies join wars
+  let lastWar = null;
+  function helmet(a, col){ try{ const top = window.__headTop ? window.__headTop(a) : null; const h = sbox(.5, .14, .5, col, 0, 0, 0, a.g); if(top){ h.position.copy(top); h.position.y += .08; } else h.position.y = 1.4; }catch(e){} }
+  function warCheck(){
+    const w = W.war;
+    if(w && w !== lastWar){
+      lastWar = w; w.allies = {A:[], B:[]};
+      const aA = allyOf(w.A), aB = allyOf(w.B);
+      if(aA && aA === aB){ breakUp(aA, w.A.name + ' and ' + w.B.name + ' went to war with each other. Friendship over!'); return; }
+      [['A', aA, w.A], ['B', aB, w.B]].forEach(([side, al, n])=>{ if(!al) return;
+        al.members.forEach(id=>{ if(id === n.id) return; const m = byId(id); if(m && !m.war){ w.allies[side].push(m.id); } });
+        if(w.allies[side].length){ const names = w.allies[side].map(id=>byId(id).name).join(' and ');
+          newsQ('WAR NEWS: ' + names + ' joined the war to help their ally ' + n.name + '! ' + al.name + ' sticks together.', true);
+          if(realm === 0) toast(names + ' came to help ' + n.name + ' in the war! (' + al.name + ')'); }
+      });
+    }
+    if(!w){ lastWar = null; return; }
+    // allied soldiers march in with every wave
+    const mx = (w.A.x + w.B.x)/2, mz = (w.A.z + w.B.z)/2, watching = realm === 0 && Math.hypot(mx - P.x, mz - P.z) < 120;
+    if(!watching || !w.allies) return;
+    w.allyT = (w.allyT || 0) - 1; if(w.allyT > 0) return; w.allyT = 12;
+    ['A', 'B'].forEach(side=>{
+      w.allies[side].forEach(id=>{ const m = byId(id); if(!m || !m.type) return;
+        const live = W.soldiers.filter(a=>a.allyOf === id && animals.indexOf(a) >= 0).length; if(live >= 2) return;
+        const home = side === 'A' ? w.A : w.B, ang = Math.atan2(mz - home.z, mx - home.x), d = Math.min(22, Math.hypot(mx - home.x, mz - home.z)*.6);
+        for(let k=0;k<2;k++){ const x = mx - Math.cos(ang)*d + (Math.random() - .5)*6, z = mz - Math.sin(ang)*d + (Math.random() - .5)*6;
+          const a = spawnAnimal(m.type, x, z); a.soldier = side; a.nation = null; a.shp = 30; a.allyOf = id; helmet(a, side === 'A' ? 0xd03030 : 0x3060d0); W.soldiers.push(a); }
+      });
+    });
+  }
+  // the alliance shows on each country's sign
+  const N = window.__natl;
+  if(N && N.line){ const _l = N.line; N.line = function(n){ const al = allyOf(n); return _l.apply(this, arguments) + (al ? '   Alliance: ' + al.name : ''); }; }
+  setInterval(()=>{
+    try{
+      if(won) return;
+      cleanup(); warCheck();
+      A.formT -= 1;
+      if(A.formT <= 0){ A.formT = 150 + Math.random()*150; form(); }
+      // now and then an alliance throws a party, or breaks up over something silly
+      if(Math.random() < 1/240 && A.list.length){ const al = pick(A.list);
+        if(Math.random() < .25 && al.members.length >= 2) breakUp(al, pick(['They could not agree on the best pizza topping.', 'Somebody forgot somebody\'s birthday.', 'They argued about whose national animal is cuter.']));
+        else newsQ('NEWS: ' + al.name + ' held a big party. ' + pick(['All ' + al.members.length + ' countries danced.', 'There was a cake shaped like a handshake.', 'Nobody declared war for a whole day.'])); }
+    }catch(e){ console.warn('LN-alliance', e); }
+  }, 1000);
+  window.__alliance = {A, form, breakUp, allyOf, formNow:()=>{ A.formT = 0; }};
+})();
+/* LN-alliance end */
+
+
+
 
 
 
