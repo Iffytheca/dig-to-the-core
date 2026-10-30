@@ -266,7 +266,7 @@ const FUNNY_LAYERS = [
 const EXTRA_KEY = 'digcore_extras';
 let chosenExtras = [];
 try{ chosenExtras = JSON.parse(localStorage.getItem(EXTRA_KEY)||'[]'); }catch(e){}
-const LAYERS = (HILARIOUS ? FUNNY_LAYERS.slice() : ALL_LAYERS.filter(l=>['Grass','Soil','Dirt','Rock','Hard Rock','Bedrock','Core'].indexOf(l.name)>=0)).sort((a,b)=>a.h-b.h);
+const LAYERS = (HILARIOUS ? FUNNY_LAYERS.slice() : ALL_LAYERS.filter(l=>['Grass','Soil','Dirt','Tough Dirt','Rock','Hard Rock','Bedrock','Hot Rock','Magma','Hot Metal','Core'].indexOf(l.name)>=0)).sort((a,b)=>a.h-b.h);
 
 const PICKS = [
   {name:'Wooden Shovel',            power:1,   price:0,       col:0xa8773f, glow:0},
@@ -3673,6 +3673,15 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
     if((b[0] >= SHOP.x-2.2 && b[1] <= SHOP.x+2.2 && b[4] >= SHOP.z-2 && b[5] <= SHOP.z+2) || (b[0] >= ROCKET_HOME.x-1.4 && b[1] <= ROCKET_HOME.x+1.4 && b[4] >= ROCKET_HOME.z-1.4 && b[5] <= ROCKET_HOME.z+1.4)) solids.splice(si,1); }
   openShop = function(){}; updateShop = function(){};
   PICKS.length = PICKS.findIndex(function(p){ return /MIGHTY/.test(p.name); }) + 1;
+  /* no badges */
+  award = function(){}; checkBadges = function(){};
+  var mb = document.getElementById('menubadges'); if(mb && mb.parentElement) mb.parentElement.style.display = 'none';
+  /* beyond the barrier the ground under the grass shows as nothing: you can look, you cannot cross */
+  var ob = baseBlock;
+  baseBlock = function(x,d,z){ if(d > 0 && !inside(x,z)) return 0; return ob(x,d,z); };
+  fillWindow(Math.floor(P.x), Math.floor(P.z));
+  /* no loot and no drops */
+  addItem = function(){}; rollMaterial = function(){};
   window.__dig.collides = collides; window.__dig.inside = inside;
 })();
 
