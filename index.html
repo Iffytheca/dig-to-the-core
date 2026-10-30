@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 113 (Oct 30)';
+  window.__BUILD = 'Build 114 (Oct 30)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -5083,7 +5083,7 @@ function updateMining(dt){
   }
   if(tt && (!hit || tt.dist < hit.t)){
     cur = null; hlEdges.visible = crack.visible = false; setCrack(0);
-    blockName.textContent = tt.tree.special ? 'Suspicious Tree' : 'Tree';
+    blockName.textContent = 'Tree';
     if(mouseDown){
       if(chopT.tree === tt.tree) chopT.p += dt; else chopT = {tree:tt.tree, p:dt};
       barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, chopT.p/((tt.tree.special && nw.st && nw.tree === tt.tree) ? 1 : (mineAny ? .4 : 1.6))*100)+'%';
@@ -29590,7 +29590,7 @@ window.__acid = ACID;
     if(bf && best < 200){ fLight.position.set(bf.x+.5, -bf.d-.3, bf.z+.5); fLight.intensity = 1.1 + Math.sin(now/70)*.25; } else fLight.intensity = 0;
   })(performance.now());
   // ---------- Newton: mine the floating suspicious tree before he does and he says thank you
-  BADGES.push({id:'newtonfriend', icon:'NT', name:"Newton's Helper", desc:'Mine the floating suspicious tree before Newton does. He says thank you.'});
+  BADGES.push({id:'newtonfriend', icon:'NT', name:"Newton's Helper", desc:'Mine the floating tree before Newton does. He says thank you.'});
   const _snE = startNewton;
   startNewton = function(t){
     _snE(t);
