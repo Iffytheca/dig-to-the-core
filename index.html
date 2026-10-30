@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 111 (Oct 29)';
+  window.__BUILD = 'Build 112 (Oct 30)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29119,6 +29119,33 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__rarer = {keepMain};
 })();
 /* LN-rarer end */
+/* LN-oldversions start: OLD VERSIONS button on the main menu, play an older build with its own save (Irfan 2026-10-30) */
+(function(){
+  const V = [["v1", "Oct 23", "The very first Dig to the Core"], ["v2", "Oct 23", "Less normal: Funny, Chaos and Extra modes"], ["v3", "Oct 24", "Six new modes: Spooky, Ocean, Robot, Dinosaur, Ice Age, Space"], ["v4", "Oct 26", "Lucky blocks, Bobs and the maze"], ["v5", "Oct 26", "Caves, Mum's room and Bob Mode"], ["v6", "Oct 27", "Biomes, Animal Nations and animal cities"], ["v7", "Oct 28", "Inventions, farms and working mineshafts"], ["v8", "Oct 28", "Illuminati Mode"], ["v9", "Oct 28", "Mars"], ["v10", "Oct 29", "The Next Universe and Planet Novaria"], ["v11", "Oct 29", "Renamed to Deep Chaos Diggers"], ["v12", "Oct 29", "Aliens build houses, religions and the Lore Book"]];
+  const btn = document.createElement('button'); btn.className = 'btn'; btn.id = 'oldVerBtn'; btn.textContent = 'OLD VERSIONS';
+  btn.style.cssText = 'display:block;margin:10px auto 0;padding:8px 22px;font-size:14px;background:#7a4a1a;color:#fff';
+  const play = document.getElementById('play'); if(play && play.parentNode) play.parentNode.insertBefore(btn, play.nextSibling);
+  const pan = document.createElement('div');
+  pan.style.cssText = 'position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center';
+  pan.innerHTML = '<div style="position:relative;background:#241a10;color:#f6e6d6;border:2px solid #ffb060;border-radius:12px;padding:18px 20px;width:min(520px,94vw);max-height:90vh;overflow:auto;font:15px system-ui,sans-serif">' +
+    '<button id="oldVerX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 22px system-ui;color:#ffc080;margin-bottom:4px">Old versions</div>' +
+    '<div style="opacity:.8;font-size:13px;margin-bottom:10px">Play the game the way it used to be. Each old version has its own save, so your real save is safe. Press BACK TO NEWEST at the bottom of the screen to come back.</div>' +
+    '<div id="oldVerList"></div></div>';
+  document.body.appendChild(pan);
+  const list = pan.querySelector('#oldVerList');
+  const row = (txt, sub, href, cur)=>{ const b = document.createElement('button'); b.className = 'btn';
+    b.style.cssText = 'display:block;width:100%;text-align:left;margin:5px 0;padding:9px 12px;font-size:14px;background:' + (cur ? '#2f6a3a' : '#5a3a1a') + ';color:#fff';
+    b.innerHTML = '<b>' + txt + '</b><br><span style="opacity:.8;font-size:12px">' + sub + '</span>';
+    b.onclick = e=>{ e.stopPropagation(); if(href) location.href = href; else pan.style.display = 'none'; }; list.appendChild(b); };
+  row('NEWEST: ' + (window.__BUILD || 'this build'), 'The game you are playing now (keep playing).', null, true);
+  V.slice().reverse().forEach(v=>row('Version ' + v[0].slice(1) + '  (' + v[1] + ')', v[2], 'old/' + v[0] + '.html'));
+  btn.onclick = e=>{ e.stopPropagation(); pan.style.display = 'flex'; };
+  pan.addEventListener('click', e=>{ if(e.target === pan || e.target.id === 'oldVerX') pan.style.display = 'none'; });
+  addEventListener('keydown', e=>{ if(e.code === 'Escape' && pan.style.display === 'flex') pan.style.display = 'none'; });
+  window.__oldVersions = {V, open:()=>{ pan.style.display = 'flex'; }};
+})();
+/* LN-oldversions end */
 
 
 
