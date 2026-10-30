@@ -191,7 +191,7 @@ const MAXT = 4;             // longest dig time (s) the player is willing/able t
 const HILARIOUS = (()=>{ try{ return localStorage.getItem('digcore_funny') === '1'; }catch(e){ return false; } })();
 const SAVE_KEY = HILARIOUS ? 'digcore_h1' : 'digcore1';
 const ALL_LAYERS = [
-  {name:'Grass',      th:1, h:1,   v:1,    base:[88,150,56],  amp:30, sp:[[110,80,50],[60,120,40]],         p:.15, glow:0},
+  {name:'Grass',      th:1, h:1,   v:1,    base:[88,150,56],  amp:0, sp:[[88,150,56],[88,150,56]],         p:0, glow:0},
   {name:'Soil',       th:5, h:2,   v:2,    base:[136,98,68],  amp:26, sp:[[100,68,42],[158,120,86]],        p:.12, glow:0},
   {name:'Dirt',       th:5, h:3.5, v:4,    base:[102,72,50],  amp:24, sp:[[132,110,90],[78,54,38]],         p:.14, glow:0},
   {name:'Tough Dirt', th:5, h:6,   v:8,    base:[76,56,42],   amp:22, sp:[[120,118,112],[52,38,28]],        p:.2,  glow:0},
@@ -3680,6 +3680,7 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   var ob = baseBlock;
   baseBlock = function(x,d,z){ if(d > 0 && !inside(x,z)) return 0; return ob(x,d,z); };
   fillWindow(Math.floor(P.x), Math.floor(P.z));
+  openInv = function(){};   /* no inventory, no crafting */
   /* no loot and no drops */
   addItem = function(){}; rollMaterial = function(){};
   window.__dig.collides = collides; window.__dig.inside = inside;
