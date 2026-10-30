@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 116 (Oct 30)';
+  window.__BUILD = 'Build 117 (Oct 30)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -22763,6 +22763,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const MAIN = x=>x < UPPER_EDGE - 450;
   function zone(x, z){                                   // 0 normal world, 1 World Edge land, 2 the void
     if(!MAIN(x)) return 0;
+    if(window.__farBox && window.__farBox(x, z)) return 0;      /* the far worlds past the edge are normal ground */
     const m = Math.max(Math.abs(x), Math.abs(z));
     return m < LAND0 ? 0 : m < EDGE ? 1 : 2;
   }
@@ -22905,7 +22906,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     homePortal.visible = realm === 0 && MAIN(P.x); edgePortal.visible = homePortal.visible;
     if(realm !== 0){ glitchG.visible = false; tint.style.opacity = 0; sign.style.display = 'none'; return; }
     // anyone who goes billions of blocks away (or breaks the numbers) lands at World Edge
-    const lost = !isFinite(P.x) || !isFinite(P.z) || (MAIN(P.x) ? (Math.abs(P.x) > EDGE + 2000 || Math.abs(P.z) > EDGE + 2000) : (Math.abs(P.x - UPPER.x) > 1e5 || Math.abs(P.z - UPPER.z) > 1e5));
+    const lost = !isFinite(P.x) || !isFinite(P.z) || (MAIN(P.x) ? ((Math.abs(P.x) > EDGE + 2000 || Math.abs(P.z) > EDGE + 2000) && !(window.__farBox && window.__farBox(P.x, P.z))) : (Math.abs(P.x - UPPER.x) > 1e5 || Math.abs(P.z - UPPER.z) > 1e5));
     if(lost && !(typeof launch !== 'undefined' && launch)){ goEdge('You went SO far that the world ran out of numbers! You landed at WORLD EDGE.'); return; }
     // walking into a portal
     if(portCD <= 0){
@@ -22913,7 +22914,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(near(HOME_P)){ goEdge(); return; }
       if(near(EDGE_P)){ goHome(); return; }
     }
-    const zn = zone(P.x, P.z), zl = zn || (Math.max(Math.abs(P.x), Math.abs(P.z)) > LAND0 - 60 && MAIN(P.x) ? 1 : 0);
+    const zn = zone(P.x, P.z), zl = zn || (Math.max(Math.abs(P.x), Math.abs(P.z)) > LAND0 - 60 && MAIN(P.x) && !(window.__farBox && window.__farBox(P.x, P.z)) ? 1 : 0);
     if(zn && !wasZone) toast('You reached WORLD EDGE, 30,000 blocks from home. The world ends here. Careful, the void is right ahead!');
     wasZone = zn;
     glitchG.visible = !!zl; sign.style.display = zn ? 'block' : 'none';
@@ -29199,6 +29200,174 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, true);
 })();
 /* LN-stairs end */
+/* LN-faredge start: five unique World Edge layers with their own caves and ores, and four far worlds past the edge, each with its own portal (Irfan 2026-10-30 16:32 "more layer in world edge ... worlds farrer than world edge ... other far world portal") */
+(function(){
+  const E = window.__edge; if(!E) return;
+  const EDGE = E.EDGE;
+  const clr = a=>a.slice();
+  // ---- blocks (kept in save.customBlocks so their ids never move)
+  function blk(name, h, v, c1, c2, glow, pattern, ore){
+    let j = BLOCKS.findIndex(b=>b.name === name);
+    if(j < 0){
+      const spec = {name, h, v, c1, c2, glow:glow || 0, pattern:pattern || 'plain', edge:1};
+      save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
+      const Bk = specToBlock(spec);
+      if(ore){ Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = ore; }
+      BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
+    } else if(ore && !BLOCKS[j].ore){ const Bk = BLOCKS[j]; Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = ore; }
+    return j + 1;
+  }
+  // ---- World Edge: five layers below the glitch ground, each with an ore and caves that exist nowhere else
+  const EL = [
+    {name:'Glitch Basalt',    d0:14, id:blk('Glitch Basalt', 20, 20, [60,30,90], [120,60,180], 0, 'brick'),            ore:blk('Pixel Ore', 40, 600, [60,30,90], [255,60,220], .4, 'ore', 'World Edge')},
+    {name:'Static Stone',     d0:24, id:blk('Static Stone', 30, 30, [40,40,60], [200,200,255], 0, 'checker'),           ore:blk('Bug Gem', 55, 1500, [40,40,60], [90,255,120], .5, 'ore', 'World Edge')},
+    {name:'Corrupted Crust',  d0:34, id:blk('Corrupted Crust', 45, 45, [90,20,60], [255,90,140], .1, 'checker'),        ore:blk('Segfault Crystal', 80, 4000, [90,20,60], [255,255,80], .6, 'ore', 'World Edge')},
+    {name:'Void Glass',       d0:46, id:blk('Void Glass', 70, 70, [20,10,50], [140,80,255], .2, 'tile'),                ore:blk('Null Diamond', 120, 12000, [20,10,50], [120,255,255], .8, 'ore', 'World Edge')},
+    {name:'Null Rock',        d0:58, id:blk('Null Rock', 100, 100, [8,8,12], [255,255,255], 0, 'brick'),               ore:blk('Edge Core Fragment', 180, 40000, [8,8,12], [255,255,255], 1, 'ore', 'World Edge')}
+  ];
+  const caveGlow = blk('Cave Static', 40, 900, [30,20,60], [80,255,240], .9, 'ore', 'World Edge');
+  function cave(x, d, z, sd){
+    const cx = Math.floor(x/6), cd = Math.floor(d/5), cz = Math.floor(z/6);
+    if(hash3(cx, cd, cz, sd) > .26) return false;
+    const bx = cx*6 + hash3(cx, cd, cz, sd+1)*6, bd = cd*5 + hash3(cx, cd, cz, sd+2)*5, bz = cz*6 + hash3(cx, cd, cz, sd+3)*6;
+    const r = 2.2 + hash3(cx, cd, cz, sd+4)*1.6, dd = (d - bd)*1.3;
+    return (x-bx)*(x-bx) + dd*dd + (z-bz)*(z-bz) < r*r;
+  }
+  function edgeLayer(d){ let L = null; for(const q of EL) if(d >= q.d0) L = q; return L; }
+  // ---- four far worlds, out in the void past World Edge (each 320 x 320 blocks)
+  const HALF = 160;
+  const W = [
+    {k:'mirror', name:'Mirror World', cx:-34000, cz:-34000, px:40, col:'#9fd8ff', tint:'rgba(170,220,255,.14)', ground:0xdde8f5, blurb:'Everything here is shiny, silver and slightly backwards.',
+      L:[['Mirror Grass',[200,220,235],[255,255,255],0],['Silvered Soil',[150,160,180],[220,230,250],0],['Mirror Stone',[110,120,150],[190,200,230],0],['Reflection Rock',[60,70,110],[120,150,255],.2]],
+      O:[['Reflection Gem',[150,240,255],3000],['Mirror Heart',[255,255,255],40000]], G:['Shard Glass',[210,255,255]]},
+    {k:'dream', name:'Pastel Dreamland', cx:34000, cz:-34000, px:56, col:'#ffb0e0', tint:'rgba(255,170,230,.14)', ground:0xffc8e8, blurb:'A soft pink world that smells like birthday cake.',
+      L:[['Dream Grass',[255,190,225],[255,255,255],.05],['Marshmallow Soil',[255,235,245],[255,200,215],0],['Pastel Stone',[190,170,255],[255,230,255],0],['Lullaby Rock',[110,90,190],[255,170,240],.2]],
+      O:[['Sleepy Pearl',[255,230,255],3000],['Dream Diamond',[170,255,255],40000]], G:['Glow Cloud',[255,255,210]]},
+    {k:'clock', name:'Clockwork Land', cx:-34000, cz:34000, px:72, col:'#ffc860', tint:'rgba(255,190,90,.14)', ground:0xb08040, blurb:'Ticking brass hills, gear forests and a very large clock in the sky.',
+      L:[['Brass Floor',[190,140,60],[255,220,120],.05],['Gear Soil',[120,90,50],[200,160,80],0],['Cog Stone',[100,90,80],[220,200,150],0],['Springwork Rock',[50,40,40],[255,180,60],.2]],
+      O:[['Tiny Cog',[255,210,100],3000],['Mainspring Core',[255,120,60],40000]], G:['Lamp Glass',[255,240,160]]},
+    {k:'ghost', name:'Ghost Isle', cx:34000, cz:34000, px:88, col:'#b8ffd8', tint:'rgba(150,255,210,.12)', ground:0x90b8a8, blurb:'A foggy island of pale grass where the rocks whisper.',
+      L:[['Spooky Moss',[110,150,130],[190,240,210],0],['Fog Soil',[90,110,110],[170,200,200],0],['Whisper Stone',[70,80,100],[170,190,230],0],['Haunted Rock',[30,34,50],[120,255,200],.25]],
+      O:[['Ecto Crystal',[120,255,200],3000],['Spirit Gem',[230,255,255],40000]], G:['Lantern Stone',[255,240,150]]}
+  ];
+  W.forEach((w, wi)=>{
+    const H = [30, 40, 70, 120], V = [60, 90, 200, 400];
+    w.ids = w.L.map((q, i)=>blk(q[0], H[i], V[i], q[1], q[2], q[3], ['checker','plain','brick','tile'][(wi + i) % 4]));
+    w.oids = w.O.map((q, i)=>blk(q[0], i ? 200 : 100, q[2], q[1], [255,255,255], .6 + i*.3, 'ore', w.name));
+    w.gid = blk(w.G[0], 60, 800, [60,60,70], w.G[1], .9, 'ore', w.name);
+    w.sd = 4100 + wi*17;
+  });
+  function box(x, z){
+    for(const w of W) if(Math.abs(x - w.cx) <= HALF && Math.abs(z - w.cz) <= HALF) return w;
+    return null;
+  }
+  window.__farBox = box;
+  const _bb = baseBlock;
+  baseBlock = function(x, d, z){
+    const w = box(x, z);
+    if(w){
+      if(d < 0 || d >= D) return 0;
+      if(d === 0) return w.ids[0];
+      if(d < 4) return w.ids[1];
+      if(d > 5 && cave(x, d, z, w.sd)) return 0;
+      const deep = d >= 18, r = hash3(x>>1, d>>1, z>>1, w.sd + 9);
+      if(r < (deep ? .035 : .012) && hash3(x, d, z, w.sd + 10) < .6) return deep && hash3(x, d, z, w.sd + 11) < .3 ? w.oids[1] : w.oids[0];
+      if(hash3(x, d, z, w.sd + 12) < .006) return w.gid;
+      return deep ? w.ids[3] : w.ids[2];
+    }
+    const r = _bb(x, d, z);
+    if(r && d >= 4 && d < 14 && E.zone && E.zone(x, z) === 1){          // above the new layers: no normal caves or acid here, only World Edge's own
+      const Bk = BLOCKS[r-1];
+      if(d >= 5 && cave(x, d, z, 5200)) return 0;
+      if(Bk && (Bk.cave || /acid/i.test(Bk.name || ''))) return E.EB.stone || r;
+      return r;
+    }
+    if(r && d >= 14 && d < D && E.zone && E.zone(x, z) === 1){
+      const L = edgeLayer(d);
+      if(cave(x, d, z, 5200)) return 0;
+      if(hash3(x>>1, d>>1, z>>1, 5300) < .03 && hash3(x, d, z, 5301) < .6) return L.ore;
+      if(hash3(x, d, z, 5302) < .004) return caveGlow;
+      return L.id;
+    }
+    return r;
+  };
+  // ---- portals at World Edge, and a way home from every far world
+  function ptex(col){
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, '#ffffff'); gr.addColorStop(.35, col); gr.addColorStop(1, '#100820');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 3;
+    for(let k=0;k<4;k++){ g.beginPath(); for(let t=0;t<60;t++){ const a = t*.18 + k*Math.PI/2, r = t*1.05; g.lineTo(64 + Math.cos(a)*r, 64 + Math.sin(a)*r); } g.stroke(); }
+    return new THREE.CanvasTexture(c);
+  }
+  function makePortal(x, z, text, col, hex){
+    const g = new THREE.Group(), fm = new THREE.MeshLambertMaterial({color:0x201030, emissive:hex, emissiveIntensity:.7});
+    [[-1.75,2,0,.5,4.4,.6],[1.75,2,0,.5,4.4,.6],[0,4.2,0,4,.5,.6],[0,-.05,0,4,.3,.9]].forEach(q=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(q[3], q[4], q[5]), fm); m.position.set(q[0], q[1], q[2]); g.add(m); });
+    const tx = ptex(col);
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(3, 3.95), new THREE.MeshBasicMaterial({map:tx, side:THREE.DoubleSide, transparent:true, opacity:.92})); plane.position.y = 2; g.add(plane); g.userData.plane = plane; g.userData.tx = tx;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(text, 512, 64, null, '#ffffff', 'bold 34px Arial'), fog:false, depthWrite:false, transparent:true})); sp.scale.set(6, .75, 1); sp.position.y = 5.4; g.add(sp);
+    g.traverse(o=>{ o.userData.noMine = true; });
+    g.position.set(x, 0, z); scene.add(g); return g;
+  }
+  const SPOTZ = E.EDGE_P.z;
+  W.forEach(w=>{
+    w.pEdge = makePortal(w.px, SPOTZ, w.name.toUpperCase(), w.col, parseInt(w.col.slice(1), 16));
+    w.pBack = makePortal(w.cx + 8, w.cz, 'BACK TO WORLD EDGE', w.col, parseInt(w.col.slice(1), 16));
+    w.pEdge.userData.at = {x:w.px, z:SPOTZ}; w.pBack.userData.at = {x:w.cx + 8, z:w.cz};
+  });
+  // far-world look: ground plane past the loaded blocks, a colour tint and a name banner
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(HALF*2, HALF*2), new THREE.MeshLambertMaterial({color:0xffffff}));
+  ground.rotation.x = -Math.PI/2; ground.visible = false; ground.userData.noMine = true; scene.add(ground);
+  const tint = document.createElement('div'); tint.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:3;opacity:0;transition:opacity .6s'; document.body.appendChild(tint);
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);font:900 20px system-ui,sans-serif;color:#fff;text-shadow:0 0 8px #000;pointer-events:none;z-index:6;display:none;letter-spacing:3px';
+  document.body.appendChild(banner);
+  let cd = 0, cur = null, flashEl = null;
+  function flash(col){
+    if(!flashEl){ flashEl = document.createElement('div'); flashEl.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;opacity:0'; document.body.appendChild(flashEl); }
+    flashEl.style.background = col; flashEl.style.transition = 'none'; flashEl.style.opacity = .85;
+    requestAnimationFrame(()=>{ flashEl.style.transition = 'opacity .9s'; flashEl.style.opacity = 0; });
+  }
+  function go(w){
+    P.x = w.cx + .5; P.z = w.cz + .5; P.vx = P.vy = P.vz = 0; P.y = 2; P.ground = false; cd = 3;
+    fillWindow(Math.round(P.x/8)*8, Math.round(P.z/8)*8);
+    save.farVisits = (save.farVisits || 0) + 1; persist();
+    flash(w.col); blip(220, .5, .2, 'sawtooth'); setTimeout(()=>blip(660, .4, .15, 'triangle'), 150); shake = Math.max(shake, .08);
+    toast('WHOOSH! Welcome to ' + w.name + '! ' + w.blurb + ' The way home is the portal next to you.');
+  }
+  const near = (a)=>Math.abs(P.x - a.x) < 1.6 && Math.abs(P.z - a.z) < .9 && P.y > -1 && P.y < 4;
+  const _st = step;
+  step = function(dt){
+    _st(dt);
+    if(cd > 0) cd -= dt;
+    const ok = realm === 0;
+    W.forEach(w=>{
+      [w.pEdge, w.pBack].forEach(p=>{ const a = p.userData.at; p.visible = ok && Math.abs(P.x - a.x) < 400 && Math.abs(P.z - a.z) < 400; if(p.visible) p.userData.plane.rotation.z += dt*.8; });
+    });
+    if(!ok) return;
+    if(cd <= 0){
+      for(const w of W){
+        if(near(w.pEdge.userData.at)){ go(w); return; }
+        if(near(w.pBack.userData.at)){ cd = 3; E.goEdge('You are back at WORLD EDGE.'); return; }
+      }
+    }
+    const w = box(P.x, P.z);
+    if(w !== cur){ cur = w; if(w){ tint.style.background = w.tint; banner.textContent = w.name.toUpperCase(); } }
+    tint.style.opacity = w ? 1 : 0; banner.style.display = w ? 'block' : 'none'; ground.visible = !!w;
+    if(w){
+      ground.material.color.setHex(w.ground); ground.position.set(w.cx, -.03, w.cz);
+      const bn = document.getElementById('biomename'); if(bn) bn.textContent = w.name;
+      const ln = document.getElementById('layername'); const dd = Math.floor(-P.y);
+      if(ln && dd >= 0) ln.textContent = w.L[dd < 1 ? 0 : dd < 4 ? 1 : dd < 18 ? 2 : 3][0];
+    } else if(E.zone && E.zone(P.x, P.z) === 1){
+      if(!save.edgeExp){ save.edgeExp = true; persist(); toast('WORLD EDGE EXPANSION: dig down through 5 new World Edge layers with their own caves and ores. Four far worlds hide past the edge, each with a portal here.'); }
+      const ln = document.getElementById('layername'), dd = Math.floor(-P.y);
+      if(ln && dd >= 14){ const L = edgeLayer(dd); if(L) ln.textContent = L.name; }
+    }
+  };
+})();
+/* LN-faredge end */
+
 
 
 
