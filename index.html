@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 124 (Oct 31)';
+  window.__BUILD = 'Build 125 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -16899,6 +16899,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     'In {y}, a {n} was elected king of the squirrels.'
   ];
   function oneFact(name, e, inf){                           // one fact per item, unique to it; some are real, some are made up, some are both mixed up
+    window.__factLabel = 'Fact:';
     const h = strHash(name+'|fact'), num = (k, a, b)=>a + Math.floor(strHash(name+k)*(b-a+1));
     const fill = t=>t.split('{n}').join(name).split('{x}').join(num('x',3,999)).split('{y}').join(num('y',1066,1999)).split('{z}').join(num('z',1,12));
     const fake = ()=>{
@@ -16906,7 +16907,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
       const all = FAKE_T.concat(FAKE2), t = all[Math.floor(strHash(name+'fake')*all.length)];
       return fill(t.split('{n}').join(name));
     };
-    if(name === '2000 Year Old iPhone' || name === 'Anonymous Chinese McDonalds Happy Meal Ripoff' || name === 'Guinness World Record' || name === "Bob's Propeller Hat") return fake();
+    if(name === '2000 Year Old iPhone' || name === 'Anonymous Chinese McDonalds Happy Meal Ripoff' || name === 'Guinness World Record' || name === "Bob's Propeller Hat"){ window.__factLabel = 'Made-up fact:'; return fake(); }
     if(SPECIAL_F[name]) return SPECIAL_F[name];
     let real = null;
     if(e){
@@ -16921,6 +16922,10 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
              : 'The '+name+' fits right in down here. '+w[1];
       }
     }
+    /* LN-facts: real things get real facts, meme items get their meme fact, everything else gets its own made-up fact */
+    if(e && real){ window.__factLabel = e.set === 'meme' ? 'Meme fact:' : 'Silly fact:'; return real.trim(); }
+    const rf = window.__realFact && window.__realFact(name); if(rf) return rf;
+    window.__factLabel = 'Made-up fact:'; if(window.__madeUp) return window.__madeUp(name);
     if(!real || h < .33) return fake();
     if(h < .6){                                              // mixed up: one true bit, one made-up bit
       const fk = fake(), cut = real.trim().replace(/\s+$/,'');
@@ -16957,9 +16962,9 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     pop.innerHTML = '<button id="factX" style="position:absolute;top:6px;right:8px;width:28px;height:28px;border-radius:8px;border:0;background:#4a3a2a;color:#fff;font-weight:800;cursor:pointer">X</button>'+
       '<div style="font-weight:800;font-size:16px;color:#ffd54a;margin-right:30px">'+f.name+'</div>'+
       '<div style="opacity:.8;font-size:12px;margin:4px 0 8px">'+f.lines.join('<br>')+'</div>'+
-      '<div><b style="color:#7fd0ff">Fact:</b> '+f.fact+'</div>'+
+      '<div><b style="color:#7fd0ff">'+(window.__factLabel || 'Fact:')+'</b> '+f.fact+'</div>'+
       '<div style="margin-top:8px"><b style="color:#ff9a4a">FAKE NEWS (100% made up):</b> '+fakeNewsFor(f.name)+'</div>'+   /* LN-fakenews3 */
-      '<div style="margin-top:8px;font-size:11px;opacity:.55">Some facts are real, some are totally made up, and some are a bit of both. Can you tell which?</div>';
+      '<div style="margin-top:8px;font-size:11px;opacity:.55">Real things have real facts. Meme items have meme facts. Made-up items have made-up facts.</div>';
     pop.style.display = 'block'; blip(880,.06,.08,'triangle');
     document.getElementById('factX').onclick = e=>{ e.stopPropagation(); pop.style.display = 'none'; };
   }
@@ -29837,6 +29842,269 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   furnObjs.slice().forEach(f=>{ try{ if(f.d && f.d.sc && !HK.test(f.d.kind)) f.g.scale.setScalar(f.d.sc); if(f.d && HK.test(f.d.kind) && !f.d.loose) loosen(f); }catch(e){} });
 })();
 /* LN-loosefurn end */
+/* LN-facts start: every item gets its own info. Real things get a real, true fact; meme items get their meme fact; made-up things get a unique funny made-up fact (Irfan 2026-10-31 "every item loot material discovery should get unique information real stuff have real facts while meme stuff have different fact") */
+(function(){
+  const REAL = {
+    'Grass':'Grass is one of the most common plant families on Earth, and wheat, rice, corn and bamboo are all grasses.',
+    'Soil':'It can take hundreds of years for nature to make just one centimetre of topsoil.',
+    'Dirt':'Earthworms eat dirt and leave behind rich castings that help plants grow.',
+    'Tough Dirt':'Compacted soil can be as hard as soft rock because the grains get squeezed tightly together.',
+    'Clay':'Clay is made of extremely tiny mineral flakes, and it turns hard as stone when it is fired in a kiln.',
+    'Rock':'Rocks are grouped into three families: igneous (from lava), sedimentary (from layers) and metamorphic (changed by heat and pressure).',
+    'Hard Rock':'Granite, a common hard rock, is mostly made of quartz and feldspar crystals that cooled slowly underground.',
+    'Bedrock':'Bedrock is the solid rock under all the soil. In some places it lies right at the surface, and in others it is hundreds of metres down.',
+    'Silicate Rock':'Silicates, made of silicon and oxygen, make up more than 90 percent of Earth\'s crust.',
+    'Hot Rock':'Rock gets hotter by about 25 degrees Celsius for every kilometre you go down into the Earth.',
+    'Magma':'Magma is melted rock under the ground. When it flows out of a volcano it is called lava.',
+    'Hot Metal':'Earth\'s core is mostly iron and nickel, and it is about as hot as the surface of the Sun.',
+    'Core':'The inner core of Earth is a solid ball of iron and nickel about the size of the Moon, and it is roughly 5,000 degrees Celsius.',
+    'Deeper Core':'Nobody has ever been near Earth\'s core. The deepest hole ever drilled, the Kola Borehole in Russia, reached only about 12 km.',
+    'Copper Ore':'Copper conducts electricity so well that it is used in almost all electrical wires. It was one of the first metals humans ever used.',
+    'Coal Ore':'Coal is made from ancient swamp plants that were buried and squeezed for millions of years.',
+    'Iron Ore':'Iron makes up most of the Earth\'s core and is the main ingredient of steel.',
+    'Silver Ore':'Silver is the best conductor of electricity and heat of all the metals.',
+    'Gold Ore':'All the gold ever mined would fit in a cube about 22 metres on each side. It never rusts.',
+    'Titanium Ore':'Titanium is as strong as steel but about 45 percent lighter, and it is used in jets and replacement hips.',
+    'Diamond Ore':'Diamonds are pure carbon. Most formed about 150 km underground more than a billion years ago.',
+    'Mythril Ore':'Mythril comes from the stories of J. R. R. Tolkien, who wrote about a light, strong silver metal.',
+    'Amethyst Crystal':'Amethyst is purple quartz. Its colour comes from tiny amounts of iron.',
+    'Emerald Crystal':'Emeralds are the green form of the mineral beryl. Most have tiny flaws inside, and jewellers call this the jardin, French for garden.',
+    'Sapphire Crystal':'Sapphire is the mineral corundum. It comes in every colour except red, because red corundum is called ruby.',
+    'Ruby Crystal':'Rubies are red corundum. Only chromium makes them red, and the glow you see is real fluorescence.',
+    'Core Crystal':'Real crystals grow slowly when a liquid cools or evaporates and the atoms line up in neat repeating patterns.',
+    'Treasure Chest':'Real treasure chests were strongboxes. Many pirate stories exist, but real pirates almost never buried treasure.',
+    'Ancient Relic':'Archaeologists dig carefully and write down exactly where every object was found, because the spot tells part of the story.',
+    'Trilobite':'Trilobites were sea animals that lived for more than 270 million years and then died out about 252 million years ago.',
+    'Fossil':'A fossil forms when a plant or animal is buried quickly and minerals slowly replace its parts.',
+    'Amber':'Amber is fossilised tree resin. Sometimes it holds insects that got stuck about 40 million years ago or more.',
+    'Ammonite':'Ammonites were sea animals with spiral shells, related to squid and octopus. They died out with the dinosaurs.',
+    'Dragon Bone':'Dragons are not real, but people once thought huge fossils, like dinosaur bones, were dragon bones.',
+    'Sky':'Air is mostly nitrogen, about 78 percent, and only about 21 percent oxygen.',
+    'Spacerock':'Meteorites are rocks from space that reach the ground. Many come from the asteroid belt between Mars and Jupiter.',
+    'Comet Ice':'A comet is a lump of ice, dust and rock. Its glowing tail points away from the Sun.',
+    'Cloudstone':'A cumulus cloud can weigh as much as 100 elephants because it holds so many tiny water droplets.',
+    'Thunder Rock':'Lightning is about five times hotter than the surface of the Sun. It can melt sand into glass tubes called fulgurites.',
+    'Star Iron':'Iron is made inside giant stars, and heavier elements are made when stars explode.',
+    'Gravel':'Gravel is small pieces of rock, and it is used to build roads and railway beds.',
+    'Packed Ice':'Glaciers are made from snow that gets squeezed over many years until it turns into dense ice.',
+    'Snow Block':'No two snowflakes are exactly alike, but every snowflake has six sides or arms.',
+    'Mossy Stone':'Moss has no real roots. It soaks up water through its leaves.',
+    'Damp Dirt':'Wet soil smells earthy after rain because of a chemical called geosmin, and humans can notice it at tiny amounts.',
+    'Glow Moss':'A few real mosses reflect light in a way that makes them glow a little inside dark caves.',
+    'Magma Rock':'Rocks that cool from lava, like basalt, are called igneous rocks.',
+    'Obsidian':'Obsidian is volcanic glass. People used it to make knives sharper than steel scalpels.',
+    'Fire Opal':'Opal is a mineral with a lot of water in it. Fire opal is orange or red and often has no play of colours.',
+    'Quartz Block':'Quartz is the second most common mineral in Earth\'s crust, and watches use it to keep time.',
+    'Quartz':'A quartz crystal vibrates at an exact rate when electricity runs through it, which is why quartz watches are so accurate.',
+    'Amethyst Block':'The ancient Greeks believed amethyst stopped people from getting drunk. The name means "not intoxicated".',
+    'Opal Ore':'Most of the world\'s opal comes from Australia. Opal is a hardened gel of silica and water.',
+    'Moonstone Ore':'Moonstone shows a floating blue glow called adularescence, caused by thin layers inside the crystal.',
+    'Mycelium':'Mycelium is the thread network of a fungus. One giant honey fungus in Oregon covers about 9 square kilometres.',
+    'Mushroom Block':'A mushroom is only the fruit of a fungus, and the main body lives hidden underground.',
+    'Platinum Ore':'Platinum is rarer than gold. It is used in car exhaust cleaners and jewellery.',
+    'Pyrite Ore':'Pyrite is nicknamed fool\'s gold, and it can make sparks when you strike it against steel.',
+    'Fool\'s Gold':'Fool\'s gold is the mineral pyrite. It is brassy yellow, harder and more brittle than real gold.',
+    'Gold Nugget Block':'The largest gold nugget ever found, the Welcome Stranger in Australia in 1869, weighed more than 70 kilograms.',
+    'Gold Vein Rock':'Gold often forms in thin veins of quartz where hot water once flowed through cracks in rock.',
+    'Gold Flakes':'Gold panners wash gravel in water, since gold is almost 19 times as heavy as water and sinks to the bottom.',
+    'Flint':'Flint breaks into very sharp edges. Early humans made tools and fire starters from it.',
+    'Flint Clay':'Flint clay is a hard kind of clay that is used to make fire bricks for furnaces.',
+    'Desert Sand':'Sand is mostly tiny bits of quartz. The Sahara is about as big as the United States.',
+    'Sandstone':'Sandstone is sand grains cemented together. Uluru in Australia is a giant sandstone rock.',
+    'Desert Stone':'Rocks in the desert crack because of big swings between hot days and cold nights.',
+    'Limestone':'Limestone is made mostly of tiny shells and corals. The pyramids of Giza were built mainly from it.',
+    'Chalk':'Chalk is made from billions of tiny sea plankton shells. The white cliffs of Dover are chalk.',
+    'Permafrost':'Permafrost is ground that stays frozen for at least two years, and some has been frozen for tens of thousands of years.',
+    'Snowy Ground':'Snow is a good blanket. It traps air, so animals can stay warm in snow holes.',
+    'Frozen Dirt':'When frozen ground thaws it can make the surface wavy and cracked, and roads and houses can tilt.',
+    'Mountain Granite':'Half Dome in Yosemite is made of granite, a rock that cooled slowly deep below the ground.',
+    'Mountain Stone':'The Himalayas are still growing, rising a few millimetres every year.',
+    'White Marble':'Marble is limestone changed by heat and pressure. Michelangelo carved the statue of David from it.',
+    'Hill Loam':'Loam is a mix of sand, silt and clay, and gardeners love it because it holds water but drains well.',
+    'Valley Silt':'Silt is finer than sand. The Nile floods used to leave rich silt that made farms in Egypt very fertile.',
+    'Valley Clay':'People have made pottery from clay for more than 20,000 years.',
+    'River Gravel':'Flowing water rounds stones by rolling them against each other for a very long time.',
+    'River Sand':'Many rivers carry sand to the sea, where waves and currents build beaches.',
+    'Wet Silt':'Mud flats are important feeding places for millions of birds that stop there when they migrate.',
+    'Pebble Stone':'Skipping stones work best when they are flat and thrown with a spin.',
+    'River Pearl':'Freshwater mussels make pearls in rivers. A pearl forms when a small grain gets coated in layers of nacre.',
+    'Lake Clay':'Lake and river clay settles slowly in still water and can show yearly layers like tree rings.',
+    'Shell Stone':'Many rocks, such as limestone, are made of shells from sea animals that lived millions of years ago.',
+    'Swamp Mud':'Swamps are wetlands full of trees, and they clean water and soak up floods.',
+    'Peat':'Peat is partly rotted plants from bogs. People dry it and burn it, and it grows less than a millimetre a year.',
+    'Bog Clay':'Bogs are acidic, so plants rot very slowly and ancient bodies and tools have been found well preserved.',
+    'Bog Iron':'Bog iron forms in wet ground. Vikings dug it up and melted it to make iron tools and swords.',
+    'Swamp Stone':'Mangrove forests grow in salty swamps and their roots protect coasts from waves.',
+    'Mangrove Mud':'Mangrove trees can live in salt water, and their tangled roots shelter young fish.',
+    'Red Sand':'Iron oxide, basically rust, gives red sand and red rock their colour.',
+    'Terracotta':'Terracotta means "baked earth" in Italian. The Terracotta Army in China has about 8,000 clay soldiers.',
+    'Red Sandstone':'The red colour of Red Sandstone comes from iron oxide stains between the sand grains.',
+    'Banded Rock':'Banded iron formations are layered rocks about 2 billion years old, laid down when early life began making oxygen.',
+    'Desert Ruby':'Garnet is a red mineral found in deserts and was once mistaken for ruby.',
+    'Farmland':'Farmers plough soil to loosen it and grow crops, and about a third of Earth\'s land is used for farming.',
+    'Hematite Rock':'Hematite is an iron ore. Its name comes from the Greek word for blood, because the powder is red.',
+    'Hematite Ore':'Hematite has been found on Mars, which is one reason scientists think Mars once had liquid water.',
+    'Iron Oxide Rock':'Iron oxide is rust. Mars is called the Red Planet because its dust is full of it.',
+    'Red Dust':'Mars is covered in fine red dust, and its dust storms can cover the whole planet.',
+    'Rusty Sand':'Rust forms when iron meets water and oxygen.',
+    'Olympus Basalt':'Olympus Mons on Mars is the tallest volcano in the Solar System, about 22 km high, nearly 2.5 times Mount Everest.',
+    'Polar Frost':'Mars has polar ice caps made of water ice and frozen carbon dioxide.',
+    'Martian Granite':'Mars rovers have found granite-like rock and sediment layers, showing Mars had a busy geologic past.',
+    'Phobos Shard Rock':'Phobos is the larger of Mars\'s two tiny moons and it orbits so close that it circles Mars in about 7 hours.',
+    'Lost Rover Rock':'NASA\'s rover Opportunity was built to last 90 days on Mars and kept working for nearly 15 years.',
+    'Sulfur Stone':'Sulfur is a yellow mineral found around volcanoes. Its smell is often compared to rotten eggs.',
+    'Obsidian Shell':'Obsidian cools so fast that crystals cannot form, and that is why it is glassy.',
+    'Obsidian Spike Rock':'Natural volcanic glass can shatter into extremely sharp edges that surgeons have used for scalpels.',
+    'Lava Glass':'When lava cools very quickly it can turn into volcanic glass instead of rock.',
+    'Scorched Glass':'Lightning striking sand fuses it into glass. These natural glass tubes are called fulgurites.',
+    'Glass Dune Sand':'Glass is made by melting sand, and most sand for glass is quartz.',
+    'Steam Rock':'Geysers like Old Faithful in Yellowstone shoot steam and hot water when underground water gets superheated.',
+    'Hot Ice':'Exotic forms of ice can exist under high pressure, and some stay solid at hundreds of degrees.',
+    'Diamond Rain Rock':'Scientists think it may rain diamonds inside Neptune and Uranus, because the pressure is so great.',
+    'Superheated Iron':'Iron melts at about 1,538 degrees Celsius.',
+    'Carbyne Ore':'Carbyne is a theoretical or lab-made chain of carbon atoms that may be the strongest material ever.',
+    'Carbyne Block':'Carbyne, a single line of carbon atoms, is predicted to be stronger than diamond and graphene.',
+    'Blue Ice':'Glacier ice looks blue because it is so dense that it soaks up red light.',
+    'Glacier Rock':'Glaciers move slowly, and as they flow they carve valleys and carry boulders far away.',
+    'Frozen Granite':'Freezing water in cracks expands about 9 percent and can split even granite.',
+    'Aurora Ice':'Auroras happen when charged particles from the Sun hit Earth\'s atmosphere near the poles.',
+    'Deep Permafrost':'Some Siberian permafrost holds frozen mammoths whose hair and skin survived for thousands of years.',
+    'Frost Slate':'Slate is changed mudstone that splits into flat sheets, which is why roofs are made from it.',
+    'Frost Crystal':'Frost forms when water vapour turns straight into ice crystals on a cold surface.',
+    'Frozen Lake Ice':'Ice floats because water expands when it freezes, so fish can survive below frozen lakes.',
+    'Eternal Snowflake':'Wilson Bentley photographed more than 5,000 snowflakes in the 1880s and found no two were alike.',
+    'Snow Grass':'Some grasses and plants live under the snow, where they stay a little warmer than the air.',
+    'Absolute Zero Rock':'Absolute zero is minus 273.15 degrees Celsius, the coldest temperature that can exist.',
+    'Solar Panel':'A solar panel turns sunlight into electricity. In one hour the Sun sends Earth more energy than humans use in a year.',
+    'Steel Plate':'Steel is iron mixed with a little carbon, and it is much stronger than plain iron.',
+    'Titanium Plate':'Titanium does not rust in seawater, so boats and submarines use it.',
+    'Circuit Stone':'Circuit boards use thin lines of copper to connect parts, and the green colour is usually a coating called solder mask.',
+    'Microchip Ore':'Microchips are made from silicon, the main ingredient of sand.',
+    'Oil Slick':'Oil is made from tiny sea creatures that were buried for millions of years. Oil floats on water.',
+    'Mine Rail':'Mine carts ran on rails long before trains, pulled by people or ponies.',
+    'Mine Lantern':'Miners once carried canaries underground because the birds would show signs of poison gas before humans did.',
+    'Old Mine Plank':'Wooden beams called timbers held up old mine tunnels and tunnels still need support today.',
+    'Mine Support Beam':'Mine tunnels need support because the rock above can fall, and miners call this ground control.',
+    'Cave Stone':'Caves often form when slightly acidic rain water slowly dissolves limestone.',
+    'Cave Gem':'Caves can grow huge crystals. The Cave of the Crystals in Mexico has gypsum crystals up to 11 metres long.',
+    'Cave Iron Ore':'Iron-rich water can stain cave walls red and orange.',
+    'Cave Silver Ore':'Silver forms in veins where hot mineral-rich water flowed through cracks in the rock.',
+    'Cave Coal Ore':'Coal seams can burn underground for decades. Centralia in Pennsylvania has burned since 1962.',
+    'Frozen Gem':'Ice crystals have six sides because of how water molecules link together.',
+    'Frost Sapphire Ore':'Sapphire is the same mineral as ruby (corundum), just a different colour.',
+    'Icicle Ore':'Icicles grow when dripping water freezes, and the longest ones can reach many metres.',
+    'Lichen Ore':'Lichen is a team of a fungus and an alga living together. Some lichens live more than 1,000 years.',
+    'Moss Emerald Ore':'Emerald is a kind of beryl, and its green colour comes from chromium and sometimes vanadium.',
+    'Toxic Uranium Ore':'Uranium is a radioactive metal that powers nuclear plants. A single pellet can make as much energy as a tonne of coal.',
+    'Acid Stone':'Acid rain can slowly dissolve limestone and marble statues.',
+    'Toxic Crystal':'Some crystals, like galena, contain lead, so geologists wash their hands after touching minerals.',
+    'Prism Ore':'A prism splits white light into a rainbow because each colour bends by a different amount.',
+    'Rainbow Crystal':'A rainbow is sunlight bent and reflected inside raindrops. You are always at the centre of your own rainbow.',
+    'Spore Grass':'A single mushroom can release billions of spores into the air.',
+    'Truffle Ore':'Truffles are underground fungi, and trained pigs and dogs sniff them out. Some sell for thousands of dollars.',
+    'Plain Slime':'Real slime moulds are single cells that can solve mazes without a brain.',
+    'Slime Block':'Slime moulds are not plants, animals or fungi. They are single-celled organisms that can crawl around.',
+    'Candy Cane Block':'Candy canes are shaped like a hook, and the story says it was to show a shepherd\'s staff.',
+    'Cotton Candy':'Cotton candy is spun sugar. It was made popular by a dentist, William Morrison, in 1897.',
+    'Licorice Rock':'Licorice flavour comes from the root of a plant, and very large amounts can raise blood pressure.',
+    'Rock Candy':'Rock candy is made by letting sugar crystals grow slowly on a string in sugar water.',
+    'Chocolate Mud':'Chocolate comes from the seeds of cacao trees, and the Maya and Aztecs drank it as a bitter drink.',
+    'Caramel Mantle':'Caramel is sugar heated until it turns brown, at about 170 degrees Celsius.',
+    'Bouncy Rubber':'Rubber comes from the sap of the rubber tree, and a natural rubber ball bounces because it stores energy and releases it.',
+    'Rubber Ruby':'Natural rubber was used by the Maya to make bouncing balls more than 3,000 years ago.',
+    'Hamster Pickaxe':'Hamsters can store food in their cheeks that is up to half their body weight, and a hamster wheel can run for kilometres every night.',
+    'Cat Pickaxe':'Cats sleep about 12 to 16 hours a day, and a cat purr is around 25 to 150 hertz.',
+    'Dog Pickaxe':'Dogs have about 300 million scent receptors in their noses. People have about 6 million.',
+    'Penguin Pickaxe':'Emperor penguins are the tallest penguins, about 1.2 metres, and they can dive more than 500 metres deep.',
+    'Shark Pickaxe':'Sharks have been around for over 400 million years, which is older than trees.',
+    'Eagle Pickaxe':'A bald eagle can see about four to five times better than a human and spot a rabbit from over a kilometre away.',
+    'Wolf Pickaxe':'A wolf pack is a family. Wolves can travel up to 50 km in a day and communicate by howling.',
+    'Gorilla Pickaxe':'Gorillas are the largest living primates and an adult male silverback can weigh about 200 kg.',
+    'Elephant Pickaxe':'Elephants are the largest land animals, and their trunk has about 40,000 muscles.',
+    'Lion Pickaxe':'Lions are the only cats that live in groups, called prides, and they sleep up to 20 hours a day.',
+    'Blue Whale Pickaxe':'The blue whale is the largest animal ever, up to about 30 metres long, and its heart is about the size of a small car.',
+    'Wooden Shovel':'Humans have used digging sticks and wooden shovels for thousands of years.',
+    'Stone Shovel':'Stone Age people made tools by chipping stones, and the Stone Age lasted about 3 million years.',
+    'Bronze Pickaxe':'Bronze is copper mixed with tin, and it started the Bronze Age about 5,000 years ago.',
+    'Copper Pickaxe':'Copper turns green over time, which is why the Statue of Liberty is green.',
+    'Silver Pickaxe':'Silver kills many bacteria, and old pioneers dropped silver coins in milk barrels to keep milk fresh.',
+    'Iron Pickaxe':'The Iron Age began around 1200 BC, when people learned to make iron tools.',
+    'Gold Pickaxe':'Gold is so soft that a pickaxe made of pure gold would bend easily, and one gram can be hammered into a sheet one square metre.',
+    'Steel Pickaxe':'Steel mixes iron with a little carbon. Modern skyscrapers and bridges use a lot of it.',
+    'Emerald Pickaxe':'Emerald is hard but can crack easily because of the tiny flaws inside it.',
+    'Titanium Pickaxe':'Titanium was named after the Titans of Greek myth and is very strong for its weight.',
+    'Sapphire Pickaxe':'Sapphires are very hard, a 9 on the Mohs scale, just below diamond at 10.',
+    'Diamond Pickaxe':'Diamond is the hardest natural material and a 10 on the Mohs scale, and it cuts through other stone.',
+    'Ruby Pickaxe':'Rubies are also a 9 on the Mohs scale, and they are used inside some lasers.',
+    'Obsidian Pickaxe':'Obsidian blades can be sharper than modern scalpels at the edge, but they are brittle.',
+    'Candy Cane Pick':'Candy canes were first made as straight white sticks, and the red stripes came later.',
+    'Coral Pick':'Coral reefs cover less than 1 percent of the ocean but are home to about a quarter of all sea life.',
+    'Trident Pick':'The trident is the three-pronged spear of Poseidon in Greek myths, and fishermen really did use three-pronged spears.',
+    'Icicle Pick':'Icicles can grow over a metre long in a cold spell.',
+    'Mammoth Tusk Pick':'Woolly mammoths lived in the ice age, and their tusks could be 4 metres long.',
+    'T-Rex Tooth Pick':'A T. rex tooth could be about 30 centimetres long, including the root, and its bite was one of the strongest of any land animal.',
+    'Raptor Claw Pick':'Velociraptor was only about the size of a turkey, and it had feathers.',
+    'Bone Pick':'The human body has 206 bones in adulthood, and babies are born with about 300.',
+    'Moon Rock Pick':'Apollo astronauts brought back about 382 kilograms of Moon rocks.',
+    'Olympus Pickaxe':'Olympus Mons on Mars is roughly the size of Arizona.',
+    'Phobos Pickaxe':'Phobos is slowly getting closer to Mars and will break up or crash in about 50 million years.',
+    'Deimos Pickaxe':'Deimos, the smaller Martian moon, is only about 12 km wide.',
+    'Star Iron Pickaxe':'Some meteorites are made of iron and nickel from the cores of ancient broken planets.',
+    'Neutron Star Pickaxe':'A teaspoon of neutron star material would weigh about a billion tonnes.',
+    'Big Bang Pickaxe':'The Big Bang happened about 13.8 billion years ago, and it was the start of space and time as we know them.',
+    'Galaxy Pick':'Our galaxy, the Milky Way, has more than 100 billion stars.',
+    'Pizza':'Pizza as we know it was invented in Naples, Italy, and Margherita pizza is said to copy the Italian flag.',
+    'Cookie':'Chocolate chip cookies were invented by accident around 1938 by Ruth Wakefield.',
+    'Bacon':'Bacon is cured pork belly, and Americans eat billions of kilograms of it each year.',
+    'Sausage':'Sausages are one of the oldest prepared foods, and the Greek poet Homer mentioned them nearly 3,000 years ago.',
+    'Burger':'The hamburger is named after Hamburg, Germany, but the sandwich as we know it was popularised in the United States.',
+    'Sheep Skin':'Sheepskin is warm because the wool traps air. A sheep can grow a few kilograms of wool a year.',
+    'Charcoal':'Charcoal is wood heated without much air until it becomes almost pure carbon, and artists draw with it.',
+    'Stone Chunk':'Stone is one of the oldest building materials, and some stone buildings are thousands of years old.',
+    'Dark Stone':'Dark rocks like basalt are made of volcanic lava that cooled.',
+    'Wooden Plank':'A plank is a flat piece of sawn wood. Trees grow a ring each year, so you can count rings to find their age.',
+    'Copper Scrap':'Copper can be recycled again and again without losing quality.',
+    'Gold Dust':'Gold dust and tiny flakes can be found in river gravel all over the world.',
+    'Leaf':'Leaves make food from sunlight in a process called photosynthesis, and they are green because of chlorophyll.',
+    'Crystal Shard':'A crystal\'s shape always follows its atoms, so shards break along flat faces.',
+    'Meadow Loam':'Meadows are grasslands full of wildflowers, and a single acre can host thousands of insects and many bees.',
+    'Forest Humus':'Humus is dark rotted leaves and plants in the soil. It holds water and food for trees.',
+    'Root Clay':'Tree roots can crack clay and rock as they grow and can reach far more than the tree is tall.',
+    'Desert Soil':'Desert soil is sandy and holds little water, but many desert plants wait years for a single rain.',
+    'Snowcap':'Mountain tops stay snowy because the air gets about 6 degrees Celsius colder for every 1,000 metres you climb.',
+    'Mountain Crystal':'Rock crystal, a clear quartz, is found in mountain caves. The ancient Greeks thought it was ice that never melts.',
+    'Glowshroom Block':'Some real mushrooms glow green in the dark. The glow is called bioluminescence.',
+    'Sky Moss':'Real moss can grow high on mountains and cliffs where there is hardly any soil.',
+    'Cloud Silver Ore':'Silver tarnishes black when it meets sulfur in the air.',
+    'Sky Iron Ore':'About 5 percent of meteorites are made mostly of iron and nickel.',
+    'Star Gold Ore':'Much of Earth\'s gold was likely made when two neutron stars crashed together.',
+    'Storm Crystal':'A lightning bolt can carry about a billion volts of electricity.',
+    'Glow Crystal':'Phosphorescent materials soak up light and glow slowly in the dark afterwards.',
+    'Ember Ore':'Embers are glowing bits of burning coal or wood that can keep a fire alive for hours.',
+    'Toxic Sludge Rock':'Mines can make acidic water called acid mine drainage that turns streams orange.',
+    'Magma Ruby Ore':'Rubies form deep in the Earth where aluminium meets heat and pressure, often in marble.',
+    'Cloth Scrap':'Cotton, wool and linen are all natural cloth fibres that humans have woven for thousands of years.'
+  };
+  // made-up facts for fantasy items: three parts picked by the item's name, so every item reads differently
+  const WHO = ['a hamster with a clipboard','Professor Waffles','a very tired pigeon','Grandma Gearwheel','three raccoons in a trench coat','a mole named Gerald','the Sock Wizard','a seagull on a skateboard','Captain Biscuit','a sleepy dragon','the Mayor of Underground','a goat with a monocle','Dr. Noodle','two penguins and a ladder','a ghost who forgot why'];
+  const A = ['The first {n} was discovered by {w} in the year {y}.','Experts say the {n} is secretly older than the Moon.','Legend says a single {n} once paid for a whole pizza and still had change.','The {n} was banned from three countries for being too {adj}.','Nobody knows who named the {n}, but everyone agrees the name is {adj}.','Scientists found {x} different uses for a {n}, and only {z} of them are legal.','In the old stories, the {n} was a gift from {w}.','The {n} was so {adj} that it once won a trophy it did not enter for.','A {n} was shown at the Underground Science Fair and nobody could explain it.','Rumour says {w} traded a whole castle for one {n}.'];
+  const B = ['It hums quietly when nobody is looking.','Put it next to a cat and the cat will pretend not to care.','If you whisper "dig dig dig" to it, it gets {adj}er.','It is {x} percent made of pure confidence.','It tastes like {food}, but please do not lick it.','It glows a tiny bit on Tuesdays.','It weighs exactly as much as {x} sleepy hamsters.','Moles say it is the best thing to sit on.','It cannot be translated into any language, only into vibes.','Spiders respect it, mostly.','It makes a very small "poit" sound if you drop it.','Bob citizens tell scary stories about it.'];
+  const C = ['Handle with care, or at least with style.','Some say it brings luck; others say it brings snacks.','Do not feed it after midnight.','Experts recommend staring at it for 10 seconds.','It is not a real thing, but it is a very good one.','Totally true (not true).','Please do not tell the shopkeeper.','Sales of it went up {x} percent after one very loud hiccup.','It has a fan club of {x} worms.','Researchers are still confused, and also a little hungry.'];
+  const ADJ = ['shiny','wobbly','spicy','mysterious','chonky','sparkly','suspicious','legendary','squishy','dramatic'];
+  const FOOD = ['toast','strawberries','popcorn','blueberry pancakes','cheese','mango','soup','jelly beans'];
+  const h = (s)=>{ let a = 2166136261; for(let i=0;i<s.length;i++){ a ^= s.charCodeAt(i); a = Math.imul(a, 16777619); } return (a>>>0)/4294967296; };
+  const pick = (arr, n, k)=>arr[Math.floor(h(n + '|' + k)*arr.length)];
+  const num = (n, k, a, b)=>a + Math.floor(h(n + '|' + k)*(b-a+1));
+  function madeUp(n){
+    const fill = t=>t.split('{n}').join(n).split('{w}').join(pick(WHO, n, 'w')).split('{y}').join(num(n, 'y', 1100, 2999)).split('{x}').join(num(n, 'x', 3, 997)).split('{z}').join(num(n, 'z', 1, 9)).split('{adj}').join(pick(ADJ, n, 'adj')).split('{food}').join(pick(FOOD, n, 'f'));
+    return fill(pick(A, n, 'a') + ' ' + pick(B, n, 'b') + ' ' + pick(C, n, 'c'));
+  }
+  window.__realFact = n=>REAL[n.replace(/\s*\(Sector.*\)$/, '')] || null;
+  window.__madeUp = madeUp;
+  window.__realFactCount = Object.keys(REAL).length;
+})();
+/* LN-facts end */
+
 
 
 
