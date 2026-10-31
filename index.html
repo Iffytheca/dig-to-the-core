@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 131 (Oct 31)';
+  window.__BUILD = 'Build 132 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -7347,7 +7347,7 @@ function makeBlockSpec(infos, want, h, h2, h3, power){
 }
 function previewHTML(pv){
   if(!pv) return '<span style="opacity:.6">Put something in a slot and type what you want to make.</span>';
-  const label = pv.kind === 'blocks' ? 'building blocks' : pv.kind === 'food' ? 'food' : pv.kind === 'furniture' ? 'furniture ('+pv.fkind+')' : pv.kind+' gear';
+  const label = pv.kind === 'blocks' ? 'building blocks' : pv.kind === 'food' ? 'food' : pv.kind === 'invention' ? 'invention' : pv.kind === 'furniture' ? 'furniture ('+pv.fkind+')' : pv.kind+' gear';
   const bst = pv.kind === 'blocks' ? ' &middot; Power '+Math.max(1, Math.min(10, Math.round((pv.spec.power||pv.power)/1.5)))+'/10 &middot; Hardness '+hardLvl(pv.spec)+'/10' : '';
   return 'Makes: <b>'+pv.name+'</b> ('+label+')'+bst+(pv.stats ? ' &middot; '+statText(pv.stats) : '');
 }
@@ -7368,6 +7368,7 @@ function craftGo(){
     if(registerCustomBlock(pv.spec) < 0){ toast('You have invented too many block types already!'); return; }
     addItem(pv.spec.name, pv.count); toast('You invented a new block: '+pv.spec.name+'!  Right-click to build with it.');
   }
+  else if(pv.kind === 'invention'){ save.furnItems = save.furnItems || {}; save.furnItems[pv.name] = {kind:pv.fk, col:pv.fk === 'campfire' ? 0xe07a28 : 0x6e6e78}; addItem(pv.name, 1); toast('Invented a ' + pv.name + '! Right-click to place it.' + (pv.fk === 'furnace' ? ' Press F next to it to smelt ore into bars.' : ' Stand near it to heal.')); }
   else if(pv.kind === 'furniture'){ save.furnItems = save.furnItems || {}; save.furnItems[pv.name] = {kind:pv.fkind, col:pv.col}; addItem(pv.name, 1); toast('Crafted '+pv.name+'! Right-click to place it.'); }
   else if(pv.kind === 'food'){ save.foodPower = save.foodPower || {}; save.foodPower[pv.name] = pv.power; addItem(pv.name, 1); toast('Crafted '+pv.name+'! Eat it for a big boost.'); }
   else { save.gear = save.gear || []; save.gearId = (save.gearId||0)+1; save.gear.push({id:save.gearId, name:pv.name, slot:pv.slot, stats:pv.stats, power:pv.power}); toast('Crafted '+pv.name+'  ('+statText(pv.stats)+')'); }
@@ -7664,6 +7665,7 @@ function itemMeta(name){
     if(B.ore) return {cat: B.cat === 'fossil' ? 'Fossils' : B.cat === 'crystal' ? 'Gems' : B.cat === 'treasure' ? 'Treasure' : 'Ores', col:B.oreCol};
     return {cat: B.spec && B.spec.cave ? 'Cave blocks' : B.custom ? 'Crafted blocks' : 'Materials', col:B.base};
   }
+  if(window.__inventionNames && window.__inventionNames[name]) return {cat:'Invention', col:window.__inventionNames[name]};
   if(save.furnItems && save.furnItems[name]) return {cat:'Furniture', icon:'\uD83E\uDE91'};
   if(RARE[name]) return {cat:'Rare finds', icon:RARE[name]};
   return {cat:'Loot', icon:LOOT[name] || '\uD83D\uDCE6'};
@@ -7672,7 +7674,7 @@ function itemMeta(name){
 let invQ = '', invQRaw = '';
 function renderInv(){
   const boxEl = document.querySelector('#inv .box'), keepScroll = boxEl ? boxEl.scrollTop : 0;
-  const inv = save.inv || {}, groups = {}, order = ['Special','Meme stuff','Funny stuff','Crafted blocks','Cave blocks','Materials','Ores','Gems','Fossils','Treasure','Furniture','Loot','Rare finds'];
+  const inv = save.inv || {}, groups = {}, order = ['Special','Meme stuff','Funny stuff','Crafted blocks','Cave blocks','Materials','Ores','Gems','Fossils','Treasure','Furniture','Invention','Loot','Rare finds'];
   let total = 0, kinds = 0;
   Object.keys(inv).forEach(name=>{ if(!inv[name]) return; if(invQ && name.toLowerCase().indexOf(invQ) < 0) return; const m = itemMeta(name); (groups[m.cat] = groups[m.cat] || []).push({name, n:inv[name], m}); total += inv[name]; kinds++; });
   $('invsum').textContent = (total || Object.keys(save.mats||{}).length) ? total.toLocaleString()+' items  \u00b7  '+kinds+' kinds  \u00b7  plus endless unique materials below' : 'Nothing yet. Dig something up!';
@@ -29808,6 +29810,86 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__profiles = {PROFILE, WORLD, pickPlayer, pickWorld};
 })();
 /* LN-profiles end */
+/* LN-invention start: the new Invention crafting category: Campfire (1 wood + 1 coal + 1 stone) and Furnace (2 iron + 1 coal) (Irfan 2026-10-31) */
+(function(){
+  const isWood = n=>/^(Wood|Wooden Plank|Giggling Log)$/.test(n), isCoal = n=>/^(Coal Ore|Cave Coal Ore|Charcoal)$/.test(n),
+        isStone = n=>/^(Rock|Hard Rock|Stone Chunk|Cave Stone|Mountain Stone|Pebble Stone|Limestone|Sandstone|Mountain Granite|Gravel|Dark Stone|Flint)$/.test(n), isIron = n=>/^(Iron Ore|Cave Iron Ore|Sky Iron Ore|Bog Iron)$/.test(n);
+  const NAMES = {'Campfire':[230,120,40], 'Furnace':[110,110,120]}; ['Copper','Iron','Silver','Gold','Titanium'].forEach(m=>{ NAMES[m + ' Bar'] = [200,170,120]; });
+  window.__inventionNames = NAMES;
+  const reg = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems['Campfire'] = save.furnItems['Campfire'] || {kind:'campfire', col:0xe07a28}; save.furnItems['Furnace'] = save.furnItems['Furnace'] || {kind:'furnace', col:0x6e6e78}; };
+  reg();
+  // recipes (the three craft slots, any order)
+  const _cp = craftPreview;
+  craftPreview = function(){
+    try{
+      const refs = craftSlots.filter(Boolean);
+      if(refs.length === 3){
+        const infos = refs.map(refInfo); if(infos.every(i=>i && i.kind === 'item')){
+          const nm = infos.map(i=>i.name), c = (f)=>nm.filter(f).length;
+          if(c(isWood) === 1 && c(isCoal) === 1 && c(isStone) === 1) return {kind:'invention', name:'Campfire', power:1, fk:'campfire'};
+          if(c(isIron) === 2 && c(isCoal) === 1) return {kind:'invention', name:'Furnace', power:1, fk:'furnace'};
+        }
+      }
+    }catch(e){}
+    return _cp.apply(this, arguments);
+  };
+  // models
+  const bx = (par, w, h, d, col, x, y, z, em)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col, emissive:em || 0, emissiveIntensity:em ? .8 : 0})); m.position.set(x, y, z); par.add(m); return m; };
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind === 'campfire'){
+      const g = new THREE.Group();
+      for(let i=0;i<8;i++){ const a = i/8*Math.PI*2; bx(g, .32, .25, .32, 0x777780, Math.cos(a)*.62, .13, Math.sin(a)*.62); }
+      for(let i=0;i<3;i++){ const l = bx(g, .14, .14, .9, 0x6a4420, 0, .26, 0); l.rotation.y = i*Math.PI/3.2; l.rotation.z = .25; }
+      const fl = new THREE.Mesh(new THREE.ConeGeometry(.3, .8, 6), new THREE.MeshBasicMaterial({color:0xff8a20, transparent:true, opacity:.9})); fl.position.y = .65; g.add(fl);
+      const fl2 = new THREE.Mesh(new THREE.ConeGeometry(.16, .5, 6), new THREE.MeshBasicMaterial({color:0xffe060})); fl2.position.y = .55; g.add(fl2);
+      const L = new THREE.PointLight(0xff9a40, 1.3, 9); L.position.y = 1; g.add(L); g.userData.flame = [fl, fl2, L];
+      return g;
+    }
+    if(kind === 'furnace'){
+      const g = new THREE.Group();
+      bx(g, 1.3, 1.5, 1.1, 0x6e6e78, 0, .75, 0); bx(g, 1.4, .15, 1.2, 0x55555e, 0, 1.58, 0); bx(g, .4, .9, .4, 0x55555e, .35, 2.1, -.2);
+      bx(g, .7, .5, .1, 0x151518, 0, .6, .56); const mouth = bx(g, .5, .3, .08, 0xff7a20, 0, .55, .6, 0xff7a20); g.userData.mouth = mouth;
+      bx(g, .9, .06, .06, 0x2a2a30, 0, .95, .58);
+      const L = new THREE.PointLight(0xff8a30, .9, 6); L.position.set(0, .6, 1); g.add(L); g.userData.flame = [mouth, null, L];
+      return g;
+    }
+    return _bf.apply(this, arguments);
+  };
+  // using them: the campfire warms (heals) you nearby, F at the furnace smelts ore into bars
+  const near = (f, r)=>f.d && Math.hypot(f.d.x - P.x, f.d.z - P.z) < r && Math.abs(f.d.y - P.y) < 4;
+  let ft = 0;
+  const _st = step;
+  step = function(dt){
+    _st(dt); ft += dt;
+    for(const f of furnObjs){
+      const k = f.d && f.d.kind; if(k !== 'campfire' && k !== 'furnace') continue;
+      const fl = f.g.userData.flame; if(fl){ const s = 1 + Math.sin(ft*11 + f.d.x)*.12 + Math.sin(ft*17)*.08; if(fl[0] && k === 'campfire'){ fl[0].scale.set(s, s*1.1, s); fl[1].scale.set(s, s*1.25, s); } if(fl[2]) fl[2].intensity = (k === 'campfire' ? 1.3 : .9)*(.85 + Math.sin(ft*13 + f.d.z)*.15); }
+      if(k === 'campfire' && realm === 0 && near(f, 5) && hp > 0 && hp < hpMax){ hp = Math.min(hpMax, hp + dt*2); }
+    }
+  };
+  function smelt(){
+    const inv = save.inv || {}, coal = Object.keys(inv).find(n=>isCoal(n) && inv[n] > 0);
+    if(!coal){ toast('The furnace needs 1 coal to smelt.'); return; }
+    const MET = {'Copper Ore':'Copper', 'Iron Ore':'Iron', 'Silver Ore':'Silver', 'Gold Ore':'Gold', 'Titanium Ore':'Titanium'};
+    const best = Object.keys(MET).filter(n=>(inv[n] || 0) >= 2).sort((a, b)=>inv[b] - inv[a])[0];
+    if(!best){ toast('Put at least 2 Copper, Iron, Silver, Gold or Titanium Ore in your items to smelt.'); return; }
+    const n = Math.min(inv[best], 20), bars = n;
+    inv[coal] -= 1; if(inv[coal] <= 0) delete inv[coal]; inv[best] -= n; if(inv[best] <= 0) delete inv[best];
+    addItem(MET[best] + ' Bar', bars); persist(); try{ renderInv(); }catch(e){}
+    toast('The furnace smelted ' + n + ' ' + best + ' into ' + bars + ' ' + MET[best] + ' Bars.'); blip(220, .25, .1, 'sawtooth');
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || realm !== 0) return;
+    const t = e.target && e.target.tagName; if(t === 'INPUT' || t === 'TEXTAREA') return;
+    if(e.shiftKey) return;   // Shift+F still picks the furnace up
+    const f = furnObjs.find(q=>q.d && q.d.kind === 'furnace' && near(q, 3.2));
+    if(f){ e.stopImmediatePropagation(); e.preventDefault(); smelt(); }
+  }, true);
+  window.__invention = {smelt};
+})();
+/* LN-invention end */
+
 
 /* LN-whisker start: Mister Whisker Bucks (rich top-hat cat who invests your money) and the Fake News Pigeon who writes the headlines (Irfan 2026-10-31 "add mister whisker bucks and pigeon who makes tha fake news to game") */
 (function(){
