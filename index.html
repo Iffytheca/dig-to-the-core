@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 139 (Oct 31)';
+  window.__BUILD = 'Build 140 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25509,6 +25509,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const BARS = [[/iron/i, 'Iron Bar'], [/copper/i, 'Copper Bar'], [/silver/i, 'Silver Bar'], [/gold/i, 'Gold Bar'], [/titanium/i, 'Titanium Bar']];
   const TECHS = ['food technology', 'medicine', 'food safety', 'fire safety', 'road safety', 'a water mill', 'glass blowing', 'a printing press', 'clock making', 'a telescope', 'a bicycle', 'an electric lantern', 'a hot air balloon', 'a pizza oven'];
   const GIZ = ['Gizmo', 'Gadget', 'Contraption', 'Doohickey', 'Widget', 'Thingamajig'], POOL = ['Wood', 'Rock', 'Feather', 'Button', 'Spoon', 'Sock', 'Rope', 'Pebble'];
+  const PLU = w=>/s$/i.test(w) ? w : w + 's';
   const aniPl = n=>(n.animal ? n.animal + 's' : 'residents');
   function townTech(n, cat, e){
     n.techQ = n.techQ || [];
@@ -25543,12 +25544,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         if(q.k === 'dish'){
           const an = AD[q.an] ? AD[q.an].name : 'Animal', dn = an + ' ' + rnd(['Stew', 'Pie', 'Skewers', 'Burger', 'Soup']);
           save.foodPower = save.foodPower || {}; save.foodPower[dn] = 8; if(window.__inventionNames && !window.__inventionNames[dn]) window.__inventionNames[dn] = [200, 140, 80]; addItem(dn, 1);
-          news('NEWS: The cooks of ' + n.name + ' made a fancy ' + dn + ' from the ' + an + 's and sent one to the miner.', true); toast(n.name + ' sent you a ' + dn + '!');
+          news('NEWS: The cooks of ' + n.name + ' made a fancy ' + dn + ' from the ' + PLU(an) + ' and sent one to the miner.', true); toast(n.name + ' sent you a ' + dn + '!');
         } else if(q.k === 'lootfarm'){
           const an = AD[q.an] ? AD[q.an].name : 'Animal', nm = (an + ' ' + (n.animal || '')).toLowerCase();
           const L2 = /cow|bull|goat/.test(nm) ? ['Milk', 'Hide'] : /sheep|ram|lamb|alpaca|llama/.test(nm) ? ['Wool', 'Milk'] : /chick|duck|hen|goose|bird|penguin/.test(nm) ? ['Eggs', 'Feather'] : /pig|boar|hog/.test(nm) ? ['Hide', 'Bacon'] : ['Fur', 'Hide', 'Bone'];
           const got = rnd(L2); addItem(got, 2);
-          news('NEWS: ' + n.name + ' collected ' + got + ' from the ' + an + 's and sent 2 to the miner.', true); toast(n.name + ' sent you 2 ' + got + ' from the ' + an + 's!');
+          news('NEWS: ' + n.name + ' collected ' + got + ' from the ' + PLU(an) + ' and sent 2 to the miner.', true); toast(n.name + ' sent you 2 ' + got + ' from the ' + PLU(an) + '!');
           if(q.rep > 1) n.techQ.push({t:60, k:'lootfarm', an:q.an, rep:q.rep - 1});
         } else if(q.k === 'craft'){
           const nm = q.a + ' ' + q.b + ' ' + GIZ[Math.floor(Math.random()*GIZ.length)];
@@ -25668,8 +25669,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       else if(role === 'loot') n.techQ.push({t:30, k:'lootfarm', an:k, rep:3});
       else setTimeout(()=>{ if(towns().indexOf(n) >= 0){ const q = tame(n, null, k); if(q && role === 'defend') q.defender = true; } }, 4000);
       persist(); close(); };
-    btn('Food', ()=>go('food', 'The ' + AD[k].name + 's of ' + n.name + ' will be cooked into dishes.'), 'Their cooks make dishes from it and send you one.');
-    btn('Loot (milk, hide, fur...)', ()=>go('loot', n.name + ' will collect loot from the ' + AD[k].name + 's.'), 'They collect milk, hide, fur or more, and send it to you.');
+    btn('Food', ()=>go('food', 'The ' + PLU(AD[k].name) + ' of ' + n.name + ' will be cooked into dishes.'), 'Their cooks make dishes from it and send you one.');
+    btn('Loot (milk, hide, fur...)', ()=>go('loot', n.name + ' will collect loot from the ' + PLU(AD[k].name) + '.'), 'They collect milk, hide, fur or more, and send it to you.');
     btn('A companion', ()=>go('pet', 'A resident of ' + n.name + ' will make a ' + AD[k].name + ' a companion.'), 'A resident tames one as a pet.');
     btn('A defending companion', ()=>go('defend', 'A ' + AD[k].name + ' will guard ' + n.name + '!'), 'A tamed one that fights monsters near the town.');
     backBtn();
