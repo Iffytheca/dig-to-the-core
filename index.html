@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 133 (Oct 31)';
+  window.__BUILD = 'Build 134 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -6965,6 +6965,7 @@ function damageAnimal(a, dmg){
   if(a.hp <= 0) killAnimal(a);
 }
 function killAnimal(a){
+  a.hp = Math.min(a.hp, 0); a.dead = true;   /* LN-resdie: any kill counts, so a house resident that is killed is gone for good */
   save.coins += a.d.reward; save.animalKills = (save.animalKills||0) + 1; if(!a.d.mad) harm += 3;
   addItem(ANIMAL_DROP[a.type] || 'Scrap', 1);
   if(dropDisc('a:' + a.type)) for(let i=0;i<2;i++) rollMaterial(ANIMAL_DROP[a.type] || 'Scrap', Math.floor(a.pos.x*13), Math.floor(a.pos.y*13)+i, Math.floor(a.pos.z*13), 1);
@@ -27859,7 +27860,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         if(!nt && !r.out && near){ const q = spawnAnimal(r.type, door.x + (Math.random() - .5), door.z + (Math.random() - .5)); q.homeOf = d.id; q.rid = r.id; outA.set(r.id, q); r.out = true; }
         else if(r.out && (!a || animals.indexOf(a) < 0)){        // it got lost (too far, or defeated): it is home again
           outA.delete(r.id); r.out = false;
-          if(a && a.hp <= 0){ d.res = d.res.filter(q=>q !== r); toast('Your Animal House lost its ' + r.name + '. So sad.'); persist(); }
+          if(a && (a.hp <= 0 || a.dead)){ d.res = d.res.filter(q=>q !== r); d.lost = (d.lost || 0) + 1; toast('Your ' + (({alarge:'Large Animal House', aapart:'Animal Apartment', amansion:'Animal Mansion'})[d.kind] || 'Animal House') + ' lost its ' + r.name + ' for good. So sad.'); try{ newsQ('NEWS: A ' + r.name + ' who lived in a miner\'s house was defeated and will never be seen again. The neighbours are in shock.'); }catch(e){} persist(); }
         }
         else if(r.out && a){
           const dist = Math.hypot(a.pos.x - d.x, a.pos.z - d.z);
