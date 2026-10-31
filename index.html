@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 123 (Oct 31)';
+  window.__BUILD = 'Build 124 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29537,6 +29537,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _bf = buildFurniture;
   buildFurniture = function(kind, col, shape){
     const g = _bf.apply(this, arguments);
+    return g;   // the furniture is loose now, see LN-loosefurn
     const P = PLAN[kind]; if(!P || !HK.test(kind)) return g;
     const f = new THREE.Group();
     P.items.forEach(([k, x, z, rot, sc, fl, c])=>{
@@ -29546,6 +29547,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     f.traverse(m=>{ if(m.isMesh){ m.castShadow = true; m.userData.noMine = true; } });
     g.add(f); return g;
   };
+  window.__furnPlan = {PLAN, plant, counter};
   // bigger gadgets: a real-looking TV, phone, router and so on, not toys
   const SC = {amansion:{'TV':2.1, 'Mobile Phone':2.2, 'Wifi Router':1.9, 'Game Console':2.0, 'Fridge':1.3, 'Computer':1.7, 'Smart Speaker':2.0, 'Popcorn Machine':1.6, 'Massage Chair':1.4, 'Disco Ball':1.6, 'Hot Tub':1.5, 'Satellite Dish':1.6, 'Robot Vacuum':2.0},
               alarge:{'TV':1.7, 'Mobile Phone':1.8, 'Wifi Router':1.6, 'Game Console':1.7, 'Fridge':1.15, 'Computer':1.4, 'Smart Speaker':1.6, 'Popcorn Machine':1.4, 'Massage Chair':1.2, 'Disco Ball':1.3, 'Satellite Dish':1.3, 'Robot Vacuum':1.6},
@@ -29799,6 +29801,43 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__whisker = {cat, pig, useWB, usePG};
 })();
 /* LN-whisker end */
+/* LN-loosefurn start: the sofa, tables, beds and so on inside mansions, large houses and apartments are real separate furniture you can pick up and place again (Irfan 2026-10-31 "it should be actual furniture to pick up") */
+(function(){
+  const FP = window.__furnPlan; if(!FP) return;
+  const HK = /^(alarge|aapart|amansion)$/;
+  const NAME = {sofa:'Sofa', table:'Table', chair:'Chair', bed:'Bed', shelf:'Shelf', lamp:'Lamp', rug:'Rug', plant:'Plant', counter:'Kitchen Counter'};
+  const reg = (k, c)=>{ save.furnItems = save.furnItems || {}; if(!save.furnItems[NAME[k]]) save.furnItems[NAME[k]] = {kind:k, col:c}; };
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind === 'plant') return FP.plant(col || 0x2a8a3a);
+    if(kind === 'counter') return FP.counter(col || 0xe0e0e8);
+    return _bf.apply(this, arguments);
+  };
+  function loosen(f){
+    const d = f.d, P = FP.PLAN[d.kind]; if(!P || d.loose) return;
+    d.loose = 1; const r = d.rot || 0, cs = Math.cos(r), sn = Math.sin(r);
+    P.items.forEach(([k, x, z, rot, sc, fl, c])=>{
+      if(!NAME[k]) return; reg(k, c);
+      save.furnId = (save.furnId || 0) + 1;
+      const dd = {id:save.furnId, name:NAME[k], kind:k, col:c, shape:null, back:{t:'i', key:NAME[k]}, x:d.x + x*cs + z*sn, y:d.y + P.ys[fl] + .05, z:d.z - x*sn + z*cs, rot:r + rot, sc};
+      save.furn.push(dd); addFurnitureObject(dd);
+    });
+    persist();
+  }
+  const _af = addFurnitureObject;
+  addFurnitureObject = function(d){
+    const r = _af.apply(this, arguments);
+    try{
+      const f = furnObjs.find(q=>q.d === d);
+      if(f && d.sc && !HK.test(d.kind)) f.g.scale.setScalar(d.sc);
+      if(f && HK.test(d.kind) && !d.loose) loosen(f);
+    }catch(e){ console.warn('LN-loosefurn', e); }
+    return r;
+  };
+  furnObjs.slice().forEach(f=>{ try{ if(f.d && f.d.sc && !HK.test(f.d.kind)) f.g.scale.setScalar(f.d.sc); if(f.d && HK.test(f.d.kind) && !f.d.loose) loosen(f); }catch(e){} });
+})();
+/* LN-loosefurn end */
+
 
 
 
