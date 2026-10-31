@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 121 (Oct 31)';
+  window.__BUILD = 'Build 123 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29342,6 +29342,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     flash(w.col); blip(220, .5, .2, 'sawtooth'); setTimeout(()=>blip(660, .4, .15, 'triangle'), 150); shake = Math.max(shake, .08);
     toast('WHOOSH! Welcome to ' + w.name + '! ' + w.blurb + ' The way home is the portal next to you.');
   }
+  window.__farWorlds = {W, blk, makePortal, go, ptex, HALF};
   const near = (a)=>Math.abs(P.x - a.x) < 1.6 && Math.abs(P.z - a.z) < .9 && P.y > -1 && P.y < 4;
   const _st = step;
   step = function(dt){
@@ -29565,6 +29566,241 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   furnObjs.forEach(f=>{ try{ if(f.d && HK.test(f.d.kind)) bigger(f); }catch(e){} });
 })();
 /* LN-furnish end */
+/* LN-edgeportal start: mine a World Edge portal for 6 Portal Blocks, place 3 on a block to get your own gate to a brand new unique World Edge with its own layers, ores, biome, animals and name (Irfan 2026-10-31 "mining world edge portal will give you 6 portal block ... a unique portal will began and unique layer and world edges can have animal and biome also different world edge and your custom world edge") */
+(function(){
+  const FW = window.__farWorlds; if(!FW) return;
+  const {W, blk, makePortal, go, ptex, HALF} = FW;
+  const ITEM = 'Portal Block', COST = 3, GIVE = 6;
+  const hsl = (h, s, l)=>{ h = ((h % 1) + 1) % 1; const a = s*Math.min(l, 1-l), f = n=>{ const k = (n + h*12) % 12; return l - a*Math.max(-1, Math.min(k-3, 9-k, 1)); }; return [Math.round(f(0)*255), Math.round(f(8)*255), Math.round(f(4)*255)]; };
+  const hex = c=>(c[0]<<16) | (c[1]<<8) | c[2];
+  const THEMES = [
+    {t:'Candy',    biome:'Candy Meadow',     h:.92, L:['Sugar Grass','Caramel Soil','Rock Candy','Licorice Rock'],       O:['Gumdrop Gem','Sweet Heart'],      G:'Sprinkle Glass'},
+    {t:'Lava',     biome:'Molten Plains',    h:.04, L:['Ember Turf','Cinder Soil','Basalt Slab','Obsidian Rock'],        O:['Ruby Ember','Magma Heart'],       G:'Glowing Vent'},
+    {t:'Crystal',  biome:'Crystal Fields',   h:.52, L:['Quartz Moss','Chalk Soil','Geode Stone','Prism Rock'],           O:['Prism Shard','Rainbow Core'],     G:'Lumen Crystal'},
+    {t:'Mushroom', biome:'Spore Forest',     h:.78, L:['Spore Grass','Fungus Soil','Cap Stone','Mycelium Rock'],         O:['Truffle Gem','Spore Heart'],      G:'Glow Cap'},
+    {t:'Neon',     biome:'Neon Wasteland',   h:.35, L:['Neon Turf','Wire Soil','Circuit Stone','Mainframe Rock'],        O:['Pixel Gem','Data Core'],          G:'Laser Glass'},
+    {t:'Bone',     biome:'Bone Desert',      h:.11, L:['Dust Sand','Fossil Soil','Marrow Stone','Skull Rock'],           O:['Ivory Gem','Ancient Heart'],      G:'Torch Bone'},
+    {t:'Cloud',    biome:'Sky Meadow',       h:.58, L:['Cloud Turf','Mist Soil','Vapor Stone','Thunder Rock'],           O:['Storm Pearl','Sun Heart'],        G:'Lightning Glass'},
+    {t:'Jelly',    biome:'Jelly Swamp',      h:.62, L:['Gel Grass','Slime Soil','Wobble Stone','Gelatin Rock'],          O:['Jelly Bean Gem','Blob Heart'],    G:'Glow Goo'}
+  ];
+  const ADJ = ['Wobbly','Shimmering','Upside-Down','Sleepy','Spicy','Giggling','Floating','Secret','Backwards','Tiny'], NOUN = ['Realm','Edge','Isle','Zone','Hollow','Kingdom','Land','Dimension'];
+  const rnd = (n)=>Math.floor(Math.random()*n);
+  const used = {};
+  const pickAnimals = (seed)=>{ const ks = Object.keys(AD).filter(k=>!AD[k].mad && !AD[k].fly); const out = []; for(let i=0;i<3 && ks.length;i++) out.push(ks[(seed*7 + i*13) % ks.length]); return out; };
+  function mkWorld(sp){
+    const th = THEMES[sp.theme], cnt = used[th.t] = (used[th.t] || 0) + 1, sfx = cnt > 1 ? ' ' + cnt : '';
+    const h = sp.hue, H = [30, 40, 70, 120], V = [60, 90, 200, 400];
+    const lc = th.L.map((n, i)=>[n + sfx, hsl(h, .5, .42 - i*.07), hsl(h + .04, .6, .66), i === 3 ? .2 : 0]);
+    const w = {k:'c' + sp.id, name:sp.name, custom:sp, cx:50000 + 400*sp.n, cz:50000, px:0, col:'#' + hex(hsl(h, .8, .7)).toString(16).padStart(6, '0'),
+      tint:'rgba(' + hsl(h, .8, .7).join(',') + ',.14)', ground:hex(hsl(h, .45, .62)), L:lc, O:th.O.map((n, i)=>[n + sfx, hsl(h + .1, .7, .6), i ? 40000 : 3000]), G:[th.G + sfx, hsl(h + .1, .5, .8)]};
+    w.ids = lc.map((q, i)=>blk(q[0], H[i], V[i], q[1], q[2], q[3], ['checker','plain','brick','tile'][(sp.n + i) % 4]));
+    w.oids = w.O.map((q, i)=>blk(q[0], i ? 200 : 100, q[2], q[1], [255,255,255], .6 + i*.3, 'ore', w.name));
+    w.gid = blk(w.G[0], 60, 800, [60,60,70], w.G[1], .9, 'ore', w.name);
+    w.sd = 7000 + sp.n*31; w.animals = pickAnimals(sp.n + sp.id); w.biome = th.biome;
+    w.blurb = 'A ' + th.biome + ' made just for you. Animals here: ' + w.animals.map(k=>AD[k].name).join(', ') + '.';
+    const dummy = {visible:false, userData:{at:{x:1e9, z:1e9}, plane:{rotation:{z:0}}}};
+    w.pEdge = dummy;
+    w.pBack = makePortal(w.cx + 8, w.cz, 'BACK HOME', w.col, parseInt(w.col.slice(1), 16)); w.pBack.userData.at = {x:w.cx + 8, z:w.cz};
+    W.push(w); return w;
+  }
+  save.customWorlds = save.customWorlds || [];
+  const byId = {}; save.customWorlds.forEach(sp=>{ byId[sp.id] = mkWorld(sp); });
+  function newWorld(name){
+    const n = save.customWorlds.length, theme = n % THEMES.length;
+    const sp = {id:(save.customWorldSeq = (save.customWorldSeq || 0) + 1), n, theme, hue:(THEMES[theme].h + (Math.random() - .5)*.12), name:name || (ADJ[rnd(ADJ.length)] + ' ' + THEMES[theme].t + ' ' + NOUN[rnd(NOUN.length)])};
+    save.customWorlds.push(sp); persist(); byId[sp.id] = mkWorld(sp); return sp;
+  }
+  // the Portal Block item
+  const reg = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems[ITEM] = {kind:'edgeportal', col:0x8040d0}; };
+  reg();
+  // gate model: a cover block with the gate opening in it
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind !== 'edgeportal') return _bf.apply(this, arguments);
+    const g = new THREE.Group(), stone = new THREE.MeshLambertMaterial({color:0x2a2240}), glow = new THREE.MeshLambertMaterial({color:0x201030, emissive:0x8040d0, emissiveIntensity:.8});
+    [[-1.3,1.8,0,.8,3.6,1.4,stone],[1.3,1.8,0,.8,3.6,1.4,stone],[0,3.2,0,1.8,.8,1.4,stone],[-.95,1.4,.05,.1,2.8,1.3,glow],[.95,1.4,.05,.1,2.8,1.3,glow],[0,2.85,.05,1.8,.1,1.3,glow]].forEach(q=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(q[3], q[4], q[5]), q[6]); m.position.set(q[0], q[1], q[2]); g.add(m); });
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 2.8), new THREE.MeshBasicMaterial({map:ptex('#c080ff'), side:THREE.DoubleSide, transparent:true, opacity:.9})); plane.position.set(0, 1.4, 0); g.add(plane); g.userData.plane = plane;
+    return g;
+  };
+  const gates = [];
+  const _af = addFurnitureObject;
+  addFurnitureObject = function(d){
+    _af.apply(this, arguments);
+    if(d.kind !== 'edgeportal') return;
+    try{
+      const f = furnObjs.find(q=>q.d === d); if(!f) return;
+      if(d.wid == null){ const sp = newWorld(pendingName); d.wid = sp.id; pendingName = ''; persist(); }
+      const w = byId[d.wid]; if(!w) return;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(w.name.toUpperCase(), 512, 64, null, '#ffffff', 'bold 34px Arial'), fog:false, depthWrite:false, transparent:true})); sp.scale.set(5, .65, 1); sp.position.y = 4.5; f.g.add(sp);
+      gates.push({d, w, f});
+    }catch(e){ console.warn('LN-edgeportal', e); }
+  };
+  let pendingName = '';
+  furnObjs.slice().forEach(f=>{ if(f.d && f.d.kind === 'edgeportal'){ scene.remove(f.g); const i = furnObjs.indexOf(f); if(i >= 0) furnObjs.splice(i, 1); for(let k=furnMeshes.length-1;k>=0;k--) if(furnMeshes[k].userData.furn === f.d) furnMeshes.splice(k, 1); addFurnitureObject(f.d); } });
+  // placing costs 3 Portal Blocks (the normal place already took 1)
+  const _sp = spawnPlaced;
+  spawnPlaced = function(name, kind, col, shape, back, x, d, z, rot){
+    if(kind === 'edgeportal'){
+      if((save.inv[ITEM] || 0) < COST - 1){ addItem(ITEM, 1); toast('A gate needs ' + COST + ' Portal Blocks. Mine World Edge portals to get 6 at a time.'); return; }
+      save.inv[ITEM] -= COST - 1; if(save.inv[ITEM] <= 0) delete save.inv[ITEM];
+      let nm = ''; try{ nm = (prompt('Name your new World Edge (leave empty for a random name):', '') || '').trim().slice(0, 24); }catch(e){}
+      pendingName = nm;
+      try{ updateHotbar(); }catch(e){}
+      toast('A new World Edge opens! Walk into the gate.');
+    }
+    return _sp.apply(this, arguments);
+  };
+  // mining the four World Edge portals gives Portal Blocks (they grow back after a while)
+  const ray = new THREE.Raycaster(), dir = new THREE.Vector3();
+  let mt = 0, lastHit = null, aniT = 8, myCd = 0;
+  const bar = (v)=>{ try{ if(v > 0){ barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, v/(mineAny ? .5 : 2.4)*100) + '%'; } else if(mt === 0 && lastHit){ barwrap.style.display = 'none'; } }catch(e){} };
+  const _st = step;
+  step = function(dt){
+    const ok = realm === 0;
+    if(ok){
+      if(myCd > 0) myCd -= dt;
+      W.forEach(w=>{ if(w.regrow > 0){ w.regrow -= dt; if(w.regrow <= 0 && w.atOrig){ w.pEdge.userData.at = w.atOrig; w.atOrig = null; } } });
+      // mine a World Edge portal
+      let hit = null;
+      if(mouseDown){
+        camera.getWorldDirection(dir); ray.set(camera.position, dir); ray.far = 7;
+        for(const w of W){ if(w.custom || !w.pEdge.visible || w.atOrig) continue; const r = ray.intersectObject(w.pEdge.userData.plane, false); if(r.length){ hit = w; break; } }
+      }
+      if(hit){
+        lastHit = hit; mt += dt; bar(mt);
+        if(mt >= (mineAny ? .5 : 2.4)){
+          mt = 0; reg(); addItem(ITEM, GIVE); barwrap.style.display = 'none';
+          burst(hit.px, 2, E_Z(), 9, 40); shake = .1; blip(140, .5, .2, 'sawtooth');
+          hit.atOrig = hit.pEdge.userData.at; hit.pEdge.userData.at = {x:1e9, z:1e9}; hit.regrow = 150;
+          toast('You mined the ' + hit.name + ' portal! +' + GIVE + ' Portal Blocks. Place ' + COST + ' on a block to make your own gate. (the portal grows back in 2 minutes)');
+        }
+      } else if(mt > 0){ mt = 0; try{ barwrap.style.display = 'none'; }catch(e){} }
+      // walk into a placed gate, or the way home from a custom world
+      if(myCd <= 0){
+        for(const q of gates){
+          const d = q.d; if(Math.hypot(P.x - d.x, P.z - d.z) < 1.1 && P.y > d.y - .6 && P.y < d.y + 3.2){ myCd = 4; q.w.home = {x:d.x, y:d.y, z:d.z, rot:d.rot || 0}; go(q.w); P.x = q.w.cx + .5; P.z = q.w.cz + .5; return; }
+        }
+        for(const w of W){
+          if(w.custom && w.pBack && Math.abs(P.x - (w.cx + 8)) < 1.6 && Math.abs(P.z - w.cz) < .9 && P.y > -1 && P.y < 4){
+            const q = gates.find(g=>g.w === w); myCd = 4;
+            if(q){ const r = q.d.rot || 0; P.x = q.d.x + Math.sin(r)*2.6; P.z = q.d.z + Math.cos(r)*2.6; P.y = q.d.y + .2; P.vx = P.vy = P.vz = 0; toast('Welcome home.'); return; }
+          }
+        }
+      }
+      // animals live in the custom worlds
+      const cur = window.__farBox && window.__farBox(P.x, P.z);
+      if(cur && cur.custom){
+        aniT -= dt;
+        if(aniT <= 0){
+          aniT = 10; let near = 0; for(const a of animals) if(Math.abs(a.pos.x - P.x) < 60 && Math.abs(a.pos.z - P.z) < 60) near++;
+          for(let i = near; i < 5; i++){ const a = Math.random()*6.283, r = 12 + Math.random()*20; try{ spawnAnimal(cur.animals[rnd(cur.animals.length)], P.x + Math.cos(a)*r, P.z + Math.sin(a)*r); }catch(e){} }
+        }
+      }
+    }
+    _st(dt);
+  };
+  const E_Z = ()=>window.__edge.EDGE_P.z;
+})();
+/* LN-edgeportal end */
+/* LN-whisker start: Mister Whisker Bucks (rich top-hat cat who invests your money) and the Fake News Pigeon who writes the headlines (Irfan 2026-10-31 "add mister whisker bucks and pigeon who makes tha fake news to game") */
+(function(){
+  const bx = (par, w, h, d, col, x, y, z, em)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col, emissive:em || 0, emissiveIntensity:em ? .5 : 0})); m.position.set(x, y, z); par.add(m); return m; };
+  const label = (g, text, y)=>{ const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(text, 512, 64, null, '#ffffff', 'bold 34px Arial'), fog:false, depthWrite:false, transparent:true})); sp.scale.set(5, .62, 1); sp.position.y = y; g.add(sp); return sp; };
+  // ---------------- Mister Whisker Bucks
+  const WB = {x:SHOP.x - 7, z:SHOP.z - 9};
+  const cat = new THREE.Group();
+  bx(cat, 1.5, 1.4, 1.1, 0xf2f2f2, 0, .9, 0);                  // round belly in a white fur coat
+  bx(cat, 1.1, .9, .2, 0x1a8a3a, 0, .95, .56);                 // green dollar vest
+  bx(cat, .35, .35, .06, 0xffd54a, 0, 1.1, .62, 0xffd54a);     // gold coin brooch
+  bx(cat, 1.1, 1.0, 1.0, 0xf6f6f6, 0, 2.0, 0);                 // head
+  bx(cat, .26, .4, .26, 0xf6f6f6, -.42, 2.65, 0); bx(cat, .26, .4, .26, 0xf6f6f6, .42, 2.65, 0);   // ears
+  bx(cat, .14, .14, .06, 0x111111, -.25, 2.1, .52); bx(cat, .14, .14, .06, 0x111111, .25, 2.1, .52); // eyes
+  bx(cat, .26, .2, .06, 0xff9aa8, 0, 1.88, .52);               // nose
+  [[-1,.1],[-1,-.04],[1,.1],[1,-.04]].forEach(q=>bx(cat, .55, .03, .03, 0x222222, q[0]*.7, 1.84 + q[1], .52));   // whiskers
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(.17, .03, 6, 14), new THREE.MeshLambertMaterial({color:0xffd54a, emissive:0xffd54a, emissiveIntensity:.6})); ring.position.set(.25, 2.1, .55); cat.add(ring);   // monocle
+  const hat = new THREE.Mesh(new THREE.CylinderGeometry(.42, .42, .8, 14), new THREE.MeshLambertMaterial({color:0x151515})); hat.position.set(0, 3.0, 0); cat.add(hat);
+  bx(cat, 1.2, .08, 1.2, 0x151515, 0, 2.6, 0); bx(cat, .86, .14, .86, 0xc0302c, 0, 2.72, 0);   // hat brim and red band
+  bx(cat, .5, .2, .1, 0xc0302c, 0, 1.55, .54);                 // bow tie
+  bx(cat, .3, .8, .3, 0xf2f2f2, -.9, .9, .1); bx(cat, .3, .8, .3, 0xf2f2f2, .9, .9, .1);          // arms
+  bx(cat, .35, .3, .5, 0xf2f2f2, -.4, .15, .1); bx(cat, .35, .3, .5, 0xf2f2f2, .4, .15, .1);      // feet
+  const tail = bx(cat, .2, 1.1, .2, 0xf2f2f2, 0, 1.0, -.7); tail.rotation.x = -.5;
+  for(let i=0;i<4;i++) bx(cat, 1.2 - i*.1, .1, .8, 0x2fa84f, 1.9, .06 + i*.1, .2 + (i%2)*.05, 0x1a7a2a).rotation.y = i*.3;   // stack of cash
+  bx(cat, .08, 1.8, .08, 0xffd54a, -1.3, .9, .35, 0xffd54a);   // golden cane
+  const wbSp = label(cat, 'MISTER WHISKER BUCKS', 4.0);
+  const wbHint = label(cat, 'F: invest your money', 3.5); wbHint.scale.set(3.4, .45, 1);
+  // ---------------- the Fake News Pigeon
+  const PG = {x:SHOP.x + 6, z:SHOP.z - 9};
+  const pig = new THREE.Group();
+  bx(pig, .7, .55, 1.0, 0x8a8f99, 0, .85, 0);                  // grey body
+  bx(pig, .5, .5, .5, 0x7a808c, 0, 1.35, .45);                 // head
+  bx(pig, .36, .14, .2, 0xb3704a, 0, 1.30, .8);                // beak
+  bx(pig, .1, .1, .06, 0xffa020, .16, 1.45, .7, 0xffa020); bx(pig, .1, .1, .06, 0xffa020, -.16, 1.45, .7, 0xffa020);
+  bx(pig, .56, .12, .5, 0x4fbf7f, 0, 1.1, .38, 0x40a070);      // green neck shine
+  bx(pig, .3, .1, .55, 0x70757f, 0, .85, -.7);                 // tail
+  bx(pig, .1, .35, .1, 0xb3704a, -.14, .4, .05); bx(pig, .1, .35, .1, 0xb3704a, .14, .4, .05);   // legs
+  const wingL = bx(pig, .08, .5, .85, 0x6a707c, -.4, .9, 0), wingR = bx(pig, .08, .5, .85, 0x6a707c, .4, .9, 0);
+  bx(pig, .55, .22, .04, 0xffffff, 0, 1.75, .5);               // tiny press card in the hat
+  bx(pig, .56, .1, .56, 0x2255aa, 0, 1.68, .45);                // blue press cap
+  const pgSp = label(pig, 'THE FAKE NEWS PIGEON', 2.6);
+  const pgHint = label(pig, 'F: ask for a headline', 2.15); pgHint.scale.set(3.4, .45, 1);
+  [cat, pig].forEach(g=>{ g.userData.noMine = true; scene.add(g); });
+  const pgPost = new THREE.Mesh(new THREE.BoxGeometry(.3, .7, .3), new THREE.MeshLambertMaterial({color:0x8a5a2a})); pgPost.userData.noMine = true; scene.add(pgPost);
+  const place = (g, p)=>{ const y = groundTop(Math.floor(p.x), 3, Math.floor(p.z)); g.position.set(p.x, y, p.z); return y; };
+  const gyW = place(cat, WB), gyP = place(pig, PG); pgPost.position.set(PG.x, gyP + .35, PG.z); pig.position.y = gyP + .7;
+  cat.rotation.y = Math.atan2(SHOP.x - WB.x, SHOP.z - WB.z); pig.rotation.y = Math.atan2(SHOP.x - PG.x, SHOP.z - PG.z);
+  // ---------------- what the pigeon writes
+  const HEAD = ['PIGEON EXCLUSIVE: Breadcrumbs are officially a food group. Experts say "obviously".', 'PIGEON REPORTS: The moon is a very large cheese wheel and the cows know.', 'FAKE NEWS (by Pigeon): Mister Whisker Bucks has so much money he pays his taxes in fish.', 'PIGEON BREAKING: A block of dirt was seen walking. It was just a very flat dog.', 'PIGEON SCOOP: Ores are just rocks that got a promotion.', 'FAKE NEWS (by Pigeon): The Core is warm because it is wearing a scarf.', 'PIGEON ALERT: Statue of a pigeon planned for the shop. Pigeon will model.', 'PIGEON EXCLUSIVE: Miners hereby required to share their snacks with pigeons.', 'FAKE NEWS (by Pigeon): Fake news is not fake. (It is made up. Totally different.)', 'PIGEON REPORTS: Tonight the stars will be on sale. Bring a ladder.', 'PIGEON BREAKING: The shopkeeper secretly collects tiny hats.', 'FAKE NEWS (by Pigeon): Gravity is just the floor being clingy.'];
+  let hi = Math.floor(Math.random()*HEAD.length);
+  const push = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const nextHead = ()=>{ hi = (hi + 1 + Math.floor(Math.random()*3)) % HEAD.length; return HEAD[hi]; };
+  let pgT = 25, fly = 0, ft = 0;
+  // ---------------- Whisker Bucks' investments: put in 10% (at least $100), collect 1.5x after 60 seconds
+  const WAIT = 60000;
+  function useWB(){
+    const s = save.wb = save.wb || {amt:0, t:0};
+    if(s.amt > 0){
+      const left = s.t + WAIT - Date.now();
+      if(left > 0){ toast('Mister Whisker Bucks: "Patience, darling. My cats are still counting your $' + s.amt + '. ' + Math.ceil(left/1000) + ' seconds."'); return; }
+      const back = Math.round(s.amt*1.5); save.coins += back; save.wbEarned = (save.wbEarned || 0) + (back - s.amt); s.amt = 0; persist();
+      toast('Mister Whisker Bucks: "Purrfect! Here is $' + back + '. A pleasure doing business."'); blip(660, .2, .1, 'triangle'); setTimeout(()=>blip(880, .25, .1, 'triangle'), 120); return;
+    }
+    const amt = Math.max(100, Math.floor((save.coins || 0)*.1));
+    if((save.coins || 0) < amt){ toast('Mister Whisker Bucks: "Come back with at least $100, my dear. I only invest in the finest pockets."'); return; }
+    save.coins -= amt; s.amt = amt; s.t = Date.now(); persist();
+    toast('Mister Whisker Bucks: "I shall invest your $' + amt + '. Return in one minute for 1.5x. Meow."'); blip(330, .15, .1, 'square');
+  }
+  function usePG(){ const h = nextHead(); push(h); next_news(); toast('Pigeon: "Coo! Fresh headline, hot off the beak!"'); blip(520, .08, .1, 'square'); }
+  const next_news = ()=>{ try{ if(window.__dig && window.__dig.news) window.__dig.news.next(); }catch(e){} };
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || realm !== 0) return;
+    const t = e.target && e.target.tagName; if(t === 'INPUT' || t === 'TEXTAREA') return;
+    if(Math.hypot(P.x - WB.x, P.z - WB.z) < 3.4 && Math.abs(P.y - gyW) < 4) useWB();
+    else if(Math.hypot(P.x - pig.position.x, P.z - pig.position.z) < 3.4 && Math.abs(P.y - gyP) < 4) usePG();
+  });
+  const _st = step;
+  step = function(dt){
+    _st(dt);
+    const on = realm === 0 && Math.hypot(P.x - WB.x, P.z - WB.z) < 220;
+    cat.visible = pig.visible = pgPost.visible = on;
+    if(!on) return;
+    ft += dt; tail.rotation.z = Math.sin(ft*2.2)*.5; cat.position.y = gyW + Math.abs(Math.sin(ft*1.1))*.03;
+    const wbNear = Math.hypot(P.x - WB.x, P.z - WB.z) < 3.4, pgNear = Math.hypot(P.x - pig.position.x, P.z - pig.position.z) < 3.4;
+    wbHint.visible = wbNear; pgHint.visible = pgNear;
+    if(wbNear){ const s = save.wb; wbHint.visible = true; }
+    // the pigeon flaps up and loops around the shop every so often, then writes a headline
+    pgT -= dt;
+    if(fly <= 0 && pgT <= 0){ fly = 7; pgT = 30 + Math.random()*20; push(nextHead()); next_news(); }
+    if(fly > 0){
+      fly -= dt; const a = ft*1.6; pig.position.set(PG.x + Math.cos(a)*7 - 7, gyP + 4 + Math.sin(ft*2)*.6, PG.z + Math.sin(a)*7); pig.rotation.y = -a + Math.PI;
+      wingL.rotation.z = Math.sin(ft*18)*.9; wingR.rotation.z = -Math.sin(ft*18)*.9;
+      if(fly <= 0){ pig.position.set(PG.x, gyP + .7, PG.z); pig.rotation.y = Math.atan2(SHOP.x - PG.x, SHOP.z - PG.z); wingL.rotation.z = wingR.rotation.z = 0; }
+    } else { pig.position.y = gyP + .7 + Math.abs(Math.sin(ft*3))*.05; pig.rotation.x = Math.sin(ft*5)*.08; }
+  };
+  window.__whisker = {cat, pig, useWB, usePG};
+})();
+/* LN-whisker end */
+
+
 
 
 
