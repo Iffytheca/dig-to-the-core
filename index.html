@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 144 (Oct 31)';
+  window.__BUILD = 'Build 145 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -30605,6 +30605,69 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
   window.__wb = {mainDone, TIERS, rollTier, openPacket, dropPacket, callWB, takePacket, showPacket, pk:()=>pk};
   /* LN-whiskerboss end */
+})();
+/* LN-dinofood start: killing a dino drops Dino Nuggets, the body can be chopped for Fried Dino, and a button makes the body remain (Irfan 2026-10-31) */
+(function(){
+  save.foodPower = save.foodPower || {};
+  save.foodPower['Dino Nuggets'] = 18; save.foodPower['Fried Dino'] = 40; persist();
+  const DINO_A = {dino:1, triceratops:1, brontosaurus:1, pterodactyl:1, babydino:1};
+  const isDinoA = a=>!!(a && DINO_A[a.type]);
+  const isDinoE = e=>!!(e && e.d && e.d.dino && e.type !== 'caveman');
+  function mark(a, label){
+    const n0 = corpses.length;
+    if(!CHAOS) { a.ang = a.ang || 0; makeCorpse(a); }
+    const c = corpses[corpses.length - 1]; if(!c || c.dino || (CHAOS ? false : corpses.length <= n0 && false)) return;
+    c.dino = true; c.born = performance.now(); c.keep = !!CHAOS; c.legs = 2; c.name = label || c.name;
+    addItem('Dino Nuggets', 1 + Math.floor(Math.random()*2));
+    toast('Dino Nuggets dropped! The body is fading. Press F near it to chop a leg for Fried Dino, or N so the body will remain.');
+  }
+  const _kA = killAnimal;
+  killAnimal = function(a){ const d = isDinoA(a); _kA(a); if(d) mark(a, a.d && a.d.name ? a.d.name : 'Dino'); };
+  const _kE = killEnemy;
+  killEnemy = function(e){ const d = isDinoE(e); _kE(e); if(d) mark(e, e.d.name); };
+  // ---- the little prompt box
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);z-index:30;background:rgba(40,24,6,.92);color:#ffe9b0;border:2px solid #ffb040;border-radius:10px;padding:8px 12px;font:14px system-ui,sans-serif;display:none;gap:8px;align-items:center;pointer-events:auto';
+  box.innerHTML = '<span id="dfName" style="font-weight:900"></span><button id="dfChop" style="padding:6px 10px;border:0;border-radius:6px;background:#c8641e;color:#fff;font:700 13px system-ui;cursor:pointer">F: Chop leg (Fried Dino)</button><button id="dfKeep" style="padding:6px 10px;border:0;border-radius:6px;background:#2a7a3a;color:#fff;font:700 13px system-ui;cursor:pointer">N: Body will remain</button><button id="dfX" style="width:28px;height:28px;border:0;border-radius:6px;background:#8a2a2a;color:#fff;font:900 14px system-ui;cursor:pointer">X</button>';
+  document.body.appendChild(box);
+  let hidden = false;
+  const near = ()=>{ let b = null, bd = 4.2; for(let i=0;i<corpses.length;i++){ const c = corpses[i]; if(!c.dino) continue; const d = Math.hypot(c.c.x - P.x, c.c.z - P.z); if(d < bd && Math.abs(c.c.y - P.y) < 4){ bd = d; b = c; } } return b; };
+  function chop(){
+    const c = near(); if(!c) return false;
+    if(c.legs <= 0){ toast('No legs left on this dino.'); return true; }
+    c.legs--; addItem('Fried Dino', 1); persist();
+    let done = false;
+    c.g.traverse(m=>{ if(done || !m.isMesh || !m.visible || !m.geometry || !m.geometry.parameters) return; const p = m.geometry.parameters; if(p.height && p.height > (p.width || 0) && m.position.y < .5 && Math.abs(m.position.x) + Math.abs(m.position.z) > .05){ m.visible = false; done = true; } });
+    burst(c.c.x, c.c.y + .3, c.c.z, 0, 12); blip(220, .1, .1, 'sawtooth'); setTimeout(()=>blip(330, .12, .08, 'triangle'), 90);
+    toast('CHOP! You get Fried Dino (' + c.legs + ' leg' + (c.legs === 1 ? '' : 's') + ' left). Eat it with E from a carry slot.');
+    return true;
+  }
+  function keep(){
+    const c = near(); if(!c) return false;
+    c.keep = true; toast('The ' + c.name + ' body will remain.'); blip(520, .1, .08, 'triangle'); return true;
+  }
+  box.querySelector('#dfChop').onclick = chop; box.querySelector('#dfKeep').onclick = keep;
+  box.querySelector('#dfX').onclick = ()=>{ hidden = true; box.style.display = 'none'; };
+  addEventListener('keydown', e=>{
+    if(e.repeat || (e.code !== 'KeyF' && e.code !== 'KeyN')) return;
+    const t = e.target && e.target.tagName; if(t === 'INPUT' || t === 'TEXTAREA') return;
+    if(!near()) return;
+    e.stopImmediatePropagation(); e.code === 'KeyF' ? chop() : keep();
+  }, true);
+  const _st = step;
+  step = function(dt){
+    _st(dt);
+    const now = performance.now();
+    for(let i=corpses.length-1;i>=0;i--){ const c = corpses[i]; if(c.dino && !c.keep && now - c.born > 40000){ scene.remove(c.g); corpses.splice(i, 1); } }
+    const c = near();
+    if(!c){ box.style.display = 'none'; hidden = false; return; }
+    if(hidden) return;
+    box.style.display = 'flex'; box.querySelector('#dfName').textContent = c.name + (c.keep ? ' (stays)' : '');
+  };
+  window.__dinofood = {mark, near, chop, keep, isDinoA, isDinoE};
+})();
+/* LN-dinofood end */
+(function(){
 })();
 
 /* LN-loosefurn start: the sofa, tables, beds and so on inside mansions, large houses and apartments are real separate furniture you can pick up and place again (Irfan 2026-10-31 "it should be actual furniture to pick up") */
