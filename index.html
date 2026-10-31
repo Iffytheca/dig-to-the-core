@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 134 (Oct 31)';
+  window.__BUILD = 'Build 135 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -7348,7 +7348,7 @@ function makeBlockSpec(infos, want, h, h2, h3, power){
 }
 function previewHTML(pv){
   if(!pv) return '<span style="opacity:.6">Put something in a slot and type what you want to make.</span>';
-  const label = pv.kind === 'blocks' ? 'building blocks' : pv.kind === 'food' ? 'food' : pv.kind === 'invention' ? 'invention' : pv.kind === 'furniture' ? 'furniture ('+pv.fkind+')' : pv.kind+' gear';
+  const label = pv.kind === 'blocks' ? 'building blocks' : pv.kind === 'food' ? 'food' : (pv.kind === 'invention' || pv.kind === 'inventionItem') ? 'invention' : pv.kind === 'furniture' ? 'furniture ('+pv.fkind+')' : pv.kind+' gear';
   const bst = pv.kind === 'blocks' ? ' &middot; Power '+Math.max(1, Math.min(10, Math.round((pv.spec.power||pv.power)/1.5)))+'/10 &middot; Hardness '+hardLvl(pv.spec)+'/10' : '';
   return 'Makes: <b>'+pv.name+'</b> ('+label+')'+bst+(pv.stats ? ' &middot; '+statText(pv.stats) : '');
 }
@@ -7369,6 +7369,7 @@ function craftGo(){
     if(registerCustomBlock(pv.spec) < 0){ toast('You have invented too many block types already!'); return; }
     addItem(pv.spec.name, pv.count); toast('You invented a new block: '+pv.spec.name+'!  Right-click to build with it.');
   }
+  else if(pv.kind === 'inventionItem'){ addItem(pv.name, pv.count || 1); if(pv.name === 'Torch'){ save.furnItems = save.furnItems || {}; save.furnItems['Torch'] = {kind:'wtorch', col:0xffa030}; } toast('Made ' + (pv.count > 1 ? pv.count + ' ' : '') + pv.name + (pv.name === 'Torch' ? 's! Right-click to place one as a light.' : '!')); }
   else if(pv.kind === 'invention'){ save.furnItems = save.furnItems || {}; save.furnItems[pv.name] = {kind:pv.fk, col:pv.fk === 'campfire' ? 0xe07a28 : 0x6e6e78}; addItem(pv.name, 1); toast('Invented a ' + pv.name + '! Right-click to place it.' + (pv.fk === 'furnace' ? ' Press F next to it to smelt ore into bars.' : ' Stand near it to heal.')); }
   else if(pv.kind === 'furniture'){ save.furnItems = save.furnItems || {}; save.furnItems[pv.name] = {kind:pv.fkind, col:pv.col}; addItem(pv.name, 1); toast('Crafted '+pv.name+'! Right-click to place it.'); }
   else if(pv.kind === 'food'){ save.foodPower = save.foodPower || {}; save.foodPower[pv.name] = pv.power; addItem(pv.name, 1); toast('Crafted '+pv.name+'! Eat it for a big boost.'); }
@@ -29948,6 +29949,59 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__invention = {smelt};
 })();
 /* LN-invention end */
+/* LN-invention2 start: more for the Invention category: roast food at a Campfire, Steel Bar from the furnace bars, and Torches (Irfan 2026-10-31 "continue making furnance and campfire") */
+(function(){
+  const NM = window.__inventionNames || (window.__inventionNames = {});
+  NM['Steel Bar'] = [160,170,190]; NM['Torch'] = [255,160,50]; NM['Roasted'] = null;
+  const isCoal = n=>/^(Coal Ore|Cave Coal Ore|Charcoal)$/.test(n), isWood = n=>/^(Wood|Wooden Plank|Giggling Log)$/.test(n);
+  const regT = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems['Torch'] = save.furnItems['Torch'] || {kind:'wtorch', col:0xffa030}; };
+  regT();
+  // recipes: Steel Bar = 2 Iron Bar + coal (3 slots), Torch x4 = wood + coal (2 slots)
+  const _cp = craftPreview;
+  craftPreview = function(){
+    try{
+      const refs = craftSlots.filter(Boolean), infos = refs.map(refInfo);
+      if(infos.length && infos.every(i=>i && i.kind === 'item')){
+        const nm = infos.map(i=>i.name), c = f=>nm.filter(f).length;
+        if(infos.length === 3 && c(n=>n === 'Iron Bar') === 2 && c(isCoal) === 1) return {kind:'inventionItem', name:'Steel Bar', count:1, power:2};
+        if(infos.length === 2 && c(isWood) === 1 && c(isCoal) === 1) return {kind:'inventionItem', name:'Torch', count:4, power:1};
+      }
+    }catch(e){}
+    return _cp.apply(this, arguments);
+  };
+  // torch model
+  const bx = (par, w, h, d, col, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col})); m.position.set(x, y, z); par.add(m); return m; };
+  const _bf = buildFurniture;
+  buildFurniture = function(kind, col, shape){
+    if(kind !== 'wtorch') return _bf.apply(this, arguments);
+    const g = new THREE.Group(); bx(g, .14, 1.4, .14, 0x6a4420, 0, .7, 0);
+    const fl = new THREE.Mesh(new THREE.ConeGeometry(.2, .5, 6), new THREE.MeshBasicMaterial({color:0xffa020})); fl.position.y = 1.65; g.add(fl);
+    const fl2 = new THREE.Mesh(new THREE.ConeGeometry(.1, .32, 6), new THREE.MeshBasicMaterial({color:0xffe070})); fl2.position.y = 1.58; g.add(fl2); g.userData.tf = [fl, fl2];
+    return g;
+  };
+  let ft = 0; const _st = step;
+  step = function(dt){ _st(dt); ft += dt; for(const f of furnObjs){ if(f.d && f.d.kind === 'wtorch' && f.g.userData.tf){ const s = 1 + Math.sin(ft*12 + f.d.x*3)*.15; f.g.userData.tf.forEach(m=>m.scale.set(s, s*1.15, s)); } } };
+  // roast food at the campfire with F (beats the furniture-spin F, Shift+F still picks it up)
+  const near = (f, r)=>f.d && Math.hypot(f.d.x - P.x, f.d.z - P.z) < r && Math.abs(f.d.y - P.y) < 4;
+  function roast(){
+    const inv = save.inv || {}, names = Object.keys(inv).filter(n=>inv[n] > 0 && !/^Roasted /.test(n) && isFoodItem(n));
+    if(!names.length){ toast('The campfire is ready. Put some food in your bag (like Pizza or Burger) and press F to roast it.'); return; }
+    names.sort((a, b)=>inv[b] - inv[a]); const n = names[0], out = 'Roasted ' + n;
+    const base = (save.foodPower && save.foodPower[n]) || itemPower(n) || 3;
+    save.foodPower = save.foodPower || {}; save.foodPower[out] = Math.round(base*1.6*10)/10 + 1;
+    inv[n] -= 1; if(inv[n] <= 0) delete inv[n]; addItem(out, 1); persist(); try{ renderInv(); }catch(e){}
+    toast('You roasted ' + n + ' over the campfire. Roasted ' + n + ' gives a much bigger boost!'); blip(500, .1, .08, 'triangle'); setTimeout(()=>blip(700, .12, .08, 'triangle'), 90);
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || realm !== 0 || e.shiftKey) return;
+    const t = e.target && e.target.tagName; if(t === 'INPUT' || t === 'TEXTAREA') return;
+    const f = furnObjs.find(q=>q.d && q.d.kind === 'campfire' && near(q, 3.4));
+    if(f){ e.stopImmediatePropagation(); e.preventDefault(); roast(); }
+  }, true);
+  window.__invention2 = {roast};
+})();
+/* LN-invention2 end */
+
 
 
 /* LN-whisker start: Mister Whisker Bucks (rich top-hat cat who invests your money) and the Fake News Pigeon who writes the headlines (Irfan 2026-10-31 "add mister whisker bucks and pigeon who makes tha fake news to game") */
