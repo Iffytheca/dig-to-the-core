@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 129 (Oct 31)';
+  window.__BUILD = 'Build 130 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -1465,7 +1465,10 @@ const MAXT = 4;             // longest dig time (s) the player is willing/able t
 
 // HILARIOUS MODE: swaps the whole world for silly versions (own save slot, own badges). Toggle it in the main menu.
 const HILARIOUS = (()=>{ try{ return localStorage.getItem('digcore_funny') === '1'; }catch(e){ return false; } })();
-const SAVE_KEY = HILARIOUS ? 'digcore_h1' : 'digcore1';
+/* LN-profiles: login by name; each player has own save, each player's worlds have own blocks and furniture */
+const PROFILE = (()=>{ try{ return localStorage.getItem('digcore_profile') || ''; }catch(e){ return ''; } })();   // '' = the original player
+const WORLD = (()=>{ try{ return localStorage.getItem('digcore_world_' + (PROFILE || 'main')) || ''; }catch(e){ return ''; } })();   // '' = the main world
+const SAVE_KEY = (HILARIOUS ? 'digcore_h1' : 'digcore1') + (PROFILE ? '_p_' + PROFILE : '');
 // CHAOS MODE: unlocked by shooting the shopkeeper, then switched on/off in the main menu. Works in both worlds.
 let chaosUnlocked = (()=>{ try{ return localStorage.getItem('digcore_chaos_unlocked') === '1'; }catch(e){ return false; } })();
 const CHAOS = chaosUnlocked && (()=>{ try{ return localStorage.getItem('digcore_chaos') === '1'; }catch(e){ return false; } })();
@@ -2656,6 +2659,8 @@ createBlockMesh = function(L, i){ return _unoCBM(L && L.uno ? Object.assign({}, 
 /* ---------------------------------------------------------------- state */
 let save = {coins:0, owned:[true], equipped:0, mined:0, v:2};
 try{ const s = JSON.parse(localStorage.getItem(SAVE_KEY)||'null'); if(s && s.owned) save = s; }catch(e){}
+let mainFurn = null;      /* LN-profiles: placed furniture and buildings belong to the world you are in */
+if(WORLD){ mainFurn = save.furn || []; try{ save.furn = JSON.parse(localStorage.getItem(SAVE_KEY + '_wf_' + WORLD) || '[]'); }catch(e){ save.furn = []; } }
 const OLD_PICKS = ['Wooden Shovel','Stone Shovel','Copper Pickaxe','Iron Pickaxe','Steel Pickaxe','Titanium Pickaxe','Diamond Pickaxe','Obsidian Pickaxe','Plasma Pickaxe','Legendary MIGHTY Pickaxe'];
 if(!save.v){
   const mp = i=>PICKS.findIndex(p=>p.name===OLD_PICKS[i]), no = [];
@@ -2707,7 +2712,10 @@ if(PICKS.some((p,i)=>p.removed && save.owned[i]) || (save.erased||[]).length || 
   save.erased = []; save.erasedU = [];
   try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
 }
-function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){} }
+function persist(){
+  if(WORLD){ const wf = save.furn; save.furn = mainFurn; try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); localStorage.setItem(SAVE_KEY + '_wf_' + WORLD, JSON.stringify(wf || [])); }catch(e){} save.furn = wf; return; }
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }catch(e){}
+}
 
 // options: lighting (shadows, glow, torch) and sound -- both on by default
 let lightOn = true, soundOn = true;
@@ -3265,7 +3273,7 @@ function baseBlock(x,d,z){
   return li+1;
 }
 const edits = new Map();                  // mined blocks: key -> 0 (saved, see saveEdits)
-const EDIT_KEY = SAVE_KEY + '_edits3';       // flat list: key, value, key, value ... (value 0 = mined, otherwise a placed block type)
+const EDIT_KEY = SAVE_KEY + '_edits3' + (WORLD ? '_w_' + WORLD : '');       // flat list: key, value, key, value ... (value 0 = mined, otherwise a placed block type)
 try{ const a = JSON.parse(localStorage.getItem(EDIT_KEY)||'[]');
   /* the Even Deeper Core adds one block type after the layers, so saved block ids above the last layer move by one when it appears or goes away */
   const want = LAYERS.some(l=>l.stairs) ? 1 : 0, have = +(localStorage.getItem(EDIT_KEY + '_shift') || 0), L = LAYERS.filter(l=>!l.stairs).length;
@@ -29727,6 +29735,72 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const E_Z = ()=>window.__edge.EDGE_P.z;
 })();
 /* LN-edgeportal end */
+/* LN-profiles start: login by name (no password) and named worlds. Progress is per player and shared by that player's worlds; blocks built or dug and placed furniture belong to one world (Irfan 2026-10-31 "ADD LOGIN TO THE GAME AND ADD WORLDS ... worlds are not different but same ... building on different world dont appear in your new world ... you can make a world name the world") */
+(function(){
+  const ls = (k, v)=>{ try{ if(v === undefined) return localStorage.getItem(k); if(v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); }catch(e){} return null; };
+  const slug = n=>n.toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 20);
+  const readJ = (k, d)=>{ try{ const v = JSON.parse(ls(k) || 'null'); return v || d; }catch(e){ return d; } };
+  const profiles = ()=>{ const a = readJ('digcore_profiles', []); if(!a.some(p=>p.id === '')) a.unshift({id:'', name:'Main player'}); return a; };
+  const pk = PROFILE || 'main';
+  const worlds = ()=>{ const a = readJ('digcore_worlds_' + pk, []); if(!a.some(w=>w.id === '')) a.unshift({id:'', name:'Main world'}); return a; };
+  const curP = profiles().find(p=>p.id === PROFILE) || {id:PROFILE, name:PROFILE || 'Main player'};
+  const curW = worlds().find(w=>w.id === WORLD) || {id:WORLD, name:WORLD || 'Main world'};
+  function leave(){ try{ persist(); saveEdits(); }catch(e){} }
+  // ---- small dialog
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;font:15px/1.4 system-ui,sans-serif;color:#f4ead8';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1f1a14;border:2px solid #e0b040;border-radius:14px;padding:18px 20px;min-width:300px;max-width:92vw;max-height:84vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.6)';
+  ov.appendChild(box); document.body.appendChild(ov);
+  const btn = (label, bg, fn)=>{ const b = document.createElement('button'); b.textContent = label; b.style.cssText = 'margin:4px 6px 4px 0;padding:8px 14px;border:0;border-radius:8px;font:700 14px system-ui;color:#fff;cursor:pointer;background:' + (bg || '#3d5a80'); b.onclick = e=>{ e.stopPropagation(); fn(); }; return b; };
+  const input = (ph)=>{ const i = document.createElement('input'); i.placeholder = ph; i.maxLength = 24; i.style.cssText = 'padding:8px 10px;border-radius:8px;border:2px solid #6d5a45;background:#120e0a;color:#f4ead8;font:14px system-ui;margin:4px 6px 4px 0;width:170px'; i.addEventListener('keydown', e=>e.stopPropagation()); i.addEventListener('keyup', e=>e.stopPropagation()); return i; };
+  const title = t=>{ const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font:800 18px system-ui;color:#ffd54a;margin-bottom:8px'; return h; };
+  const note = t=>{ const h = document.createElement('div'); h.textContent = t; h.style.cssText = 'font-size:12px;opacity:.7;margin:6px 0'; return h; };
+  function pickPlayer(first){
+    box.innerHTML = ''; ov.style.display = 'flex';
+    box.appendChild(title(first ? 'Who is playing?' : 'Switch player'));
+    box.appendChild(note('Type your name to log in. A new name makes a new player with its own progress. No password.'));
+    profiles().forEach(p=>{ const row = document.createElement('div'); row.appendChild(btn((p.id === PROFILE ? '> ' : '') + p.name, p.id === PROFILE ? '#2e7d32' : '#3d5a80', ()=>chooseP(p.id))); box.appendChild(row); });
+    const i = input('Your name'); box.appendChild(i);
+    box.appendChild(btn('Log in', '#b07a00', ()=>{
+      const nm = i.value.trim(); if(!nm) return; const id = slug(nm); if(!id){ i.value = ''; return; }
+      const all = profiles(), ex = all.find(p=>p.id === id || p.name.toLowerCase() === nm.toLowerCase());
+      if(ex) return chooseP(ex.id);
+      all.push({id, name:nm}); ls('digcore_profiles', JSON.stringify(all.filter(p=>p.id !== ''))); chooseP(id);
+    }));
+    if(!first) box.appendChild(btn('Cancel', '#555', ()=>{ ov.style.display = 'none'; }));
+  }
+  function chooseP(id){ leave(); ls('digcore_profile', id); ls('digcore_profile_set', '1'); location.reload(); }
+  function pickWorld(){
+    box.innerHTML = ''; ov.style.display = 'flex';
+    box.appendChild(title('Worlds (' + curP.name + ')'));
+    box.appendChild(note('Your coins, tools, items and badges are the same in every world. Blocks you dig or build and furniture you place stay in the world you made them in.'));
+    worlds().forEach(w=>{ const row = document.createElement('div'); row.appendChild(btn((w.id === WORLD ? '> ' : '') + w.name, w.id === WORLD ? '#2e7d32' : '#3d5a80', ()=>{ leave(); ls('digcore_world_' + pk, w.id); location.reload(); }));
+      if(w.id !== ''){ row.appendChild(btn('Delete', '#8a2a2a', ()=>{ if(!confirm('Delete the world "' + w.name + '" and everything built in it? This cannot be undone.')) return; ls('digcore_worlds_' + pk, JSON.stringify(worlds().filter(q=>q.id !== '' && q.id !== w.id))); const base = SAVE_KEY + '_edits3'; ls(base + '_w_' + w.id, null); ls(base + '_w_' + w.id + '_shift', null); ls(SAVE_KEY + '_wf_' + w.id, null); if(w.id === WORLD){ ls('digcore_world_' + pk, ''); leave(); location.reload(); } else pickWorld(); })); }
+      box.appendChild(row); });
+    const i = input('New world name'); box.appendChild(i);
+    box.appendChild(btn('Create world', '#b07a00', ()=>{
+      const nm = i.value.trim(); if(!nm) return; const all = worlds();
+      if(all.some(w=>w.name.toLowerCase() === nm.toLowerCase())){ toast('You already have a world called ' + nm + '.'); return; }
+      const id = 'w' + Date.now().toString(36); all.push({id, name:nm}); ls('digcore_worlds_' + pk, JSON.stringify(all.filter(w=>w.id !== '')));
+      leave(); ls('digcore_world_' + pk, id); location.reload();
+    }));
+    box.appendChild(btn('Close', '#555', ()=>{ ov.style.display = 'none'; }));
+  }
+  // ---- buttons in the main menu
+  const reset = document.getElementById('btnReset');
+  if(reset && reset.parentNode){
+    const row = document.createElement('div'); row.style.cssText = 'margin-top:8px';
+    const bp = document.createElement('button'), bw = document.createElement('button');
+    [[bp, 'Player: ' + curP.name + ' (switch)', '#2a5a8a', ()=>pickPlayer(false)], [bw, 'World: ' + curW.name + ' (worlds)', '#2a7a5a', pickWorld]].forEach(([b, t, bg, fn])=>{ b.className = 'btn'; b.textContent = t; b.style.cssText = 'margin:6px 6px 0;padding:8px 18px;font-size:14px;color:#fff;background:' + bg; b.onclick = e=>{ e.stopPropagation(); fn(); }; row.appendChild(b); });
+    reset.parentNode.insertBefore(row, reset);
+  }
+  // first visit: ask who is playing
+  if(!ls('digcore_profile_set')) pickPlayer(true);
+  window.__profiles = {PROFILE, WORLD, pickPlayer, pickWorld};
+})();
+/* LN-profiles end */
+
 /* LN-whisker start: Mister Whisker Bucks (rich top-hat cat who invests your money) and the Fake News Pigeon who writes the headlines (Irfan 2026-10-31 "add mister whisker bucks and pigeon who makes tha fake news to game") */
 (function(){
   const bx = (par, w, h, d, col, x, y, z, em)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col, emissive:em || 0, emissiveIntensity:em ? .5 : 0})); m.position.set(x, y, z); par.add(m); return m; };
