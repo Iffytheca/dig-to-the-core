@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 143 (Oct 31)';
+  window.__BUILD = 'Build 144 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -26842,6 +26842,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const homePortal = portalMesh(0x40e0ff, 'HOME PORTAL (EARTH)'); homePortal.visible = false; homePortal.position.set(HP.x, 0, HP.z); sAdd(homePortal);
   let portCD = 0, lockT = 0;
   function goUni(){
+    if(window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Mister Whisker Bucks guards the Next Universe. Beat him at the shop (press F next to him) to open it.' : 'The Next Universe is locked. First finish the last planet of this universe (dig to the TOI-1853b core), then beat Mister Whisker Bucks at the shop.'); portCD = 2; return; }
     P.x = NU.x + .5; P.z = NU.z + .5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true; portCD = 2;
     save.uniVisits = (save.uniVisits || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + UNI + '! You are on ' + NAME + '. Alien cities, wild disasters and animal pickaxes (station shop: H). The home portal is right behind you.');
@@ -27395,6 +27396,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(typeof launch !== 'undefined' && launch) return;                 // let other gift rides finish first
     clearInterval(t);
     try{ localStorage.setItem('digcore_gift_uni', '1'); }catch(e){}
+    if(window.__wbOpen && !window.__wbOpen()) return;
     if(U.onUni && U.onUni()) return;
     toast('The Next Universe is back! Going through the portal to Planet Novaria. To go home, use the home portal behind you. On Earth, the rocket now has choice 4 for the Next Universe.');
     setTimeout(()=>{ try{ U.goUni(); }catch(e){ console.warn('LN-unireadd', e); } }, 1500);
@@ -30395,6 +30397,216 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__whisker = {cat, pig, useWB, usePG};
 })();
 /* LN-whisker end */
+(function(){
+  /* LN-whiskerboss start: Mister Whisker Bucks becomes a boss once the last main-universe planet is done, beating him opens the Next Universe, and a luggage packet falls from the sky every day (Irfan 2026-10-31) */
+  save.wbBeaten = save.wbBeaten || 0; save.pkOpened = save.pkOpened || {};
+  const mainDone = ()=>!!save.toiCore;
+  window.__wbOpen = ()=>!!save.wbBeaten;
+  // ---- lore
+  (function(){
+    const L = window.__lore; if(!L || !L.LORE) return;
+    [
+      ['wb1','Mister Whisker Bucks','The Cat Who Was Sold for $1','Long ago the Shopkeeper sold his cat for one dollar, as a joke. The cat invested the dollar. By Tuesday he owned the shop sign. By Friday he owned the Shopkeeper.','scroll'],
+      ['wb2','Mister Whisker Bucks','The Top Hat','The top hat is not fashion. It is a vault. Nobody knows how much is inside, but it hums when a coin gets near.','scroll'],
+      ['wb3','Mister Whisker Bucks','The Guardian of the Portal','Once a miner finishes the last planet, Mister Whisker Bucks climbs into his Money Mech and blocks the portal to the Next Universe. He says it is "customs". It is not customs.','wbfinish'],
+      ['wb4','Mister Whisker Bucks','The Packet Treaty','After the great duel, Mister Whisker Bucks signed the Packet Treaty: every day one luggage packet floats down from the sky for the miner who beat him. He calls it "a tip". He is a very proud cat.','wbbeat'],
+      ['wb5','Mister Whisker Bucks','The Seven Suitcases','Luggage comes in seven kinds: normal, metal, golden, royal, diamond, platinum and carbyne. Carbyne luggage is so rare that the cat has only seen two, and he cried both times.','wbpacket'],
+      ['un1','The Universes','One Universe Is Not Enough','The first universe has Earth, Mars and TOI-1853b. Past a purple portal there is a second universe, full of alien cities that are very rude about our dirt.','scroll'],
+      ['un2','The Universes','Why Packets Fall From the Sky','Parachutes were invented for the Packet Treaty. Before that the luggage just fell, and three Bobs were flattened.','wbpacket']
+    ].forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])) L.LORE.push(r); });
+  })();
+  const lore = (id, how)=>{ try{ window.__lore && window.__lore.unlock(id, how); }catch(e){} };
+  // ---- the boss: Mister Whisker Bucks in his Money Mech
+  const gl = (m, c)=>{ m.material.emissive = new THREE.Color(c); return m; };
+  const cyl = (par, r1, r2, h, col, x, y, z, seg)=>{ const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg || 10), new THREE.MeshLambertMaterial({color:col})); m.position.set(x, y, z); par.add(m); return m; };
+  const tor = (par, R, r, col, x, y, z)=>{ const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 8, 24), new THREE.MeshLambertMaterial({color:col})); m.position.set(x, y, z); par.add(m); return m; };
+  const grp = (par, x, y, z)=>{ const o = new THREE.Group(); o.position.set(x, y, z); par.add(o); return o; };
+  function wbModel(g){
+    const W = 0xf6f6f6, M = 0x6a7280;
+    [-1.1,1.1].forEach(x=>{ sbox(.9,2.6,.9,M,x,1.3,0,g); sbox(1.3,.4,1.8,0x4a5060,x,.2,.4,g); });                  // mech legs and feet
+    sbox(4,2.6,2.4,W,0,3.9,0,g); sbox(3,1.8,.2,0x1a8a3a,0,3.7,1.25,g);                                          // fur body, dollar vest
+    gl(sbox(.8,.8,.12,0xffd54a,0,3.9,1.36,g), 0x8a6a10);                                                      // coin brooch
+    sbox(2.6,2.2,2.2,W,0,6,0,g); [-.9,.9].forEach(x=>sbox(.6,1,.6,W,x,7.4,0,g));                                // head and ears
+    [-.6,.6].forEach(x=>sbox(.34,.34,.12,0x111111,x,6.2,1.12,g)); sbox(.6,.4,.12,0xff9aa8,0,5.7,1.12,g);       // eyes and nose
+    [[-1,.1],[-1,-.15],[1,.1],[1,-.15]].forEach(q=>sbox(1.3,.07,.07,0x222222,q[0]*1.6,5.6+q[1],1.12,g));          // whiskers
+    gl(tor(g,.4,.07,0xffd54a,.6,6.2,1.18), 0x8a6a10);                                                         // monocle
+    cyl(g,.95,.95,1.7,0x151515,0,8.2,0,14); sbox(2.9,.2,2.9,0x151515,0,7.2,0,g); sbox(1.95,.3,1.95,0xc0302c,0,7.4,0,g);   // top hat
+    sbox(1.2,.4,.2,0xc0302c,0,5.1,1.2,g);                                                                       // bow tie
+    [-1,1].forEach(s=>{ const a = grp(g,s*2.5,4.6,0); sbox(.8,2.4,.8,M,0,-1,0,a); gl(cyl(a,.55,.7,1.3,0xffd54a,0,-2.5,0,10), 0x8a6a10); a.userData.armSide = s; });   // arms with coin cannons
+    const tail = sbox(.4,2.6,.4,W,0,3.2,-1.7,g); tail.rotation.x = -.6;                                          // tail
+    for(let i=0;i<6;i++) gl(sbox(2.2-i*.1,.2,1.4,0x2fa84f,3.6,.2+i*.22,1,g), 0x1a7a2a);                         // cash pile
+    sbox(.16,5,.16,0xffd54a,-3.4,2.5,1,g);                                                                      // golden cane
+    const ring = grp(g,0,3.9,0); for(let i=0;i<8;i++){ const a = i/8*6.283; gl(cyl(ring,.45,.45,.1,0xffd54a,Math.cos(a)*3.6,0,Math.sin(a)*3.6,12), 0x8a6a10).rotation.x = 1.57; }   // orbiting coins
+    g.userData.wbRing = ring;
+  }
+  ED.whiskerbucks = {name:'Mister Whisker Bucks', hp:9500, speed:3.1, dmg:14, r:3.1, reward:75000, boss:true, key:'whiskerbucks', yo:3, wb:true, color:0xffd54a, quips:['Defeated.']};
+  const _beWB = buildEnemy;
+  buildEnemy = function(type){ if(type === 'whiskerbucks'){ const g = new THREE.Group(); wbModel(g); g.scale.setScalar(1.1); return g; } return _beWB(type); };
+  const _cA = carveAround;
+  carveAround = function(e){ if(e && e.d && e.d.wb) return; return _cA.apply(this, arguments); };   // the Money Mech does not dig up the shop
+  const _fv2 = new THREE.Vector3();
+  function wbAttacks(e, dt){
+    if(!e.wbInit){ e.wbInit = 1; e.wv = 1.5; e.wr = 4; e.wt = 8; e.wring = 6; }
+    const u = e.g.userData; if(u.wbRing) u.wbRing.rotation.y += dt*1.6;
+    e.g.rotation.y = Math.atan2(P.x - e.pos.x, P.z - e.pos.z);
+    if(!locked) return;
+    const rage = e.hp <= e.max*.5 ? 1.35 : 1;
+    if(rage > 1 && !e.enr){ e.enr = true; toast('Mister Whisker Bucks: "That was my FAVOURITE hat!" He is ENRAGED!'); blip(80, .6, .2, 'sawtooth'); shake = .15; }
+    e.wv -= dt*rage; e.wr -= dt*rage; e.wt -= dt*rage; e.wring -= dt*rage;
+    if(e.wv <= 0){ e.wv = 2.3;                                    // coin cannon volley
+      const dmg = Math.round(e.d.dmg*.55), dx = P.x - e.pos.x, dz = P.z - e.pos.z;
+      for(let k=0;k<5;k++){ const a = (k-2)*.24, c = Math.cos(a), s = Math.sin(a); _fv2.set(dx*c - dz*s, P.y + 1.1 - (e.pos.y + 6), dx*s + dz*c).normalize(); fireFoe(e.pos.x + _fv2.x*3, e.pos.y + 6, e.pos.z + _fv2.z*3, _fv2, 8, dmg, 0xffd54a); }
+      blip(660, .08, .06, 'triangle'); }
+    if(e.wr <= 0){ e.wr = 3.8;                                    // money rain
+      for(let k=0;k<9;k++){ _fv2.set(0, -1, 0); fireFoe(P.x + (Math.random()-.5)*10, P.y + 12, P.z + (Math.random()-.5)*10, _fv2, 9, Math.round(e.d.dmg*.6), 0x2fa84f); }
+      blip(220, .3, .1, 'sawtooth'); }
+    if(e.wring <= 0){ e.wring = 7;                                // ring of coins
+      const off = Math.random()*6.283; for(let k=0;k<14;k++){ const a = off + k/14*6.283; _fv2.set(Math.cos(a), 0, Math.sin(a)); fireFoe(e.pos.x, e.pos.y + 4, e.pos.z, _fv2, 7, Math.round(e.d.dmg*.5), 0xffd54a); }
+      blip(300, .2, .1, 'square'); }
+    if(e.wt <= 0){ e.wt = 9;                                      // vanishes in a puff of cash and appears behind you
+      const a = Math.random()*6.283, x = P.x + Math.cos(a)*8, z = P.z + Math.sin(a)*8;
+      burst(e.pos.x, e.pos.y + 3, e.pos.z, 9, 14); e.pos.x = x; e.pos.z = z; e.pos.y = Math.max(groundTop(Math.floor(x), Math.max(P.y, 0) + 3, Math.floor(z)), 0); burst(x, e.pos.y + 3, z, 9, 14); }
+  }
+  ENEMY_DROP.whiskerbucks = 'Golden Top Hat'; RARE['Golden Top Hat'] = 'CS';
+  // ---- luggage packets
+  const TIERS = [
+    {k:'normal',  n:'Normal',   col:0x8a6a4a, w:45,  cnt:2,  cap:300,   coin:300},
+    {k:'metal',   n:'Metal',    col:0x9aa0a8, w:25,  cnt:3,  cap:3000,  coin:2000},
+    {k:'golden',  n:'Golden',   col:0xffd040, w:14,  cnt:4,  cap:3e4,   coin:15000},
+    {k:'royal',   n:'Royal',    col:0x7a2aa8, w:8,   cnt:5,  cap:3e5,   coin:100000},
+    {k:'diamond', n:'Diamond',  col:0x80f0ff, w:5,   cnt:6,  cap:3e6,   coin:800000},
+    {k:'platinum',n:'Platinum', col:0xe8eef2, w:2.5, cnt:8,  cap:3e7,   coin:6e6},
+    {k:'carbyne', n:'Carbyne',  col:0xff60c0, w:.5,  cnt:10, cap:5e8,   coin:5e7}
+  ];
+  const rollTier = ()=>{ let s = 0; TIERS.forEach(t=>s += t.w); let r = Math.random()*s; for(let i=0;i<TIERS.length;i++){ r -= TIERS[i].w; if(r <= 0) return i; } return 0; };
+  const fmt = n=>n >= 1e6 ? (n/1e6).toFixed(1).replace('.0','') + 'M' : n >= 1e3 ? (n/1e3).toFixed(1).replace('.0','') + 'k' : '' + n;
+  function openPacket(ti){
+    const T = TIERS[ti], out = [], inv = save.inv = save.inv || {};
+    const give = (name, n)=>{ inv[name] = (inv[name] || 0) + n; out.push(n + ' x ' + name); };
+    const blocks = BLOCKS.filter(b=>b && b.v && b.v <= T.cap && !b.unbreakable);
+    const loot = Object.keys(ENEMY_DROP).map(k=>ENEMY_DROP[k]).filter(Boolean);
+    for(let i=0;i<T.cnt;i++){
+      const r = Math.random();
+      if(r < .5 && blocks.length){ const a = blocks[Math.floor(Math.random()*blocks.length)], b = blocks[Math.floor(Math.random()*blocks.length)], bl = a.v > b.v ? a : b; give(bl.name, 2 + Math.floor(Math.random()*(ti < 3 ? 5 : 4))); }
+      else if(r < .78 || !loot.length){ const c = Math.round(T.coin*(.3 + Math.random()*.9)); save.coins += c; out.push('$' + fmt(c) + ' coins'); }
+      else give(loot[Math.floor(Math.random()*loot.length)], 1 + Math.floor(Math.random()*3));
+    }
+    let dino = false;
+    if(Math.random() < (ti === 6 ? .3 : .06)){ dino = true; RARE['Pocket Dinosaur'] = 'DINO'; give('Pocket Dinosaur', 1); }
+    persist();
+    lore('wb5', 'Lore from a packet');
+    return {T, out, dino};
+  }
+  const pan = document.createElement('div');
+  pan.style.cssText = 'position:fixed;inset:0;z-index:62;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  pan.innerHTML = '<div id="pkBox" style="position:relative;background:#241a06;color:#fff0c0;border:3px solid #ffd040;border-radius:12px;padding:16px 18px;width:min(460px,94vw);max-height:86vh;overflow:auto;font:15px system-ui,sans-serif">' +
+    '<button id="pkX" style="position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div id="pkTitle" style="font:900 20px Georgia,serif;margin:0 40px 8px 0"></div><div id="pkList"></div></div>';
+  document.body.appendChild(pan);
+  const closePk = ()=>{ pan.style.display = 'none'; };
+  pan.querySelector('#pkX').onclick = closePk; pan.addEventListener('click', e=>{ if(e.target === pan) closePk(); });
+  function showPacket(ti, res){
+    const T = res.T, hex = '#' + T.col.toString(16).padStart(6, '0');
+    pan.querySelector('#pkBox').style.borderColor = hex;
+    pan.querySelector('#pkTitle').textContent = T.n + ' Luggage opened!';
+    pan.querySelector('#pkTitle').style.color = hex;
+    pan.querySelector('#pkList').innerHTML = res.out.map(s=>'<div style="padding:3px 0;border-bottom:1px solid rgba(255,208,64,.2)">' + s + '</div>').join('') +
+      (res.dino ? '<div style="margin-top:10px;font-weight:900;color:#9fe870">A DINOSAUR was inside! It is a very small one. It says RAWR politely. (Pocket Dinosaur added.)</div>' : '');
+    pan.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+    blip(660, .15, .1, 'triangle'); setTimeout(()=>blip(990, .2, .1, 'triangle'), 140);
+  }
+  // ---- the falling packet
+  let pk = null;
+  const bxm = (par, w, h, d, col, x, y, z, em)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col, emissive:em || 0, emissiveIntensity:em ? .6 : 0})); m.position.set(x, y, z); par.add(m); return m; };
+  function makePacket(ti){
+    const T = TIERS[ti], g = new THREE.Group(), bag = new THREE.Group(); g.add(bag);
+    bxm(bag, 1.5, 1.1, .6, T.col, 0, .55, 0, ti >= 2 ? T.col : 0);
+    bxm(bag, 1.55, .12, .65, 0x222222, 0, .35, 0); bxm(bag, 1.55, .12, .65, 0x222222, 0, .8, 0);
+    bxm(bag, .5, .14, .14, 0x222222, 0, 1.2, 0);
+    const chute = new THREE.Group(); g.add(chute); chute.position.y = 1.2;
+    const can = new THREE.Mesh(new THREE.SphereGeometry(2.4, 14, 8, 0, 6.283, 0, 1.4), new THREE.MeshLambertMaterial({color:0xffffff, side:THREE.DoubleSide, emissive:0x333333})); can.position.y = 2.2; chute.add(can);
+    for(let i=0;i<4;i++) bxm(chute, .1, 2.4, .1, 0x888888, Math.cos(i*1.57)*.7, 1.1, Math.sin(i*1.57)*.7);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.18, .18, 40, 6), new THREE.MeshBasicMaterial({color:T.col, transparent:true, opacity:.5, fog:false})); beam.position.y = 20; g.add(beam);
+    g.userData.noMine = true; bag.userData.noMine = true; scene.add(g);
+    return {g, bag, chute, beam, T, ti, landed:false};
+  }
+  function dropPacket(ti, near){
+    if(pk) return pk;
+    ti = ti == null ? rollTier() : ti;
+    const a = Math.random()*6.283, r = near ? 8 : 16 + Math.random()*10, x = P.x + Math.cos(a)*r, z = P.z + Math.sin(a)*r;
+    pk = makePacket(ti); pk.x = x; pk.z = z; pk.y = Math.max(P.y, 0) + 70;
+    pk.g.position.set(x, pk.y, z);
+    toast('A ' + TIERS[ti].n + ' Luggage packet is parachuting down nearby! Follow the tall beam of light and walk into it.');
+    blip(440, .2, .1, 'sine'); return pk;
+  }
+  function takePacket(){
+    const ti = pk.ti; scene.remove(pk.g); pk = null;
+    save.pkDay = new Date().toISOString().slice(0, 10); save.pkCount = (save.pkCount || 0) + 1; persist();
+    showPacket(ti, openPacket(ti));
+  }
+  let pkWait = 25, hintT = 0, ft = 0;
+  const _st = step;
+  step = function(dt){
+    _st(dt);
+    ft += dt;
+    if(pk){
+      if(realm !== 0 || P.x >= UPPER_EDGE){ scene.remove(pk.g); pk = null; return; }
+      if(!pk.landed){
+        pk.y -= 5*dt; const gy = groundTop(Math.floor(pk.x), Math.max(P.y, 2) + 6, Math.floor(pk.z));
+        if(pk.y <= gy){ pk.y = gy; pk.landed = true; pk.chute.visible = false; burst(pk.x, gy + .5, pk.z, 0, 12); }
+        pk.g.position.y = pk.y; pk.chute.rotation.z = Math.sin(ft*2)*.1;
+      }
+      if(pk.ti === 6) pk.bag.children[0].material.color.setHSL((ft*.4) % 1, .9, .6);
+      pk.bag.rotation.y += dt*(pk.landed ? 1.2 : .3);
+      if(pk.landed && locked && Math.hypot(P.x - pk.x, P.z - pk.z) < 2.4 && Math.abs(P.y - pk.y) < 3.5) takePacket();
+      return;
+    }
+    // the daily drop
+    if(!mainDone() || !save.wbBeaten || realm !== 0 || P.x >= UPPER_EDGE || !locked) return;
+    if(save.pkDay === new Date().toISOString().slice(0, 10)) return;
+    pkWait -= dt; if(pkWait <= 0){ pkWait = 25; dropPacket(); }
+  };
+  // ---- the duel
+  const WBPOS = ()=>({x:SHOP.x - 7, z:SHOP.z - 9});
+  function callWB(){
+    if(bossActive){ toast('A boss is already here. Beat it first!'); return; }
+    const w = WBPOS(), x = w.x - 4, z = w.z - 12, gy = groundTop(Math.floor(x), 12, Math.floor(z));
+    const e = spawnEnemy('whiskerbucks', x, gy, z);
+    bossActive = true; e.atkT = 2;
+    toast('Mister Whisker Bucks: "You want the Next Universe? Customs says NO. Meow." He climbs into his Money Mech!');
+    blip(110, .5, .2, 'sawtooth'); shake = .12; lore('wb3', 'Lore of the cat');
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || realm !== 0 || !mainDone() || save.wbBeaten) return;
+    const t = e.target && e.target.tagName; if(t === 'INPUT' || t === 'TEXTAREA') return;
+    const w = WBPOS(); if(Math.hypot(P.x - w.x, P.z - w.z) > 3.6) return;
+    e.stopImmediatePropagation(); callWB();
+  }, true);
+  const _st2 = step;
+  step = function(dt){
+    _st2(dt);
+    for(let i=0;i<enemies.length;i++) if(enemies[i].d && enemies[i].d.wb) wbAttacks(enemies[i], dt);
+    if(realm !== 0 || !mainDone() || save.wbBeaten || bossActive) return;
+    const w = WBPOS(); hintT -= dt;
+    if(hintT <= 0 && Math.hypot(P.x - w.x, P.z - w.z) < 7){ hintT = 25; lore('wb3', 'Lore of the cat'); toast('Mister Whisker Bucks guards the Next Universe now. Press F next to him to duel his Money Mech. Beat him to unlock the portal.'); }
+  };
+  const _kE3 = killEnemy;
+  killEnemy = function(e){
+    const wb = e && e.d && e.d.wb;
+    _kE3(e);
+    if(!wb) return;
+    save.wbBeaten = 1;
+    const inv = save.inv = save.inv || {}; persist();
+    setTimeout(()=>{
+      toast('Mister Whisker Bucks is defeated! The NEXT UNIVERSE is unlocked: use the Mars portal or rocket choice 4. A luggage packet will now fall from the sky every day. Press Y for the Packet Treaty.');
+      lore('wb4', 'Lore of the treaty'); try{ (window.__newsQ = window.__newsQ || []).push('BREAKING: Mister Whisker Bucks has lost his Money Mech. He says it was "a business decision".'); }catch(e){}
+      if(!pk) dropPacket(2, true);
+    }, 1400);
+  };
+  window.__wb = {mainDone, TIERS, rollTier, openPacket, dropPacket, callWB, takePacket, showPacket, pk:()=>pk};
+  /* LN-whiskerboss end */
+})();
+
 /* LN-loosefurn start: the sofa, tables, beds and so on inside mansions, large houses and apartments are real separate furniture you can pick up and place again (Irfan 2026-10-31 "it should be actual furniture to pick up") */
 (function(){
   const FP = window.__furnPlan; if(!FP) return;
