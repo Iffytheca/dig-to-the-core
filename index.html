@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 135 (Oct 31)';
+  window.__BUILD = 'Build 136 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -13015,7 +13015,7 @@ registerMode('robot', cp('robotBtn','Robot Mode'), 'digcore_robot', ROBOT, '#1f6
   const _st = step;
   step = function(dt){
     const can = realm === 0 && locked && !GRAV.float;
-    hoverOn = can && keys.Space && !P.ground && P.vy < .5 && batt > 0;
+    hoverOn = can && keys.Space && !P.ground && P.vy < .5 && batt > 0; if(hoverOn) window.__hoverT = performance.now();
     if(hoverOn){
       P.vy = Math.min(1.2, Math.max(P.vy, -.6) + 22*GRAV.scale*dt + 2.5*dt);   // cancels gravity in the base step, a little lift
       batt = Math.max(0, batt - 22*dt);
@@ -24581,9 +24581,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     RG.on = false; scene.remove(RG.g);
     const pv = RG.pts[J.hipL], pw = RG.pts[J.hipR];
     let x = (pv.x + pw.x)/2, z = (pv.z + pw.z)/2, y = Math.max(pv.y, pw.y);
-    if(!isFinite(x) || !isFinite(z) || !isFinite(y) || y < RG.sy - 2.5 || Math.hypot(x - RG.sx, z - RG.sz) > 8){ P.x = RG.sx; P.y = RG.sy; P.z = RG.sz; P.vy = 0; blip(500, .06, .06, 'triangle'); return; }   // got up where you fell
+    if(!isFinite(x) || !isFinite(z) || !isFinite(y)){ P.x = RG.sx; P.y = RG.sy; P.z = RG.sz; P.vy = 0; blip(500, .06, .06, 'triangle'); return; }   // got up where you fell
     let gy = y; try{ gy = groundTop(Math.floor(x), y + 1, Math.floor(z)); }catch(e){}
-    if(!isFinite(gy) || gy < y - 4) gy = y;
+    if(!isFinite(gy) || gy < y - 4) gy = y;  /* LN-ragfix: no snap back */
     P.x = x; P.z = z; P.y = Math.max(gy, Math.ceil(y - .5)) + .02; P.vy = 0;
     if(solid(P.x, P.y + .5, P.z) || solid(P.x, P.y + 1.5, P.z)){ P.x = RG.sx; P.y = RG.sy; P.z = RG.sz; }    // never get up inside a wall
     blip(500, .06, .06, 'triangle'); setTimeout(()=>blip(750, .08, .06, 'triangle'), 80);
@@ -24733,7 +24733,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(!locked) return;
       // falling
       if(!P.ground){ airVy = Math.min(airVy, P.vy); topY = Math.max(topY, P.y); }
-      else { if(topY - P.y >= 7 && airVy < -15 && !(window.__pause && window.__pause.on)){ if(soundOn) thud(); if(!startRag((Math.random()-.5), (Math.random()-.5), 4, 5)) rollT = 1.1; if(gap('falltoast', 6000)) toast(rnd(['Splat! Ragdoll landing!','Ouch! That was a big fall.','Thud! You bounced like a ragdoll.'])); } airVy = 0; topY = P.y; }
+      else { if(topY - P.y >= 7 && airVy < -15 && !(window.__pause && window.__pause.on) && performance.now() - (window.__hoverT||0) > 5000 && !(typeof GRAV !== 'undefined' && GRAV.float)){ if(soundOn) thud(); if(!startRag((Math.random()-.5), (Math.random()-.5), 4, 5)) rollT = 1.1; if(gap('falltoast', 6000)) toast(rnd(['Splat! Ragdoll landing!','Ouch! That was a big fall.','Thud! You bounced like a ragdoll.'])); } airVy = 0; topY = P.y; }
       // walking footsteps
       const hs = Math.hypot(dx, dz)/Math.max(dt, .001);
       if(P.ground && hs > 1.2 && hs < 40){
@@ -24748,6 +24748,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }catch(e){}
   }, 60);
 
+  addEventListener('keydown', e=>{ if(e.code === 'Space' && RG.on){ endRag(); } }, true);  /* LN-ragfix: Space gets you up */
   window.__fun = {cam:camera, RG, startRag, endRag, baboon, ragdoll, pieces, peels, spawnPeel:()=>{ peelT = 0; }, roll:()=>roll, startRoll:()=>{ rollT = 1.1; }, popText, zap};
 })();
 /* LN-fun end */
@@ -30410,6 +30411,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__realFact = n=>REAL[n.replace(/\s*\(Sector.*\)$/, '')] || null;
   window.__madeUp = madeUp;
   window.__realFactCount = Object.keys(REAL).length;
+  { const _rf = window.__realFact; window.__realFact = n=>(n === 'Furnace' ? 'Made of cold cut iron, tastes better than baloney.' : _rf(n)); }  /* LN-ragfix: Furnace info */
 })();
 /* LN-facts end */
 
