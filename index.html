@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 130 (Oct 31)';
+  window.__BUILD = 'Build 131 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -6481,10 +6481,15 @@ function carveAround(e){
   }
 }
 function damageEnemy(e, dmg){ e.hp -= dmg; if(e.hp <= 0) killEnemy(e); }
+/* LN-drops: not everything drops discoveries (about 3 in 10 kinds never do, bosses always do), and many kills drop their own extra loot (Irfan 2026-10-31) */
+function dropDisc(tag){ return strHash(tag + '|discdrop') >= .3; }
+const LOOT_PARTS = ['Tooth', 'Claw', 'Feather', 'Scale', 'Whisker', 'Fur Tuft', 'Bone Chip', 'Horn Piece', 'Tail Fluff', 'Toe Bean', 'Shell Chip', 'Fang'];
+function extraLoot(name, chance, partsFrom){ if(Math.random() >= chance) return null; const pool = partsFrom || LOOT_PARTS, it = name + ' ' + pool[Math.floor(strHash(name + '|part') * pool.length)]; addItem(it, 1); return it; }
 function killEnemy(e){
   save.coins += e.d.reward; save.kills = (save.kills||0) + 1;
   addItem(ENEMY_DROP[e.type] || 'Scrap', e.boss ? 1 : 1 + Math.floor(Math.random()*2));
-  for(let i=0;i<(e.boss ? 12 : 2);i++) rollMaterial(ENEMY_DROP[e.type] || 'Scrap', Math.floor(e.pos.x*13), Math.floor(e.pos.y*13)+i, Math.floor(e.pos.z*13), 1);
+  if(e.boss || dropDisc('e:' + e.type)) for(let i=0;i<(e.boss ? 12 : 2);i++) rollMaterial(ENEMY_DROP[e.type] || 'Scrap', Math.floor(e.pos.x*13), Math.floor(e.pos.y*13)+i, Math.floor(e.pos.z*13), 1);
+  extraLoot(e.d.name || e.type, e.boss ? 1 : .4);
   burst(e.pos.x, e.pos.y+(e.d.yo||1), e.pos.z, 0, e.boss ? 60 : 16); burst(e.pos.x, e.pos.y+(e.d.yo||1), e.pos.z, 9, e.boss ? 30 : 6); shake = e.boss ? .2 : .05;
   if(e.boss){
     save.fboss = save.fboss || {}; save.fboss[e.d.key] = true; bossActive = false; if(e.d.chaos) chaosBossDown();
@@ -6962,7 +6967,8 @@ function damageAnimal(a, dmg){
 function killAnimal(a){
   save.coins += a.d.reward; save.animalKills = (save.animalKills||0) + 1; if(!a.d.mad) harm += 3;
   addItem(ANIMAL_DROP[a.type] || 'Scrap', 1);
-  for(let i=0;i<2;i++) rollMaterial(ANIMAL_DROP[a.type] || 'Scrap', Math.floor(a.pos.x*13), Math.floor(a.pos.y*13)+i, Math.floor(a.pos.z*13), 1);
+  if(dropDisc('a:' + a.type)) for(let i=0;i<2;i++) rollMaterial(ANIMAL_DROP[a.type] || 'Scrap', Math.floor(a.pos.x*13), Math.floor(a.pos.y*13)+i, Math.floor(a.pos.z*13), 1);
+  extraLoot(a.d.name || a.type, .4);
   burst(a.pos.x, a.pos.y+(a.d.yo||1), a.pos.z, 0, 14); shake = .04;
   toast(a.d.quips[Math.floor(Math.random()*a.d.quips.length)]+'  +$'+a.d.reward); blip(300,.15,.1,'triangle');
   persist(); refreshShopIfOpen(); removeAnimal(a);
@@ -27241,7 +27247,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(p.hp > 0){ if(Math.random() < .25) toast(p.job.j + ' Bob: "' + pick(['Ow! What was that for?', 'Hey! I am a GOOD Bob!', 'I am telling the Mayor!', 'Help! Guards!']) + '"'); return; }
     const i = BC.people.indexOf(p); if(i >= 0) BC.people.splice(i, 1);
     const g = p.b.g; burst(g.position.x, g.position.y + 1, g.position.z, 0, 20); fallBody(g);
-    save.coins += 25; save.bobCitKills = (save.bobCitKills || 0) + 1; if(Math.random() < .5) addItem("Bob's Propeller Hat", 1); persist();
+    save.coins += 25; save.bobCitKills = (save.bobCitKills || 0) + 1; if(Math.random() < .5) addItem("Bob's Propeller Hat", 1);
+    for(let k=0;k<2;k++) rollMaterial('Bob Fluff', Math.floor(g.position.x*13), Math.floor(g.position.z*13)+k, Date.now() & 1023, 1);   /* Bobs drop discoveries */
+    extraLoot('Bob', .5, ['Button', 'Shoelace', 'Hat Pin', 'Lunch Crumb', 'Tiny Clipboard']); persist();
     blip(300, .2, .12, 'square'); toast('You defeated ' + p.job.j + ' Bob of ' + p.c.name + '.  +$25');
     if(save.bobCitKills % 3 === 1) newsQ('NEWS: A ' + p.job.j + ' Bob of ' + p.c.name + ' was defeated by a miner. The other Bobs are very upset and a bit scared.');
   }
@@ -27258,7 +27266,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const body = a.g.clone(); body.position.copy(p).y -= 1.1; body.rotation.copy(a.g.rotation); scene.add(body); fallBody(body); body.userData.rm = true;
     a.g.visible = false;
     const c = U.civ[i]; if(c){ c.pop = Math.max(0, (c.pop || 0) - 1); }
-    save.coins += 100; addItem('Glorp Goo', 1 + Math.floor(Math.random()*2)); save.alienKills = (save.alienKills || 0) + 1; persist();
+    save.coins += 100; addItem('Glorp Goo', 1 + Math.floor(Math.random()*2)); rollMaterial('Glorp Goo', Math.floor(p.x*13), Math.floor(p.z*13), Date.now() & 1023, 1); extraLoot('Alien', .5, ['Antenna Tip', 'Moon Button', 'Zorp Crumb', 'Star Sticker']); save.alienKills = (save.alienKills || 0) + 1; persist();
     blip(1200, .15, .1, 'square'); setTimeout(()=>blip(500, .3, .1, 'sawtooth'), 120);
     toast('You defeated an alien of ' + U.TOWNS[i].n + '.  +$100  +Glorp Goo. New aliens come in 60 seconds.');
     if(save.alienKills % 3 === 1) newsQ('SPACE NEWS: An Earth miner defeated an alien in ' + U.TOWNS[i].n + '. The aliens have put up "Please be nice" signs.');
