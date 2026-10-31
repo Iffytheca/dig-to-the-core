@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 145 (Oct 31)';
+  window.__BUILD = 'Build 146 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -1465,6 +1465,16 @@ const MAXT = 4;             // longest dig time (s) the player is willing/able t
 
 // HILARIOUS MODE: swaps the whole world for silly versions (own save slot, own badges). Toggle it in the main menu.
 const HILARIOUS = (()=>{ try{ return localStorage.getItem('digcore_funny') === '1'; }catch(e){ return false; } })();
+/* LN-profreset start: every player profile keeps its own gifts and unlock flags (Irfan 2026-10-31 "different account means different progress") */
+(function(){ try{
+  const PR = localStorage.getItem('digcore_profile') || ''; if(!PR) return;       // the original player keeps the plain keys
+  const SC = k=>(typeof k === 'string' && (k.indexOf('digcore_gift_') === 0 || k === 'digcore_stairs' || k === 'digcore_chaos_unlocked' || k === 'digcore_extra_unlocked')) ? k + '@' + PR : k;
+  const S = Storage.prototype, g = S.getItem, st = S.setItem, rm = S.removeItem;
+  S.getItem = function(k){ return g.call(this, this === localStorage ? SC(k) : k); };
+  S.setItem = function(k, v){ return st.call(this, this === localStorage ? SC(k) : k, v); };
+  S.removeItem = function(k){ return rm.call(this, this === localStorage ? SC(k) : k); };
+}catch(e){} })();
+/* LN-profreset end */
 /* LN-profiles: login by name; each player has own save, each player's worlds have own blocks and furniture */
 const PROFILE = (()=>{ try{ return localStorage.getItem('digcore_profile') || ''; }catch(e){ return ''; } })();   // '' = the original player
 const WORLD = (()=>{ try{ return localStorage.getItem('digcore_world_' + (PROFILE || 'main')) || ''; }catch(e){ return ''; } })();   // '' = the main world
@@ -2674,11 +2684,13 @@ const UNLOCK_KEY = 'digcore_unlocks';
 function readUnlocks(){ try{ return JSON.parse(localStorage.getItem(UNLOCK_KEY)||'{}') || {}; }catch(e){ return {}; } }
 function resetProgress(){
   const mode = HILARIOUS ? 'Hilarious Mode' : 'the normal world';
-  if(!confirm('Reset ALL progress in '+mode+'?\n\nCoins, tools, badges and every hole you dug will be erased. This cannot be undone.')) return;
+  if(!confirm('Reset ALL progress in '+mode+' for this player?\n\nCoins, tools, badges, planet progress (Mars, TOI, the Next Universe) and every hole you dug will be erased. Other players are not touched. This cannot be undone.')) return;
   const alsoUnlocks = confirm('Also forget the secret pickaxes you unlocked?\n(They are shared between the normal world and Hilarious Mode.)\n\nOK = forget them too, Cancel = keep them');
   edits.clear(); editsDirty = false;                       // so nothing is written back while the page reloads
   try{
-    localStorage.removeItem(SAVE_KEY); localStorage.removeItem(EDIT_KEY); ['digcore_stairs','digcore_chaos_unlocked','digcore_chaos','digcore_extra_unlocked','digcore_extra'].forEach(k=>localStorage.removeItem(k)); localStorage.removeItem(EDIT_KEY + '_shift');
+    localStorage.removeItem(SAVE_KEY); localStorage.removeItem(EDIT_KEY);
+    for(let i = localStorage.length - 1; i >= 0; i--){ const k = localStorage.key(i); if(k && k.indexOf(SAVE_KEY + '_') === 0 && (PROFILE || k.indexOf(SAVE_KEY + '_p_') !== 0)) localStorage.removeItem(k); }   // this player's saved worlds and planet edits
+    ['digcore_gift_uni','digcore_stairs','digcore_chaos_unlocked','digcore_chaos','digcore_extra_unlocked','digcore_extra'].forEach(k=>localStorage.removeItem(k)); localStorage.removeItem(EDIT_KEY + '_shift');
     if(alsoUnlocks) localStorage.removeItem(UNLOCK_KEY);
   }catch(e){}
   location.reload();
