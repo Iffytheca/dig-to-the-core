@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 127 (Oct 31)';
+  window.__BUILD = 'Build 128 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29624,6 +29624,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // the Portal Block item
   const reg = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems[ITEM] = {kind:'edgeportal', col:0x8040d0}; };
   reg();
+  // one-time gift: 100 free Portal Blocks (Irfan 2026-10-31)
+  { let pend = false; try{ pend = !localStorage.getItem('digcore_gift_portal100'); }catch(e){}
+    if(pend) setTimeout(()=>{ try{ addItem(ITEM, 100); localStorage.setItem('digcore_gift_portal100', '1'); toast('GIFT: 100 Portal Blocks! Right-click one in a carry slot to place a gate (3 blocks each).'); }catch(e){ console.warn('portal gift', e); } }, 2500); }
   // gate model: a cover block with the gate opening in it
   const _bf = buildFurniture;
   buildFurniture = function(kind, col, shape){
