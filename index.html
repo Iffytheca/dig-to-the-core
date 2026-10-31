@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 125 (Oct 31)';
+  window.__BUILD = 'Build 126 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -7654,13 +7654,15 @@ function itemMeta(name){
   if(RARE[name]) return {cat:'Rare finds', icon:RARE[name]};
   return {cat:'Loot', icon:LOOT[name] || '\uD83D\uDCE6'};
 }
+/* LN-invsearch: type to find loot, discoveries, materials and items you own (Irfan 2026-10-31) */
+let invQ = '', invQRaw = '';
 function renderInv(){
   const boxEl = document.querySelector('#inv .box'), keepScroll = boxEl ? boxEl.scrollTop : 0;
   const inv = save.inv || {}, groups = {}, order = ['Special','Meme stuff','Funny stuff','Crafted blocks','Cave blocks','Materials','Ores','Gems','Fossils','Treasure','Furniture','Loot','Rare finds'];
   let total = 0, kinds = 0;
-  Object.keys(inv).forEach(name=>{ if(!inv[name]) return; const m = itemMeta(name); (groups[m.cat] = groups[m.cat] || []).push({name, n:inv[name], m}); total += inv[name]; kinds++; });
+  Object.keys(inv).forEach(name=>{ if(!inv[name]) return; if(invQ && name.toLowerCase().indexOf(invQ) < 0) return; const m = itemMeta(name); (groups[m.cat] = groups[m.cat] || []).push({name, n:inv[name], m}); total += inv[name]; kinds++; });
   $('invsum').textContent = (total || Object.keys(save.mats||{}).length) ? total.toLocaleString()+' items  \u00b7  '+kinds+' kinds  \u00b7  plus endless unique materials below' : 'Nothing yet. Dig something up!';
-  let html = '';
+  let html = '<div style="margin:0 0 8px"><input id="invSearch" type="search" placeholder="Search your loot, discoveries, materials and items..." value="'+invQRaw.replace(/"/g,'&quot;')+'" style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:2px solid #6d5a45;background:#1a1510;color:#f4ead8;font:14px system-ui">'+(invQ ? '<div style="font-size:12px;opacity:.75;margin-top:3px">Showing only things you have that match "'+invQRaw.replace(/</g,'&lt;')+'". Clear the box to see everything.</div>' : '')+'</div>';
   save.equip = save.equip || {};
   html += '<div class="invcat">Equipped</div><div class="eqrow">'+EQUIP_SLOTS.map(sl=>{ const e = save.equip[sl]; return '<div class="eqslot"><b>'+sl+'</b>'+(e ? e.name+'<br><span style="opacity:.7">'+statText(e.stats)+'</span><br><button class="mini" data-act="unequip" data-slot="'+sl+'">Take off</button>' : '<span style="opacity:.5">empty</span>')+'</div>'; }).join('')+'</div>';
   html += '<div style="margin-top:4px;font-size:12px;opacity:.8">Total bonus: '+statText(gear)+(buffs.length ? '  (includes food effects)' : '')+'</div>';
@@ -7684,7 +7686,7 @@ function renderInv(){
     EQUIP_SLOTS.map(sl=>'<button class="mini" data-act="equip" data-slot="'+sl+'">Wear: '+sl+'</button>').join('')+
     (si.kind === 'gear' ? '' : '<button class="mini" data-act="craftadd">Add to craft</button><button class="mini" data-act="place">Place (blueprint)</button>')
     : '<span style="opacity:.6">Click any item below to eat it, wear it or craft with it. You can do all of it with anything.</span>')+'</div>';
-  const gl = save.gear || [];
+  const gl = (save.gear || []).filter(g=>!invQ || g.name.toLowerCase().indexOf(invQ) >= 0);
   if(gl.length){
     html += '<div class="invcat">Crafted gear ('+gl.length+')</div><div class="invgrid">'+gl.map(g=>'<div class="invitem'+(selRef === 'g:'+g.id ? ' sel' : '')+'" data-ref="g:'+g.id+'" style="border-color:#6a4fc2"><span>'+g.name+'<br><span style="opacity:.6;font-size:11px">'+statText(g.stats)+'</span></span><span class="ct">'+g.slot+'</span></div>').join('')+'</div>';
   }
@@ -7697,7 +7699,7 @@ function renderInv(){
     }).join('')+'</div>';
   });
   const mats = save.mats || {}, ml = [];
-  Object.keys(mats).forEach(k=>{ const i = k.indexOf('|'); ml.push({t:+k.slice(0,i), name:k.slice(i+1), n:mats[k], key:k}); });
+  Object.keys(mats).forEach(k=>{ const i = k.indexOf('|'); if(invQ && k.slice(i+1).toLowerCase().indexOf(invQ) < 0) return; ml.push({t:+k.slice(0,i), name:k.slice(i+1), n:mats[k], key:k}); });
   if(ml.length){
     ml.sort((a,b)=>b.t-a.t || b.n-a.n);
     const totalM = ml.reduce((x,y)=>x+y.n,0);
@@ -7708,7 +7710,8 @@ function renderInv(){
   }
   $('invbody').innerHTML = html;
   $('invbody').onclick = invClick;
-  $('invbody').oninput = e=>{ if(e.target.id === 'craftWant'){ craftWant = e.target.value; updateCraftPreview(); } };
+  $('invbody').oninput = e=>{ if(e.target.id === 'invSearch'){ invQRaw = e.target.value; invQ = invQRaw.trim().toLowerCase(); renderInv(); const el = document.getElementById('invSearch'); if(el){ el.focus(); try{ el.setSelectionRange(el.value.length, el.value.length); }catch(err){} } return; }
+    if(e.target.id === 'craftWant'){ craftWant = e.target.value; updateCraftPreview(); } };
   $('invbody').onkeydown = e=>{ if(e.target.id === 'craftWant' && e.key === 'Enter'){ e.preventDefault(); craftGo(); renderInv(); } };
   if(boxEl) boxEl.scrollTop = keepScroll;
   const sb = document.getElementById('sellMats');
