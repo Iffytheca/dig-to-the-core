@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 147 (Oct 31)';
+  window.__BUILD = 'Build 148 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -31422,6 +31422,465 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 })();
 /* LN-ui147 merge tweak */
 (function(){ const st = document.createElement('style'); st.textContent = '#feed{bottom:150px !important;transform:scale(.85);transform-origin:0 100%} body.touchplay #feed{bottom:190px !important}'; document.head.appendChild(st); })();
+/* LN-uitouch start: a tidy phone (touch) HUD with no boxes on top of each other: PLANETS and LORE join the small button column, news bar at the top, thin hunger and stamina bars under the stats, carry slots fit between the stick and ATTACK (Irfan 2026-10-31) */
+(function(){
+  if(!document.body.classList.contains('touchplay')) return;          // desktop layout stays exactly as it was
+  const EDGE = 14, NEWS_R = 110, GAP = 6;
+  const $q = id=>document.getElementById(id);
+  const vis = e=>{ if(!e) return false; const cs = getComputedStyle(e); if(cs.display === 'none' || cs.visibility === 'hidden') return false; const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const root = document.documentElement;
+  const setV = (k, v)=>{ if(root.style.getPropertyValue(k) !== v) root.style.setProperty(k, v); };
+  const setI = (e, k, v)=>{ if(e && (e.style.getPropertyValue(k) !== v || e.style.getPropertyPriority(k) !== 'important')) e.style.setProperty(k, v, 'important'); };
+  const H = 'html body.touchplay ';
+  const st = document.createElement('style');
+  st.textContent = [
+    // gone from the screen in touch mode (their jobs moved to the button column or to the drawer chips)
+    H + '#planetsBtn,' + H + '#loreBtn,' + H + '#lnLogTab,' + H + '#uiKeyBtn,' + H + '#uiLayBtn{display:none!important}',
+    // news bar: top centre between the stats and the button column
+    H + '#newsbar{left:160px!important;right:' + NEWS_R + 'px!important;top:8px!important;bottom:auto!important;height:22px!important;font-size:12px!important;line-height:22px!important;overflow:hidden!important}',
+    H + '#newsbar .lbl{padding:0 6px!important;font-size:11px!important}',
+    H + '#newsX{top:1px!important;width:18px!important;height:18px!important}',
+    // hunger, stamina (and health when hurt): thin bars under the stats panel, the words sit inside the bar
+    H + '#uiHunger,' + H + '#uiStam,' + H + '#hpwrap{position:fixed!important;transform:none!important;left:' + EDGE + 'px!important;right:auto!important;bottom:auto!important;width:120px!important;height:12px!important;margin:0!important;padding:0!important;box-sizing:border-box!important;border-radius:6px!important;overflow:hidden!important;background:rgba(0,0,0,.5)!important;z-index:17!important}',
+    H + '#uiHunger{top:var(--tcBarT,110px)!important}',
+    H + '#uiStam{top:calc(var(--tcBarT,110px) + 15px)!important}',
+    H + '#hpwrap{top:calc(var(--tcBarT,110px) + 30px)!important;height:10px!important;border:0!important}',
+    H + '#uiHunger>div:first-child,' + H + '#uiStam>div:first-child{position:absolute!important;left:5px;right:4px;top:0;margin:0!important;font:800 10px/12px system-ui,sans-serif!important;letter-spacing:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1;text-shadow:0 1px 2px #000,0 0 2px #000}',
+    H + '#uiHunger>div:nth-child(2),' + H + '#uiStam>div:nth-child(2){height:12px!important;border-radius:6px!important;opacity:.85}',
+    // carry slots: placed by the loop below
+    H + '#hotbar{max-width:none!important;flex-wrap:wrap!important;transform-origin:50% 100%!important}',
+    H + '#hotbar .hbtip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px!important}',
+    // messages: centred near the top, never on the carry slots
+    H + '#toast{top:var(--tcToastT,60px)!important;bottom:auto!important;width:max-content!important;max-width:var(--tcLane,60vw)!important;white-space:normal!important;text-align:center!important;font-size:13px!important;line-height:16px!important;padding:5px 12px!important;box-sizing:border-box!important;display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden!important}',
+    H + '#blockname{top:var(--tcToastT,60px)!important;max-width:var(--tcLane,60vw)!important;overflow:hidden;text-overflow:ellipsis;font-size:12px!important}',
+    H + '#blockname.tcHide{visibility:hidden!important}',
+    H + '#prompt{top:var(--tcPromptT,36px)!important;max-width:var(--tcLane,60vw)!important;box-sizing:border-box!important;font-size:12px!important;padding:4px 12px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    // new item chips: at most 3, small, top right under the news bar, left of the buttons
+    H + '#feed{top:var(--tcFeedT,36px)!important;bottom:auto!important;left:auto!important;right:' + NEWS_R + 'px!important;transform:scale(.6)!important;transform-origin:100% 0!important;align-items:flex-end!important}',
+    H + '#feed>div{max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    H + '#feed>div:nth-last-child(n+4){display:none!important}',
+    // boss bar: top centre, half the screen wide
+    H + '#bosswrap{top:36px!important;width:var(--tcBossW,50vw)!important;margin-left:calc(var(--tcBossW,50vw) / -2)!important;box-sizing:border-box!important;font-size:12px!important;letter-spacing:2px!important}',
+    // held weapon card: small, under PLANETS / LORE, above RUN and INTERACT (top and scale set by the loop below)
+    H + '#gunhud{top:var(--tcGunT,196px)!important;bottom:auto!important;right:106px!important;transform:scale(var(--tcGunS,.6))!important;transform-origin:100% 0!important}'
+  ].join('\n');
+  document.head.appendChild(st);
+
+  // ---- PLANETS and LORE as small buttons. The column (x 744/792 at 844 wide, rows y 8/55/102/149) has no room for a 5th row
+  // above PLACE on a 375 px tall phone, so they get a third column on its left, rows 3 and 4 (the top rows there belong to the news bar)
+  function addBtns(){
+    const w = $q('tcw'); if(!w || w.dataset.uitouch) return !!w;
+    w.dataset.uitouch = 1;
+    [['PLANETS', 'planetsBtn', 102], ['LORE', 'loreBtn', 149]].forEach(q=>{
+      const b = document.createElement('div'); b.className = 'tb sm'; b.id = 'tc' + q[0][0] + q[0].slice(1).toLowerCase();
+      b.textContent = q[0]; b.style.cssText = 'right:106px;top:' + q[2] + 'px;font-size:' + (q[0].length > 5 ? 8 : 10) + 'px';
+      const fire = ()=>{ const o = $q(q[1]); if(o) o.click(); };
+      b.addEventListener('touchstart', e=>{ if(e.cancelable) e.preventDefault(); e.stopPropagation(); b.classList.add('on'); fire(); }, {passive:false});
+      const end = e=>{ if(e.cancelable) e.preventDefault(); b.classList.remove('on'); };
+      b.addEventListener('touchend', end, {passive:false}); b.addEventListener('touchcancel', end, {passive:false});
+      b.addEventListener('click', e=>{ e.stopPropagation(); fire(); });
+      w.appendChild(b);
+    });
+    return true;
+  }
+
+  let hunger = null, stam = null;
+  function findBars(){
+    if(hunger && stam && hunger.isConnected && stam.isConnected) return;
+    for(const d of document.body.children){
+      if(!d.style || d.tagName !== 'DIV') continue;
+      const t = (d.textContent || '').trim().slice(0, 8);
+      if(/^HUNGER/.test(t)){ hunger = d; if(!d.id) d.id = 'uiHunger'; }
+      else if(/^STAMINA/.test(t)){ stam = d; if(!d.id) d.id = 'uiStam'; }
+    }
+  }
+
+  // ---- carry slots: centred between the stick and ATTACK / INTERACT, scaled so they fit; < and > just outside
+  let hotKey = '';
+  function placeHotbar(W, H){
+    const hot = $q('hotbar'), w = $q('tcw'), joy = $q('tcbase');
+    if(!hot || !w || !joy) return;
+    const jr = joy.getBoundingClientRect(); if(!jr.width) return;
+    let prev = null, next = null, rightL = W;
+    for(const b of w.querySelectorAll('.tb')){
+      const t = b.textContent.trim();
+      if(t === '<'){ prev = b; continue; } if(t === '>'){ next = b; continue; }
+      const r = b.getBoundingClientRect();
+      if(r.width && r.left > W*.4 && r.bottom > H*.5) rightL = Math.min(rightL, r.left);
+    }
+    const SB = 38;
+    const L = Math.round(jr.right) + GAP + SB + GAP, R = Math.round(rightL) - GAP - SB - GAP, A = Math.max(60, R - L);
+    const slots = [...hot.children].filter(c=>c.classList && c.classList.contains('hslot'));
+    if(!slots.length) return;
+    const sw = slots[0].offsetWidth || 62, sh = slots[0].offsetHeight || 62, n = slots.length;
+    const tip = hot.querySelector('.hbtip'), th = tip ? tip.offsetHeight + 6 : 0;
+    const hmax = H - 8 - Math.round(jr.top) - 2;                // never higher than the top of the stick (that strip belongs to the drawers)
+    let best = null;
+    for(let rows = 1; rows <= 3; rows++){
+      const per = Math.ceil(n/rows), nw = per*sw + (per - 1)*4, nh = th + rows*sh + (rows - 1)*4;
+      const s = Math.min(.62, A/nw, hmax/nh);
+      if(!best || s > best.s*1.08) best = {s, nw, nh, rows};
+    }
+    const s = Math.max(.3, Math.floor(best.s*1000)/1000), cx = Math.round((L + R)/2);
+    setI(hot, 'width', best.nw + 'px');
+    setI(hot, 'left', cx + 'px'); setI(hot, 'bottom', '8px'); setI(hot, 'top', 'auto');
+    setI(hot, 'transform', 'translateX(-50%) scale(' + s + ')');
+    const halfW = best.nw*s/2, rowMid = 8 + sh*s/2;
+    const by = Math.max(8, Math.round(rowMid - SB/2)) + 'px';
+    if(prev){ setI(prev, 'left', Math.round(cx - halfW - GAP - SB) + 'px'); setI(prev, 'margin-left', '0px'); setI(prev, 'bottom', by); }
+    if(next){ setI(next, 'left', Math.round(cx + halfW + GAP) + 'px'); setI(next, 'margin-left', '0px'); setI(next, 'bottom', by); }
+    hotKey = [W, H, s, best.rows].join();
+  }
+
+  function layout(){
+    if(!addBtns()) return;
+    findBars();
+    const W = innerWidth, H = innerHeight;
+    // under the stats panel (scaled .55, so ask the browser where it really ends)
+    const stats = $q('stats'); const sr = stats && vis(stats) ? stats.getBoundingClientRect() : {bottom:102, right:140};
+    setV('--tcBarT', Math.round(sr.bottom + 4) + 'px');
+    placeHotbar(W, H);
+    // centre lane: between the stats panel and the item chips (chips are at most 102 px wide at scale .6, right edge 110 px from the side)
+    const feed = $q('feed'), boss = $q('bosswrap'), prompt = $q('prompt'), toastEl = $q('toast'), bn = $q('blockname');
+    const half = Math.min((W - NEWS_R - 102 - 8) - W/2, W/2 - Math.max(sr.right || 140, 140) - 8);
+    const lane = Math.floor(Math.max(160, Math.min(W*.6, 2*half)));
+    setV('--tcLane', lane + 'px');
+    setV('--tcBossW', Math.floor(Math.max(160, Math.min(W*.5, 2*half))) + 'px');
+    setV('--tcFeedT', '36px');
+    const bossOn = vis(boss), br = bossOn ? boss.getBoundingClientRect() : null;
+    // held weapon card: below the LORE button, scaled so it ends above RUN / INTERACT
+    const gun = $q('gunhud'), lore = $q('tcLore');
+    if(gun && lore && vis(gun)){
+      const lr = lore.getBoundingClientRect(), top = Math.round(lr.bottom + 4), ow = gun.offsetWidth || 120, oh = gun.offsetHeight || 50;
+      const x1 = W - 106, x0 = x1 - ow*.7;
+      let lim = H - 8;
+      for(const b of $q('tcw').querySelectorAll('.tb')){ const r = b.getBoundingClientRect(); if(r.width && r.top >= top && r.right > x0 && r.left < x1) lim = Math.min(lim, r.top); }
+      setV('--tcGunT', top + 'px'); setV('--tcGunS', String(Math.max(.4, Math.min(.7, (lim - 4 - top)/oh)).toFixed(3)));
+    }
+    let y = 36;
+    if(bossOn) y = Math.max(y, Math.round(br.bottom + 4));
+    setV('--tcPromptT', y + 'px');
+    if(prompt && vis(prompt)) y = Math.round(prompt.getBoundingClientRect().bottom + 4);
+    setV('--tcToastT', Math.max(60, y) + 'px');
+    if(bn && toastEl) bn.classList.toggle('tcHide', +(toastEl.style.opacity || 0) > 0.05);
+  }
+  let ticks = 0, lastErr = null;
+  setInterval(()=>{ ticks++; try{ layout(); }catch(e){ lastErr = e; } }, 200);
+  addEventListener('resize', ()=>{ try{ layout(); }catch(e){} });
+  document.addEventListener('pointerlockchange', ()=>{ try{ layout(); }catch(e){} });
+  let lastT = 0;
+  (function loop(now){ requestAnimationFrame(loop); if(now - lastT < 200) return; lastT = now; ticks++; try{ layout(); }catch(e){ lastErr = e; } })(performance.now());
+  try{ layout(); }catch(e){}
+  window.__uitouch = {layout, get ticks(){ return ticks; }, get err(){ return lastErr; }, get barsBottom(){ const v = parseInt(root.style.getPropertyValue('--tcBarT')) || 106; return v + 40; }, get hot(){ return hotKey; }};
+})();
+/* LN-uitouch end */
+/* LN-uidrawer start: drawers for the panels you do not need all the time (Map, Homework, Layers, Log, Keys). A row of chips opens them, PIN keeps one open, the rest fold away after 10 s (Irfan 2026-10-31 round 2) */
+(function(){
+  const TOUCH = document.body.classList.contains('touchplay');
+  const EDGE = 14, GAP = 10;
+  let IDLE = 10000;
+  const byId = id=>document.getElementById(id);
+  const LSget = k=>{ try{ return localStorage.getItem(k) === '1'; }catch(e){ return false; } };
+  const LSset = (k, v)=>{ try{ localStorage.setItem(k, v ? '1' : '0'); }catch(e){} };
+  const now = ()=>performance.now();
+  const visible = el=>{ if(!el) return false; const cs = getComputedStyle(el); if(cs.display === 'none' || cs.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const playing = ()=>{ try{ return startEl.style.display !== 'flex'; }catch(e){ return true; } };
+
+  // ---- the panels other modules own: we only move them, they keep drawing themselves
+  const trk = byId('uiTracker'), lay = byId('layers'), help = TOUCH ? null : byId('help'), logP = byId('lnLog'), logTab = byId('lnLogTab');
+  const AL = window.__actLog, BT = window.__biomeTracker, HW = window.__babaHW;
+  let hwBox = null, hwMini = null;
+  for(const d of document.body.children){
+    if(!d.style || d.style.zIndex !== '29') continue;
+    if(d.tagName === 'BUTTON' && d.textContent === 'HOMEWORK') hwMini = d;
+    else if(d.tagName === 'DIV' && (d.style.top === '356px' || /255, 106, 106|ff6a6a/i.test(d.style.borderColor || d.style.border || ''))) hwBox = d;
+  }
+  if(hwBox && !hwBox.id) hwBox.id = 'drwHwBox';
+  if(hwMini && !hwMini.id) hwMini.id = 'drwHwMini';
+
+  // ---- style
+  const st = document.createElement('style');
+  st.textContent = [
+    '#uiLayBtn,#uiKeyBtn,#lnLogTab,#drwHwMini,#hwX,.drwBd #uiTracker .uiX{display:none!important}',
+    '.drwCol{position:fixed;z-index:29;display:flex;flex-direction:column;gap:' + GAP + 'px;pointer-events:none}',
+    '.drwCol>*{pointer-events:auto}',
+    '.drwStack{display:flex;flex-direction:column;gap:' + GAP + 'px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin}',
+    '.drwStack:empty{display:none}',
+    '#drwChips{display:flex;flex-wrap:wrap;gap:5px}',
+    '#drwL #drwChips{width:max-content;max-width:min(420px,calc(100vw - 28px))}',
+    '.drwChip{position:relative;height:26px;padding:0 8px;border-radius:13px;border:2px solid rgba(255,255,255,.35);background:rgba(20,24,30,.78);color:#fff;font:800 11px system-ui,sans-serif;letter-spacing:.5px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent;touch-action:manipulation}',
+    '.drwChip:hover{background:rgba(60,70,90,.92)}',
+    '.drwChip.on{border-color:#ffd54a;background:rgba(70,62,30,.92)}',
+    '.drwChip.pin::before{content:"";position:absolute;left:50%;bottom:-2px;width:14px;margin-left:-7px;height:3px;border-radius:2px;background:#ffd54a}',
+    '.drwChip .dot{width:8px;height:8px;border-radius:50%;background:#ff5a4a;box-shadow:0 0 0 2px rgba(0,0,0,.35);display:none}',
+    '.drwChip .cnt{min-width:18px;height:16px;border-radius:8px;background:#e8433a;color:#fff;font:800 10px/16px system-ui,sans-serif;text-align:center;padding:0 4px;display:none}',
+    '.drwSec{flex:none;background:rgba(14,14,18,.86);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#f2ead8;overflow:hidden;box-shadow:0 4px 18px rgba(0,0,0,.35)}',
+    '.drwSec.hw{background:rgba(60,20,20,.86);border-color:#ff6a6a}',
+    '.drwSec.map{background:rgba(10,30,18,.8);border-color:rgba(138,255,168,.3)}',
+    '.drwHd{display:flex;align-items:center;gap:6px;height:30px;padding:0 4px 0 10px;border-bottom:1px solid rgba(255,255,255,.12)}',
+    '.drwTi{flex:1;min-width:0;font:800 12px system-ui,sans-serif;letter-spacing:1px;color:#ffe9b0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '.drwSec.hw .drwTi{color:#ff9a9a}.drwSec.map .drwTi{color:#8affa8}',
+    '.drwPin,.drwX{flex:none;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.28);background:rgba(0,0,0,.4);color:#ddd;font:800 10px system-ui,sans-serif;letter-spacing:.5px;cursor:pointer;padding:0 7px;display:inline-flex;align-items:center;gap:4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}',
+    '.drwX{width:22px;padding:0;justify-content:center;font-size:11px;color:#fff}',
+    '.drwPin:hover,.drwX:hover{background:rgba(255,255,255,.2)}',
+    '.drwPin.on{background:#ffd54a;color:#2a2010;border-color:#ffd54a}',
+    '.drwPin i{position:relative;display:inline-block;width:8px;height:11px}',
+    '.drwPin i::before{content:"";position:absolute;left:0;top:0;width:8px;height:8px;border-radius:50%;background:currentColor}',
+    '.drwPin i::after{content:"";position:absolute;left:3.5px;top:6px;width:1.5px;height:5px;background:currentColor}',
+    '#lnLog .drwPin{height:auto;padding:3px 8px;font-size:11px}',
+    '.drwBd{position:relative}',
+    // the moved panels: flow inside the drawer, no own box
+    '#drwBd_map #uiTracker{position:static!important;display:block!important;transform:none!important;width:auto!important;left:auto!important;top:auto!important;background:none!important;border:0!important;border-radius:0!important;padding:6px 8px 8px!important}',
+    '#drwBd_layers #layers{position:static!important;display:block!important;width:auto!important;min-width:0!important;background:none!important;border:0!important;border-radius:0!important;backdrop-filter:none!important;padding:6px 6px 8px!important;pointer-events:auto}',
+    '#drwBd_keys #help{position:static!important;display:block!important;width:auto!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important;padding:6px 10px 10px!important}',
+    '#drwBd_hw #drwHwBox{position:static!important;background:none!important;border:0!important;border-radius:0!important;padding:6px 10px 10px!important}',
+    '#drwL #lnTicker{position:static!important;width:auto!important;align-self:stretch}',
+    // touch: one overlay under the chips, big enough for a thumb
+    'body.touchplay #drwChips{position:fixed;left:' + EDGE + 'px;z-index:45;gap:6px;max-width:200px}',
+    'body.touchplay .drwChip{height:34px;padding:0 12px;border-radius:10px;font-size:12px}',
+    '#drwT{position:fixed;z-index:45;width:max-content;min-width:min(240px,var(--drwTW,60vw));max-width:var(--drwTW,60vw);display:flex;flex-direction:column;gap:6px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;border-radius:10px;touch-action:pan-y}',
+    '#drwT:empty{display:none}',
+    'body.touchplay .drwHd{height:34px}',
+    'body.touchplay .drwPin{height:28px;padding:0 10px;font-size:11px}',
+    'body.touchplay .drwX{width:30px;height:28px;font-size:13px}',
+    '#drwT .uiFoot{display:none}',
+    '#drwT #uiTracker canvas{width:var(--drwCv,170px)!important;height:var(--drwCv,170px)!important;margin-top:4px}',
+    '#drwT #uiTracker .uiList{max-height:120px!important}',
+    '#drwT #lnLog{position:relative!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;width:auto!important;max-width:none!important;height:var(--drwLogH,220px);border:1px solid rgba(255,255,255,.2);border-radius:10px;box-shadow:none;flex:none}',
+    '#drwT #lnLog .hd button{padding:5px 10px}'
+  ].join('\n');
+  document.head.appendChild(st);
+
+  // ---- containers
+  const chips = document.createElement('div'); chips.id = 'drwChips';
+  let colL = null, stackL = null, colR = null, ov = null;
+  if(TOUCH){
+    document.body.appendChild(chips);
+    ov = document.createElement('div'); ov.id = 'drwT'; document.body.appendChild(ov);
+  } else {
+    colL = document.createElement('div'); colL.id = 'drwL'; colL.className = 'drwCol';
+    stackL = document.createElement('div'); stackL.className = 'drwStack';
+    colL.appendChild(chips);
+    const tk = byId('lnTicker'); if(tk) colL.appendChild(tk);     // the crypto price line stays right under the chips
+    colL.appendChild(stackL); document.body.appendChild(colL);
+    colR = document.createElement('div'); colR.id = 'drwR'; colR.className = 'drwCol drwStack';
+    document.body.appendChild(colR);
+  }
+  const stop = e=>{ e.stopPropagation(); };
+  [chips, ov, colL, colR].forEach(c=>{ if(!c) return;
+    c.addEventListener('mousedown', e=>{ e.stopPropagation(); if(e.target.closest('button')) e.preventDefault(); });
+    c.addEventListener('touchstart', stop, {passive:true});
+    c.addEventListener('click', stop);
+  });
+
+  // ---- the drawers
+  const D = {}, ORDER = [];
+  function mkSec(o){
+    const s = document.createElement('div'); s.className = 'drwSec ' + o.name; s.id = 'drwSec_' + o.name; s.style.display = 'none';
+    s.innerHTML = '<div class="drwHd"><span class="drwTi"></span><button class="drwPin" title="Pin: keep it open"><i></i>PIN</button><button class="drwX" title="Close">X</button></div><div class="drwBd" id="drwBd_' + o.name + '"></div>';
+    s.querySelector('.drwTi').textContent = o.title;
+    s.querySelector('.drwBd').appendChild(o.el);
+    return s;
+  }
+  function def(name, o){
+    o.name = name; o.open = false; o.t = 0; o.pinned = LSget('digcore_ui_pin_' + name);
+    const c = document.createElement('button'); c.className = 'drwChip'; c.id = 'drwChip_' + name; c.title = o.tip || o.title;
+    c.innerHTML = '<span>' + o.chip + '</span>' + (name === 'hw' ? '<i class="dot"></i>' : '') + (name === 'log' ? '<b class="cnt"></b>' : '');
+    c.addEventListener('click', e=>{ e.stopPropagation(); setOpen(name, !isOpen(name)); try{ c.blur(); }catch(_){} });
+    o.chipEl = c; chips.appendChild(c);
+    if(o.log){
+      o.sec = logP;
+      const hd = logP.querySelector('.hd'), pb = document.createElement('button'); pb.className = 'drwPin'; pb.title = 'Pin: keep it open'; pb.innerHTML = '<i></i>PIN';
+      hd.insertBefore(pb, hd.querySelector('h3').nextSibling);
+      if(TOUCH) ov.appendChild(logP);
+    } else {
+      o.sec = mkSec(o);
+      o.sec.querySelector('.drwX').addEventListener('click', e=>{ e.stopPropagation(); setOpen(name, false); });
+      const home = TOUCH ? ov : (o.col === 'L' ? stackL : colR);
+      home.appendChild(o.sec);
+    }
+    o.pinEl = o.sec.querySelector('.drwPin');
+    o.pinEl.addEventListener('click', e=>{ e.stopPropagation(); e.preventDefault(); o.pinned = !o.pinned; LSset('digcore_ui_pin_' + name, o.pinned); o.t = now(); render(); try{ o.pinEl.blur(); }catch(_){} });
+    // hover, scroll and taps keep it open
+    const touch = ()=>{ o.t = now(); };
+    ['mousemove', 'wheel', 'pointerdown', 'keydown'].forEach(ev=>o.sec.addEventListener(ev, touch, {passive:true}));
+    o.sec.addEventListener('touchstart', e=>{ touch(); e.stopPropagation(); }, {passive:true});
+    o.sec.addEventListener('touchmove', touch, {passive:true});      // a finger scroll (the log scrolling itself to new lines does not count)
+    D[name] = o; ORDER.push(name);
+  }
+
+  const mapAvail = ()=>{ try{ const ob = byId('uiOldTracker'); return !!(ob && ob.style.display === 'block'); }catch(e){ return false; } };
+  if(trk) def('map', {el:trk, title:'MAP', chip:'MAP', tip:'Map and biome tracker (J)', col:'L', avail:mapAvail});
+  if(hwBox) def('hw', {el:hwBox, title:'HOMEWORK', chip:'HOMEWORK', tip:'Homework from Baba Caka', col:'R', avail:()=>hwBox.style.display === 'block' || !!(hwMini && hwMini.style.display === 'block')});
+  if(lay) def('layers', {el:lay, title:'LAYERS', chip:'LAYERS', tip:'The layers and how hard they are', col:'R', avail:()=>lay.children.length > 0});
+  if(logP && AL) def('log', {log:true, title:'ACTIVITY LOG', chip:'LOG', tip:'Activity log (`)', avail:()=>true});
+  if(help) def('keys', {el:help, title:'KEYS', chip:'KEYS', tip:'Keys and your pickaxe', col:'L', avail:()=>true});
+
+  function isOpen(n){ const o = D[n]; if(!o) return false; return o.log ? AL.isOpen() : o.open; }
+  let logWas = false;
+  function setOpen(n, v){
+    const o = D[n]; if(!o) return;
+    v = !!v;
+    if(o.log){ if(AL.isOpen() !== v) AL.open(v); logWas = v; } else o.open = v;
+    if(!v) o.closedAfter = Math.round(now() - o.t);
+    if(v){
+      o.t = now();
+      if(!o.pinned) ORDER.forEach(m=>{ if(m !== n && !D[m].pinned && isOpen(m)) setOpen(m, false); });
+      if(n === 'map'){ try{ if(save.biomeTrackerOff && BT) BT.setShown(true); }catch(e){} }
+    }
+    render();
+  }
+
+  // the Map needs the tracker switched on (it also lights the biome beacons); the drawer does the hiding now
+  try{ if(BT && save.biomeTrackerOff) BT.setShown(true); }catch(e){}
+  // J: open or close the Map drawer instead of switching the whole tracker off
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyJ' || !D.map) return;
+    const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.stopImmediatePropagation();
+    if(e.repeat) return;
+    try{ if(!((save.inv || {})['Biome Tracker'] > 0)){ toast('You need the Biome Tracker for that.'); return; } }catch(_){}
+    if(save.biomeTrackerOff && BT){ try{ BT.setShown(true); }catch(_){} }
+    setOpen('map', !D.map.open);
+  }, true);
+
+  // hwBox: uihud sets its width and position every 200 ms; inside the drawer those are dropped again before the browser paints (no flicker)
+  function scrub(el, props){
+    if(!el) return;
+    const fix = ()=>{ if(!el.closest('.drwBd')) return; props.forEach(p=>{ if(el.style.getPropertyValue(p)) el.style.removeProperty(p); }); };
+    try{ new MutationObserver(fix).observe(el, {attributes:true, attributeFilter:['style']}); }catch(e){}
+    fix();
+  }
+  scrub(hwBox, ['width', 'max-width', 'top', 'right']);
+  scrub(trk, ['width', 'left', 'top']);
+  scrub(help, ['bottom', 'max-height', 'overflow']);
+
+  // ---- homework: un-hide what an old save hid (the drawer owns that now), pop open when new homework comes
+  let lastTasks = HW && HW.H ? HW.H.tasks : undefined, newHw = false;
+  function hwTick(){
+    if(!D.hw) return;
+    if(hwMini && hwMini.style.display === 'block'){ try{ hwMini.click(); }catch(e){} }
+    const H = HW && HW.H;
+    if(H && H.tasks !== lastTasks){ lastTasks = H.tasks; if(H.tasks) newHw = true; }
+    if(newHw && hwBox.style.display === 'block' && hwBox.textContent.trim()){ newHw = false; if(!isOpen('hw')) setOpen('hw', true); else D.hw.t = now(); }
+  }
+  function hwPending(){ try{ const H = HW && HW.H; return !!(H && H.active && H.tasks && !H.tasks.every(t=>t.have >= t.n)); }catch(e){ return false; } }
+
+  // hunger and stamina bars: named the way uihud names them (uihud only does it on desktop)
+  function nameBars(){
+    if(byId('uiHunger') && byId('uiStam')) return;
+    for(const d of document.body.children){
+      if(!d.style || d.tagName !== 'DIV' || d.id) continue;
+      const t = (d.textContent || '').trim().slice(0, 8);
+      if(/^HUNGER/.test(t) && !byId('uiHunger')) d.id = 'uiHunger'; else if(/^STAMINA/.test(t) && !byId('uiStam')) d.id = 'uiStam';
+    }
+  }
+  // ---- draw
+  function place(){
+    const W = innerWidth, H = innerHeight;
+    if(TOUCH){
+      nameBars();
+      // chips: a small block under the stats (and under the bars of the touch layout when it is there)
+      const s = byId('stats'), sr = s ? s.getBoundingClientRect() : null;
+      let top = sr && sr.height ? Math.round(sr.bottom) + 6 : 110;
+      try{ const ut = window.__uitouch; if(ut && ut.barsBottom) top = Math.max(top, Math.round(ut.barsBottom) + 4); }catch(e){}
+      chips.style.top = top + 'px';
+      // the drawers open beside the chips: under a chip row there is no room left above the stick on a phone,
+      // so the panel starts right of the chip block, under the news bar, and ends 20 px above the stick
+      let cr = EDGE;
+      for(const c of chips.children){ const r = c.getBoundingClientRect(); if(r.width) cr = Math.max(cr, Math.round(r.right)); }
+      const left = cr + 10;
+      const base = byId('tcbase'), br = base ? base.getBoundingClientRect() : null;
+      const lim = br && br.height ? br.top - 20 : H - 166;
+      let right = Math.min(W - 8, left + Math.round(W*.6));
+      let ot = 36;
+      const obst = [byId('newsbar'), byId('uiHunger'), byId('uiStam'), byId('planetsBtn'), byId('loreBtn')];
+      const tcw = byId('tcw'); if(tcw) tcw.querySelectorAll('.tb').forEach(b=>obst.push(b));
+      obst.forEach(e=>{
+        if(!visible(e)) return; const r = e.getBoundingClientRect();
+        if(r.right <= left || r.left >= right) return;
+        if(r.bottom < 80 && r.left < left + 160) ot = Math.max(ot, Math.round(r.bottom) + 6);     // a bar along the top: go under it
+        else if(r.top < lim && r.bottom > ot && r.left > left + 160) right = Math.min(right, Math.round(r.left) - 8);   // a button on the right: stop before it
+      });
+      const fd = byId('feed'); if(visible(fd)){ const r = fd.getBoundingClientRect(); if(r.right > left + 160 && r.top < lim) right = Math.min(right, Math.round(r.left) - 8); }
+      const mh = Math.max(80, Math.round(lim - ot));
+      ov.style.left = left + 'px'; ov.style.top = ot + 'px'; ov.style.maxHeight = mh + 'px';
+      document.documentElement.style.setProperty('--drwTW', Math.max(200, right - left) + 'px');
+      document.documentElement.style.setProperty('--drwCv', Math.max(90, Math.min(170, mh - 34 - 30 - 18)) + 'px');
+      let other = 0;                               // the log takes what the other open drawers leave
+      for(const c of ov.children){ if(c !== logP && c.style.display !== 'none' && c.offsetHeight) other += c.offsetHeight + 6; }
+      document.documentElement.style.setProperty('--drwLogH', Math.max(150, mh - other) + 'px');
+      return;
+    }
+    const LW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--uiLW')) || 270;
+    const RW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--uiRW')) || 300;
+    const s = byId('stats'), sr = s ? s.getBoundingClientRect() : null;
+    let y = sr && sr.height ? Math.round(sr.bottom) + GAP : 120;
+    ['menuBtn', 'planetsBtn', 'loreBtn'].forEach(id=>{ const b = byId(id); if(visible(b)) y = Math.max(y, Math.round(b.getBoundingClientRect().bottom) + GAP); });
+    colL.style.left = EDGE + 'px'; colL.style.top = y + 'px'; colL.style.width = LW + 'px';
+    // left stack stops above the hunger bar / carry slots
+    let lim = H - 90;
+    const hu = byId('uiHunger'); if(visible(hu)){ const r = hu.getBoundingClientRect(); if(r.left < EDGE + LW + 4) lim = Math.min(lim, r.top); }
+    const hot = byId('hotbar'); if(visible(hot)){ const r = hot.getBoundingClientRect(); if(r.left < EDGE + LW + 4) lim = Math.min(lim, r.top); }
+    const sTop = stackL.getBoundingClientRect().top || (y + 40);
+    stackL.style.maxHeight = Math.max(80, Math.round(lim - GAP - sTop)) + 'px';
+    // right column: top right, moves left of the log when the log is open and there is room
+    const top0 = sr && sr.height ? Math.round(sr.top) : EDGE;
+    let right = EDGE;
+    if(isOpen('log')){ const lr = logP.getBoundingClientRect(); const lw = Math.round(lr.width) || 320; if(W - lw - GAP - RW >= EDGE + LW + GAP) right = lw + GAP; }
+    colR.style.right = right + 'px'; colR.style.top = top0 + 'px'; colR.style.width = RW + 'px';
+    let rlim = H - 90;
+    const sm = byId('uiStam'); if(visible(sm)){ const r = sm.getBoundingClientRect(); if(r.right > W - right - RW - 4) rlim = Math.min(rlim, r.top); }
+    if(visible(hot)){ const r = hot.getBoundingClientRect(); if(r.right > W - right - RW - 4) rlim = Math.min(rlim, r.top); }
+    colR.style.maxHeight = Math.max(80, Math.round(rlim - GAP - top0)) + 'px';
+  }
+  function render(){
+    const play = playing();
+    const shown = play && !(typeof won !== 'undefined' && won);
+    chips.style.display = shown ? 'flex' : 'none';
+    if(colL) colL.style.display = shown ? 'flex' : 'none';
+    if(colR) colR.style.display = shown ? 'flex' : 'none';
+    if(ov) ov.style.display = shown ? 'flex' : 'none';
+    ORDER.forEach(n=>{
+      const o = D[n], av = shown && o.avail(), op = isOpen(n);
+      o.chipEl.style.display = av ? '' : 'none';
+      o.chipEl.classList.toggle('on', op && av);
+      o.chipEl.classList.toggle('pin', o.pinned);
+      o.pinEl.classList.toggle('on', o.pinned);
+      o.pinEl.title = o.pinned ? 'Pinned: stays open. Tap to unpin' : 'Pin: keep it open';
+      if(!o.log){ const d = op && av ? '' : 'none'; if(o.sec.style.display !== d) o.sec.style.display = d; }
+    });
+    if(D.hw){ D.hw.chipEl.querySelector('.dot').style.display = hwPending() ? 'inline-block' : 'none'; }
+    if(D.log){
+      const b = logTab && logTab.querySelector('b'), c = D.log.chipEl.querySelector('.cnt');
+      const n = b && b.style.display === 'block' ? b.textContent : '';
+      c.textContent = n; c.style.display = n && n !== '0' ? 'inline-block' : 'none';
+    }
+    if(shown) place();
+  }
+
+  function tick(){
+    try{
+      hwTick();
+      if(D.log){                                   // the ` key and the log's own X still work: follow them
+        const lo = AL.isOpen();
+        if(lo && !logWas){ D.log.t = now(); if(!D.log.pinned) ORDER.forEach(m=>{ if(m !== 'log' && !D[m].pinned && isOpen(m)) setOpen(m, false); }); }
+        logWas = lo;
+      }
+      const t = now();
+      ORDER.forEach(n=>{ const o = D[n]; if(!o.pinned && isOpen(n) && t - o.t > IDLE) setOpen(n, false); });
+      render();
+    }catch(e){ console.warn('LN-uidrawer', e); }
+  }
+
+  // ---- start: only pinned drawers come back open
+  ORDER.forEach(n=>{ const o = D[n]; if(o.log){ if(o.pinned) AL.open(true); else if(AL.isOpen()) AL.open(false); logWas = AL.isOpen(); } else o.open = o.pinned; o.t = now(); });
+  render();
+  setInterval(tick, 200);
+  addEventListener('resize', ()=>{ try{ render(); }catch(e){} });
+  window.__uidrawer = {D, open:(n)=>setOpen(n, true), close:(n)=>setOpen(n, false), toggle:(n)=>setOpen(n, !isOpen(n)), isOpen, setIdle(ms){ IDLE = ms > 0 ? ms : 10000; }, pin(n, v){ const o = D[n]; if(!o) return; o.pinned = !!v; LSset('digcore_ui_pin_' + n, o.pinned); o.t = now(); render(); }, render};
+})();
+/* LN-uidrawer end */
 /* LN-uilog end */
 (function(){
 })();
