@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 136 (Oct 31)';
+  window.__BUILD = 'Build 137 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25505,11 +25505,58 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
   }
 
+  /* LN-animaltech start: animals smelt introduced ore in furnaces and invent food technology and other technology from introduced discoveries (Irfan 2026-10-31) */
+  const BARS = [[/iron/i, 'Iron Bar'], [/copper/i, 'Copper Bar'], [/silver/i, 'Silver Bar'], [/gold/i, 'Gold Bar'], [/titanium/i, 'Titanium Bar']];
+  const TECHS = ['food technology', 'a water mill', 'glass blowing', 'a printing press', 'clock making', 'a telescope', 'a bicycle', 'an electric lantern', 'a hot air balloon', 'a pizza oven'];
+  const aniPl = n=>(n.animal ? n.animal + 's' : 'residents');
+  function townTech(n, cat, e){
+    n.techQ = n.techQ || [];
+    if(cat === 'ore' || /ore\b/i.test(e.name)){
+      const bar = (BARS.find(x=>x[0].test(e.name)) || [])[1] || null;
+      n.techQ.push({t:24, k:'smelt', ore:e.name, bar});
+      toast('The ' + aniPl(n) + ' of ' + n.name + ' are building a furnace to smelt your ' + e.name + '!');
+    } else if(cat === 'disc'){
+      n.techs = n.techs || [];
+      let t = TECHS.find(x=>n.techs.indexOf(x) < 0 && (n.techs.length > 0 || x === 'food technology')) || null;
+      if(t){ n.techs.push(t); n.techQ.push({t:30, k:'tech', tech:t, d:e.name}); toast('The ' + aniPl(n) + ' of ' + n.name + ' are inspired by ' + e.name + ' and start inventing ' + t + '!'); }
+    }
+  }
+  function techTick(T){
+    T.forEach(n=>{
+      if(!n.techQ || !n.techQ.length) return;
+      n.techQ.forEach(q=>{ q.t -= 2; });
+      const done = n.techQ.filter(q=>q.t <= 0); if(!done.length) return;
+      n.techQ = n.techQ.filter(q=>q.t > 0);
+      done.forEach(q=>{
+        if(q.k === 'smelt'){
+          n.furnace = true; n.smelted = n.smelted || {};
+          if(q.bar){ n.smelted[q.bar] = (n.smelted[q.bar] || 0) + 1; addItem(q.bar, 2);
+            news('NEWS: The ' + aniPl(n) + ' of ' + n.name + ' built a FURNACE and smelted the ' + q.ore + ' into shiny bars! They sent two ' + q.bar + 's to the miner who brought it.', true);
+            toast(n.name + ' smelted your ' + q.ore + ' and sent you 2 ' + q.bar + 's!');
+          } else { save.coins += 300;
+            news('NEWS: The ' + aniPl(n) + ' of ' + n.name + ' tried to smelt a ' + q.ore + ' in their new furnace. It turned into very pretty beads. They gave the miner $300.', true);
+            toast(n.name + ' turned your ' + q.ore + ' into beads and gave you $300.'); }
+        } else {
+          if(q.tech === 'food technology'){ save.foodPower = save.foodPower || {}; save.foodPower['Animal Stew'] = 7; addItem('Animal Stew', 2); n.foodTech = true;
+            news('NEWS: Thanks to the ' + q.d + ', the ' + aniPl(n) + ' of ' + n.name + ' invented FOOD TECHNOLOGY! Their first dish, Animal Stew, is so good they sent the miner two bowls.', true);
+            toast(n.name + ' invented food technology and sent you 2 Animal Stew!');
+          } else { save.coins += 400;
+            news('NEWS: The ' + q.d + ' inspired the ' + aniPl(n) + ' of ' + n.name + ' to invent ' + q.tech + '! The whole town came to see it. The miner got $400.', true);
+            toast(n.name + ' invented ' + q.tech + ' and gave you $400!'); }
+        }
+      });
+      persist();
+    });
+  }
+  window.__animalTech = {townTech, techTick};
+  /* LN-animaltech end */
+
   /* ------------------------------------------------ towns change over time on their own: new crops, new animals, tamed pets, materials spread */
   let evT = 50;
   function worldTick(){
     const T = towns(); if(!T.length) return;
     T.forEach(n=>{ if(n.gemT > 0){ n.gemT -= 2; if(n.gemT <= 0) gemDone(n); } });
+    try{ techTick(T); }catch(err){ console.error('animaltech tick', err); }
     // materials: the monument keeps growing
     T.forEach(n=>{ if(n.mat && n.mat.h < 7 && Math.random() < .03){ n.mat.h++; if(Math.hypot(n.x - P.x, n.z - P.z) < 120) buildMat(n, false); } });
     evT -= 2; if(evT > 0) return;
@@ -25616,6 +25663,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       let pw = 1; try{ pw = Math.max(1, (e.tier != null ? e.tier + 1.2 : itemPower(e.name)) || 1); }catch(err){}
       const gift = Math.round(100 + pw*80); save.coins += gift; n.shown = (n.shown || 0) + 1; if(cat === 'gem'){ n.jewel = true; n.gems = (n.gems || 0) + 1; }
       const act = rnd(REACT[cat] || REACT.item);
+      try{ townTech(n, cat, e); }catch(err){ console.error('animaltech', err); }
       news('NEWS: A miner brought a ' + e.name + ' to ' + n.name + '. ' + who(n) + ' ' + act + ' it, and now the whole town is talking.', true);
       toast(n.name + ' loves your ' + e.name + '!  Thank-you gift +$' + gift.toLocaleString()); blip(900, .12, .1, 'triangle');
       persist(); close();
@@ -29874,7 +29922,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-invention start: the new Invention crafting category: Campfire (1 wood + 1 coal + 1 stone) and Furnace (2 iron + 1 coal) (Irfan 2026-10-31) */
 (function(){
   const isWood = n=>/^(Wood|Wooden Plank|Giggling Log)$/.test(n), isCoal = n=>/^(Coal Ore|Cave Coal Ore|Charcoal)$/.test(n),
-        isStone = n=>/^(Rock|Hard Rock|Stone Chunk|Cave Stone|Mountain Stone|Pebble Stone|Limestone|Sandstone|Mountain Granite|Gravel|Dark Stone|Flint)$/.test(n), isIron = n=>/^(Iron Ore|Cave Iron Ore|Sky Iron Ore|Bog Iron)$/.test(n);
+        isStone = n=>/^(Rock|Hard Rock|Stone Chunk|Cave Stone|Mountain Stone|Pebble Stone|Limestone|Sandstone|Mountain Granite|Gravel|Dark Stone|Flint)$/.test(n), isIron = n=>/^(Iron Ore|Cave Iron Ore|Sky Iron Ore|Bog Iron|Iron Bar)$/.test(n);
   const NAMES = {'Campfire':[230,120,40], 'Furnace':[110,110,120]}; ['Copper','Iron','Silver','Gold','Titanium'].forEach(m=>{ NAMES[m + ' Bar'] = [200,170,120]; });
   window.__inventionNames = NAMES;
   const reg = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems['Campfire'] = save.furnItems['Campfire'] || {kind:'campfire', col:0xe07a28}; save.furnItems['Furnace'] = save.furnItems['Furnace'] || {kind:'furnace', col:0x6e6e78}; };
@@ -29964,7 +30012,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const refs = craftSlots.filter(Boolean), infos = refs.map(refInfo);
       if(infos.length && infos.every(i=>i && i.kind === 'item')){
         const nm = infos.map(i=>i.name), c = f=>nm.filter(f).length;
-        if(infos.length === 3 && c(n=>n === 'Iron Bar') === 2 && c(isCoal) === 1) return {kind:'inventionItem', name:'Steel Bar', count:1, power:2};
+        if(infos.length === 3 && c(n=>n === 'Iron Bar') === 3) return {kind:'inventionItem', name:'Steel Bar', count:1, power:2};
         if(infos.length === 2 && c(isWood) === 1 && c(isCoal) === 1) return {kind:'inventionItem', name:'Torch', count:4, power:1};
       }
     }catch(e){}
