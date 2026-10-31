@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 128 (Oct 31)';
+  window.__BUILD = 'Build 129 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29622,11 +29622,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     save.customWorlds.push(sp); persist(); byId[sp.id] = mkWorld(sp); return sp;
   }
   // the Portal Block item
-  const reg = ()=>{ save.furnItems = save.furnItems || {}; save.furnItems[ITEM] = {kind:'edgeportal', col:0x8040d0}; };
+  const PBID = blk(ITEM, 30, 400, [60,20,110], [200,130,255], .9, 'tile');   // Portal Block is a normal placeable block now; four stacked can become a gate
+  const reg = ()=>{ if(save.furnItems) delete save.furnItems[ITEM]; };
   reg();
   // one-time gift: 100 free Portal Blocks (Irfan 2026-10-31)
   { let pend = false; try{ pend = !localStorage.getItem('digcore_gift_portal100'); }catch(e){}
-    if(pend) setTimeout(()=>{ try{ addItem(ITEM, 100); localStorage.setItem('digcore_gift_portal100', '1'); toast('GIFT: 100 Portal Blocks! Right-click one in a carry slot to place a gate (3 blocks each).'); }catch(e){ console.warn('portal gift', e); } }, 2500); }
+    if(pend) setTimeout(()=>{ try{ addItem(ITEM, 100); localStorage.setItem('digcore_gift_portal100', '1'); toast('GIFT: 100 Portal Blocks! Place them like blocks. Stack 4 on top of each other and confirm to make a gate.'); }catch(e){ console.warn('portal gift', e); } }, 2500); }
   // gate model: a cover block with the gate opening in it
   const _bf = buildFurniture;
   buildFurniture = function(kind, col, shape){
@@ -29651,19 +29652,29 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
   let pendingName = '';
   furnObjs.slice().forEach(f=>{ if(f.d && f.d.kind === 'edgeportal'){ scene.remove(f.g); const i = furnObjs.indexOf(f); if(i >= 0) furnObjs.splice(i, 1); for(let k=furnMeshes.length-1;k>=0;k--) if(furnMeshes[k].userData.furn === f.d) furnMeshes.splice(k, 1); addFurnitureObject(f.d); } });
-  // placing costs 3 Portal Blocks (the normal place already took 1)
-  const _sp = spawnPlaced;
-  spawnPlaced = function(name, kind, col, shape, back, x, d, z, rot){
-    if(kind === 'edgeportal'){
-      if((save.inv[ITEM] || 0) < COST - 1){ addItem(ITEM, 1); toast('A gate needs ' + COST + ' Portal Blocks. Mine World Edge portals to get 6 at a time.'); return; }
-      save.inv[ITEM] -= COST - 1; if(save.inv[ITEM] <= 0) delete save.inv[ITEM];
-      let nm = ''; try{ nm = (prompt('Name your new World Edge (leave empty for a random name):', '') || '').trim().slice(0, 24); }catch(e){}
-      pendingName = nm;
-      try{ updateHotbar(); }catch(e){}
-      toast('A new World Edge opens! Walk into the gate.');
-    }
-    return _sp.apply(this, arguments);
+  // stack four Portal Blocks and confirm to turn them into an official gate (Irfan 2026-10-31)
+  const declined = new Set(); let t0 = performance.now(), asking = false;
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    const r = _sb.apply(this, arguments);
+    if(t === PBID && !asking && performance.now() - t0 > 4000) setTimeout(()=>checkStack(x, d, z), 50);
+    return r;
   };
+  function checkStack(x, d, z){
+    if(asking || get(x, d, z) !== PBID) return;
+    let a = d, b = d; while(get(x, a - 1, z) === PBID && d - a < 12) a--; while(get(x, b + 1, z) === PBID && b - d < 12) b++;
+    if(b - a + 1 < 4) return;
+    const key = x + ',' + z + ',' + a + ',' + b; if(declined.has(key)) return;
+    asking = true;
+    let yes = false; try{ if(document.exitPointerLock) document.exitPointerLock(); yes = confirm('You stacked ' + (b - a + 1) + ' Portal Blocks.\n\nDo you want to make an official portal here?\n\nOK = make the portal (uses 4 blocks)\nCancel = keep them as plain blocks'); }catch(e){}
+    asking = false;
+    if(!yes){ declined.add(key); toast('OK, they stay as blocks. Add or remove one to be asked again.'); return; }
+    let nm = ''; try{ nm = (prompt('Name your new World Edge (leave empty for a random name):', '') || '').trim().slice(0, 24); }catch(e){}
+    pendingName = nm;
+    for(let k = b; k > b - 4; k--) setBlock(x, k, z, 0);
+    spawnPlaced('Portal Gate', 'edgeportal', 0x8040d0, null, {t:'i', key:ITEM}, x, b, z, Math.round((P.yaw || 0)/(Math.PI/2))*(Math.PI/2));
+    toast('A new World Edge opens! Walk into the gate.');
+  }
   // mining the four World Edge portals gives Portal Blocks (they grow back after a while)
   const ray = new THREE.Raycaster(), dir = new THREE.Vector3();
   let mt = 0, lastHit = null, aniT = 8, myCd = 0;
@@ -29686,7 +29697,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
           mt = 0; reg(); addItem(ITEM, GIVE); barwrap.style.display = 'none';
           burst(hit.px, 2, E_Z(), 9, 40); shake = .1; blip(140, .5, .2, 'sawtooth');
           hit.atOrig = hit.pEdge.userData.at; hit.pEdge.userData.at = {x:1e9, z:1e9}; hit.regrow = 150;
-          toast('You mined the ' + hit.name + ' portal! +' + GIVE + ' Portal Blocks. Place ' + COST + ' on a block to make your own gate. (the portal grows back in 2 minutes)');
+          toast('You mined the ' + hit.name + ' portal! +' + GIVE + ' Portal Blocks. Place them as blocks and stack 4 to make your own gate. (the portal grows back in 2 minutes)');
         }
       } else if(mt > 0){ mt = 0; try{ barwrap.style.display = 'none'; }catch(e){} }
       // walk into a placed gate, or the way home from a custom world
