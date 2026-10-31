@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 142 (Oct 31)';
+  window.__BUILD = 'Build 143 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -15450,14 +15450,23 @@ updateTrees = function(dt){
 
   /* ------------------------------------------------ feature: Professor Pyramid and the secret club house next to spawn */
   function buildClub(par, x, z, y){
-    const h = grp(par, x, y, z);
-    sbox(5.4,.3,5.4,0xb09060,0,.15,0,h);
-    for(let i=0;i<5;i++){ const w = 5-i*1.0; sbox(w,.8,w,i%2 ? 0xe0b860 : 0xd0a850,0,.7+i*.8,0,h); }          // a stepped golden pyramid
-    glow(pyramid(h,.8,1.1,0xfff0a0,0,4.3,0,0x8a6a10), 0x8a6a10);
-    eyeSign(h,1.5,0,3.3,1.55);
-    sbox(1.3,1.6,.1,0x2a1a0a,0,1.1,2.52,h);                                                             // doorway
+    const h = grp(par, x, y, z), WC = 0xc8a040, WD = 0xa88830;
+    sbox(9.6,.3,9.6,0x6a1a1a,0,.15,0,h);                                                                  // red carpet floor
+    sbox(9,4.5,.4,WC,0,2.4,-4.3,h); sbox(.4,4.5,9,WC,-4.3,2.4,0,h); sbox(.4,4.5,9,WC,4.3,2.4,0,h);       // back and side walls
+    sbox(3.7,4.5,.4,WC,-2.65,2.4,4.3,h); sbox(3.7,4.5,.4,WC,2.65,2.4,4.3,h); sbox(1.7,1.4,.4,WC,0,4.1,4.3,h);   // front wall with a door gap
+    sbox(9.6,.4,9.6,0xb09060,0,4.85,0,h);                                                               // roof
+    for(let i=0;i<4;i++) sbox(7.6-i*1.7,.8,7.6-i*1.7,i%2 ? 0xe0b860 : 0xd0a850,0,5.4+i*.8,0,h);        // stepped golden pyramid on top
+    glow(pyramid(h,.9,1.2,0xfff0a0,0,8.6,0,0x8a6a10), 0x8a6a10); eyeSign(h,1.6,0,6.1,4.0);
+    [[-4,-4],[4,-4],[-4,4],[4,4]].forEach(q=>sbox(.6,4.5,.6,DGOLD,q[0],2.4,q[1],h));                    // gold pillars
     const sign = new THREE.Mesh(new THREE.BoxGeometry(2.6,.5,.06), new THREE.MeshLambertMaterial({map:textTex(cp('illumClubSign','SECRET CLUB'),256,64,'#3a2a00','#ffd84a','bold 34px Arial')}));
-    sign.position.set(0,2.2,2.62); h.add(sign);
+    sign.position.set(0,3.5,4.55); h.add(sign);
+    sbox(3.4,.14,3.4,0x3a2a10,0,1.0,.4,h); [[-1.3,-1.3],[1.3,-1.3],[-1.3,1.7],[1.3,1.7]].forEach(q=>sbox(.2,1,.2,0x3a2a10,q[0],.5,q[1],h));   // the council table
+    [[-2.6,.4],[2.6,.4],[0,-1.9],[0,2.7]].forEach(q=>sbox(.8,.7,.8,0x4a1a5a,q[0],.45,q[1],h));         // chairs
+    eyeSign(h,2.6,0,2.9,-4.05);                                                                           // the big eye on the back wall
+    sbox(1.3,1,1.3,GOLD,0,.8,-3,h); glow(pyramid(h,.6,.9,0xfff0a0,0,1.8,-3,0x8a6a10), 0x8a6a10);        // the golden pedestal
+    const ped = new THREE.Mesh(new THREE.BoxGeometry(2.2,.4,.06), new THREE.MeshLambertMaterial({map:textTex('CHALLENGE (F)',256,48,'#3a2a00','#ffd84a','bold 28px Arial')})); ped.position.set(0,2.9,-3.9); h.add(ped);
+    for(let k=0;k<5;k++){ [-1,1].forEach(sd=>{ glow(sbox(.1,.9,.7,GOLD,sd*4.05,2.4,-3+k*1.5,h), 0x886600); }); }   // portraits of the council along the side walls
+    const lamp = new THREE.PointLight(0xffd070, 1.3, 14, 1.2); lamp.position.set(0,3.8,0); h.add(lamp);
     h.traverse(m=>{ m.userData.gone = true; });
     return h;
   }
@@ -15477,7 +15486,9 @@ updateTrees = function(dt){
     let x = 5.5, z = 16.5;
     for(let t=0;t<trees.length;t++){ const tr = trees[t]; if(Math.hypot(tr.x-x, tr.z-z) < 2){ x -= 2.2; t = -1; if(x < -40) break; } }
     const hx = x - 4.5, hz = z + 3.5, hy = groundTop(Math.floor(hx), 2, Math.floor(hz));
-    S.club = buildClub(scene, hx, hz, hy); solids.push([hx-2.7, hx+2.7, hy, hy+4.5, hz-2.7, hz+2.7]);
+    S.club = buildClub(scene, hx, hz, hy);
+    [[-4.5,4.5,-4.5,-4.1],[-4.5,-4.1,-4.5,4.5],[4.1,4.5,-4.5,4.5],[-4.5,-.85,4.1,4.5],[.85,4.5,4.1,4.5]].forEach(q=>solids.push([hx+q[0], hx+q[1], hy, hy+5, hz+q[2], hz+q[3]]));   /* LN-council: walls with a door, you can walk in */
+    solids.push([hx-4.8, hx+4.8, hy+4.7, hy+5.3, hz-4.8, hz+4.8]);
     const g = buildProf(), y = groundTop(Math.floor(x), 2, Math.floor(z)); g.position.set(x, y, z); scene.add(g);
     const lab = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(cp('illumNpcName','Professor Pyramid'),256,64,null,'#ffd84a','bold 28px Arial'), fog:false, depthWrite:false, transparent:true}));
     lab.scale.set(2.2,.55,1); lab.position.set(0, BIGHEAD ? 3.6 : 3.0, 0); g.add(lab);
@@ -15506,6 +15517,7 @@ updateTrees = function(dt){
     'A Floating Eye never sleeps. That is why it looks so tired.',
     'The Sphinx Cat knows the answer to every riddle. It just will not tell anyone.',
     'Golden Scarabs roll little balls everywhere. Nobody knows why. It is a secret.',
+    'Come inside the Secret Club! Stand at the golden pedestal and press F. Nineteen bosses and the Great Eye are waiting for you.',
     'Shhh. This conversation never happened.'];
   const _cA = computeAct;
   computeAct = function(){
@@ -15525,6 +15537,174 @@ updateTrees = function(dt){
   }
   const _dA = doAct;
   doAct = function(){ if(act && act.k === 'illnpc'){ npcTalk(); return; } _dA(); };
+
+  /* LN-council start: the Secret Club is a real building you can walk into, and 19 more unique Illuminati bosses (20 with the Great Eye) are challenged from the golden pedestal inside (Irfan 2026-10-31) */
+  save.clubBoss = save.clubBoss || {};
+  const sph = (par, r, col, x, y, z, sx, sy, sz, em)=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 12), new THREE.MeshLambertMaterial({color:col, emissive:em || 0})); m.position.set(x, y, z); m.scale.set(sx || 1, sy || 1, sz || 1); par.add(m); return m; };
+  const cyl = (par, r1, r2, h, col, x, y, z, seg, em)=>{ const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg || 10), new THREE.MeshLambertMaterial({color:col, emissive:em || 0})); m.position.set(x, y, z); par.add(m); return m; };
+  const tor = (par, R, r, col, x, y, z, em)=>{ const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 8, 24), new THREE.MeshLambertMaterial({color:col, emissive:em || 0})); m.position.set(x, y, z); par.add(m); return m; };
+  const ghost = (m, o)=>{ m.material.transparent = true; m.material.opacity = o; return m; };
+  const SPIN = (g, m, ax, sp)=>{ (g.userData.spin = g.userData.spin || []).push({m, ax, sp}); return m; };
+  const MODEL = {
+    warden(g){ [-.7,.7].forEach(x=>sbox(.55,2.2,.55,DGOLD,x,1.1,0,g)); glow(pyramid(g,3.4,3.6,GOLD,0,2.1,0), 0x5a4000); eyeSign(g,1.7,0,3.4,1.1); [-1.9,1.9].forEach(x=>sbox(.45,2,.45,DGOLD,x,3,0,g)); [-1,0,1].forEach(x=>glow(pyramid(g,.4,.6,0xfff0a0,x*.8,6,0), 0x886600)); },
+    sphinx(g){ sbox(2.4,1.8,4.4,0xd8b860,0,1.2,0,g); sbox(1.7,1.7,1.7,0xe0c070,0,3,1.9,g); sbox(2.4,2,.5,0x2a4a9a,0,2.9,1.35,g); [-.4,.4].forEach(x=>glow(sbox(.25,.2,.12,0xff2020,x,3.1,2.8,g), 0xaa0000)); [-.8,.8].forEach(x=>sbox(.6,.5,1.8,0xd0a850,x,.3,2.8,g)); sbox(.35,.35,2.2,0xc09840,0,1,-3.3,g); sbox(.7,.9,.15,GOLD,0,3.9,1.9,g); },
+    scarab(g){ sph(g,1.6,0x1a5a5a,0,1.4,0,1.2,.8,1.7,0x062020); sph(g,1,0x2a8a8a,0,1.5,1.9,1,.8,1,0x083030); [-1,1].forEach(s=>{ sbox(.3,1,.3,0x103a3a,s*.5,2.2,2.7,g).rotation.z = s*.4; for(let i=0;i<3;i++){ const l = sbox(.25,1.2,.25,0x103a3a,s*1.7,.6,-.9+i*1.1,g); l.rotation.z = s*.5; } }); glow(cyl(g,.9,.9,.25,GOLD,0,2.6,-.6,16), 0x886600).rotation.x = 1.57; },
+    obelisk(g){ sbox(1.6,6,1.6,0x20242c,0,3.4,0,g); glow(pyramid(g,1.3,1.4,GOLD,0,6.4,0), 0x886600); [1.5,3,4.5].forEach(y=>glow(sbox(1.7,.18,1.7,0xffd040,0,y,0,g), 0xaa7a00)); const r = glow(tor(g,2.1,.14,GOLD,0,3.4,0), 0x886600); r.rotation.x = 1.4; SPIN(g, r, 'y', 2); },
+    hydra(g){ glow(pyramid(g,3.2,2.2,0x5a2a8a,0,1.1,0), 0x2a0a4a); [-1.2,0,1.2].forEach((x,i)=>{ const h = grp(g,x,2.2,0.2); sbox(.45,1.8,.45,0x6a3a9a,0,.9,0,h).rotation.z = x*.18; const hd = grp(h,x*.3,2,0); glow(pyramid(hd,.9,1,GOLD,0,.3,0), 0x664400); eyeSign(hd,.6,0,.4,.5); SPIN(g, hd, 'y', .7 + i*.4); }); },
+    mason(g){ [-.5,.5].forEach(x=>sbox(.6,1.8,.6,0x2a2a38,x,.9,0,g)); sbox(1.7,2,1,0x2a4a9a,0,2.7,0,g); sbox(1.5,1.5,.12,0xf0f0f0,0,2.2,.56,g); sbox(1.1,1.1,1,0xf0c8a0,0,4.2,0,g); sbox(1.5,.35,1.4,0x2a2a38,0,4.9,0,g); sbox(.2,.2,.1,0x111111,-.25,4.3,.52,g); sbox(.2,.2,.1,0x111111,.25,4.3,.52,g); const a = grp(g,1.4,3.4,0); sbox(.5,1.6,.5,0x2a4a9a,0,-.6,0,a); sbox(.25,3.4,.25,0x6a4420,0,.2,.8,a).rotation.x = .3; glow(sbox(1.4,1,1,0x8a8a98,0,1.9,1.2,a), 0x222230); g.userData.arm = a; },
+    horus(g){ sph(g,1.5,0xffffff,0,2.5,0,1,1,.8); sph(g,.8,0x2a7ad8,0,2.5,1,1,1,.4); sph(g,.38,0x000000,0,2.5,1.25,1,1,.4); g.userData.wing = []; [-1,1].forEach(s=>{ const w = grp(g,s*1.4,2.7,0); for(let i=0;i<5;i++) sbox(.5,.1,2.4-i*.3,i%2?0x2a4a9a:0xf0c040,s*(.3+i*.6),-i*.18,-.2-i*.1,w); g.userData.wing.push([w,s]); }); sbox(.4,1.4,.3,0xf0c040,0,1.2,-.4,g); },
+    dollar(g){ ghost(sbox(4.4,2.4,.15,0x4a9a5a,0,3,0,g),.7); glow(pyramid(g,1,1.1,0xe8f0c8,0,3,.2), 0x335533); eyeSign(g,.8,0,3,.25); [-1.8,1.8].forEach(x=>{ sbox(.5,.5,.2,0xdfe8c0,x,3.7,.1,g); sbox(.5,.5,.2,0xdfe8c0,x,2.3,.1,g); }); for(let i=0;i<8;i++) sbox(.5,.1,.05,0xdfe8c0,-1.5+i*.45,3.5,.1,g); },
+    grand(g){ cyl(g,.6,1.7,4,0x3a1a5a,0,2,0,12); sbox(1.2,1.2,1.1,0x2a1040,0,4.5,0,g); sbox(1,.5,.1,0x000000,0,4.4,.58,g); [-.22,.22].forEach(x=>glow(sbox(.18,.1,.06,0xffe060,x,4.45,.63,g), 0xaa8800)); glow(pyramid(g,.9,1.3,GOLD,0,5.4,0), 0x664400); sbox(.15,5,.15,0x6a4420,1.6,2.6,.6,g); glow(pyramid(g,.5,.7,GOLD,1.6,5.4,.6), 0x664400); sbox(2.4,3,.1,0x2a1040,0,2.4,-.9,g); },
+    compass(g){ [-1,1].forEach(s=>{ const l = sbox(.3,5,.3,0xc0c0cc,s*.8,3,0,g); l.rotation.z = s*.32; }); glow(sph(g,.5,GOLD,0,5.7,0), 0x664400); const sq = grp(g,0,3,0); sbox(.3,4,.3,0xa0a0b0,-1.6,0,0,sq); sbox(3.4,.3,.3,0xa0a0b0,0,-1.85,0,sq); SPIN(g, sq, 'y', 1.6); glow(sbox(.9,.9,.2,GOLD,0,3,.4,g), 0x664400); },
+    cube(g){ const c = sbox(3.2,3.2,3.2,0x40c0ff,0,3,0,g); ghost(c,.45); glow(c, 0x104050); const i = glow(pyramid(g,.9,1.4,0xffffff,0,3,0), 0x888888); SPIN(g, i, 'y', 3); [-1,1].forEach(x=>[-1,1].forEach(z=>[-1,1].forEach(y=>glow(sbox(.28,.28,.28,0xffffff,x*1.6,3+y*1.6,z*1.6,g), 0x888888)))); },
+    anubis(g){ [-.5,.5].forEach(x=>sbox(.6,2,.6,0x1a1a22,x,1,0,g)); sbox(1.8,2,1,0x1a1a22,0,3,0,g); sbox(2,.3,1.1,GOLD,0,3.9,0,g); sbox(1.1,1.1,1.1,0x15151c,0,4.6,0,g); sbox(.7,.6,1.3,0x15151c,0,4.4,.9,g); [-.4,.4].forEach(x=>sbox(.3,1.2,.2,0x15151c,x,5.6,-.1,g)); [-.3,.3].forEach(x=>glow(sbox(.16,.12,.06,0xffd040,x,4.8,.57,g), 0xaa7700)); sbox(.15,5,.15,GOLD,1.6,2.6,.5,g); sbox(.9,.9,.12,GOLD,-1.6,3.2,.5,g); },
+    ouro(g){ const t = glow(tor(g,2.6,.55,0xd0a030,0,3.4,0), 0x4a3000); SPIN(g, t, 'z', 1.2); sph(t,.2,0xff2020,2.6,.35,.5,1,1,1,0xaa0000); glow(sph(t,.85,0xe0b840,2.6,0,0,1.2,1,1), 0x4a3000); },
+    puppet(g){ sbox(.9,1.5,.5,0x8a5a2a,0,2.2,0,g); sbox(.7,.7,.7,0xe8c898,0,3.4,0,g); [-.3,.3].forEach(x=>sbox(.2,.2,.1,0x111111,x,3.45,.36,g)); [-.7,.7].forEach(x=>{ sbox(.28,1.4,.28,0x8a5a2a,x,2.3,0,g).rotation.z = x*.25; sbox(.3,1.4,.3,0x8a5a2a,x*.4,.8,0,g); }); const bar = sbox(2,.15,1.4,0x3a2a1a,0,7,0,g); SPIN(g, bar, 'y', 1); [-.9,0,.9].forEach(x=>sbox(.04,4.2,.04,0xdddddd,x,5.1,0,g)); glow(pyramid(g,.5,.6,GOLD,0,7.4,0), 0x664400); },
+    moon(g){ glow(sph(g,2,0xf0e8b0,0,3.6,0), 0x6a6020); [[-.8,.6],[.9,-.2],[.2,1.1]].forEach(q=>sph(g,.4,0xc8bf80,q[0]*1.5,3.6+q[1]*1.2,1.5,1,1,.3)); [-1,1].forEach(s=>sbox(.12,5,.12,0x3a3020,s*2.2,3.6,0,g)); sbox(4.8,.15,.15,0x3a3020,0,6.1,0,g); sbox(.9,.5,.9,0x3a3020,0,.7,0,g); glow(sph(g,.45,0xff9a20,0,6.6,0,1,1.4,1), 0xaa5000); },
+    colossus(g){ [-1,1].forEach(s=>{ sbox(1,2.4,1.1,0x5a5e6a,s*1,1.2,0,g); sbox(.8,2.6,.8,0x6a6e7a,s*2.5,4.2,0,g); sbox(1.2,1.2,1.2,0x4a4e5a,s*2.5,2.6,0,g); }); sbox(3.4,3.2,1.8,0x6a6e7a,0,4,0,g); glow(pyramid(g,1.4,1.2,GOLD,0,4.2,1), 0x664400); sbox(1.6,1.3,1.4,0x5a5e6a,0,6.2,0,g); glow(sbox(1.2,.3,.2,0xff1a1a,0,6.3,.75,g), 0xff0000); [-1.4,1.4].forEach(x=>sbox(.2,2,.2,0x2a2a32,x,5.4,-.7,g)); },
+    mirror(g){ const gl = 0x9ae8ff; [-.35,.35].forEach(x=>ghost(sbox(.5,1.8,.5,gl,x,.9,0,g),.6)); ghost(sbox(1.2,1.8,.7,gl,0,2.7,0,g),.6); ghost(sbox(.9,.9,.9,gl,0,4.2,0,g),.6); [-.9,.9].forEach(x=>ghost(sbox(.4,1.7,.4,gl,x,2.7,0,g),.6)); glow(sbox(.14,.14,.1,0xffffff,-.2,4.3,.46,g), 0xffffff); glow(sbox(.14,.14,.1,0xffffff,.2,4.3,.46,g), 0xffffff); const sh = grp(g,0,3,0); for(let i=0;i<4;i++){ const a = i*1.57; ghost(glow(sbox(.1,1.2,.6,0xffffff,Math.cos(a)*2.2,0,Math.sin(a)*2.2,sh), 0x335566),.7); } SPIN(g, sh, 'y', 2); },
+    candles(g){ cyl(g,.9,1,3.4,0xf0e8c8,0,1.7,0,10); glow(sph(g,.35,0xffc040,0,3.8,0,.8,1.5,.8), 0xaa6600); const ring = grp(g,0,0,0); for(let i=0;i<8;i++){ const a = i/8*6.283; cyl(ring,.3,.3,1.6,0xf0e8c8,Math.cos(a)*2.6,.8,Math.sin(a)*2.6,8); glow(sph(ring,.18,0xffc040,Math.cos(a)*2.6,1.8,Math.sin(a)*2.6,.8,1.4,.8), 0xaa6600); } SPIN(g, ring, 'y', .8); sbox(.4,.4,.1,0x000000,0,2,.92,g); },
+    orbs(g){ const ring = grp(g,0,3.2,0); [0,1,2,3,4].forEach(i=>{ const a = i/5*6.283, c = grp(ring,Math.cos(a)*2,Math.sin(i*1.3)*.6,Math.sin(a)*2); sph(c,.9,0xffffff,0,0,0); sph(c,.45,[0x2a7ad8,0x2ab04a,0xd82a2a,0x8a2ad8,0xe8a020][i],0,0,.6,1,1,.4); sph(c,.2,0x000000,0,0,.85,1,1,.4); }); SPIN(g, ring, 'y', .9); glow(tor(g,2,.1,GOLD,0,3.2,0), 0x664400).rotation.x = 1.57; }
+  };
+  // the roster: [key, name, hp, speed, dmg, radius, reward, move, hover height, attacks [kind, every seconds, ...args], colour, about]
+  const CB = [
+    ['warden',  'The Pyramid Warden',   3600, 3.2, 8,  2.6, 9000,  'walk', 0, [['volley', 2.6, 3, .3, 5], ['slam', 7]],             0xffd040, 'A walking golden pyramid. Throws triangles and stomps.'],
+    ['sphinx',  'The Sphinx Regent',    4200, 3.6, 9,  2.8, 11000, 'walk', 0, [['charge', 5], ['ring', 6, 10, 5]],                  0xe8c860, 'A giant stone cat that charges like a bull.'],
+    ['scarab',  'The Scarab King',      3000, 4.4, 8,  2.2, 10000, 'walk', 0, [['charge', 4], ['summon', 12, 'tribot']],            0x30b0b0, 'A huge beetle that rolls at you and calls Triangle Bots.'],
+    ['obelisk', 'The Floating Obelisk', 3400, 2.6, 8,  1.6, 12000, 'hover', 5, [['rain', 3.4, 5], ['volley', 3, 1, 0, 6]],         0x8a8aff, 'A black tower that rains golden spikes from the sky.'],
+    ['hydra',   'The Triangle Hydra',   4800, 2.4, 9,  2.8, 14000, 'walk', 0, [['volley', 2, 5, .24, 6], ['ring', 7, 12, 5]],       0xb060ff, 'Three pointy heads, three times the triangles.'],
+    ['mason',   'The Master Mason',     4400, 3.8, 11, 2.2, 13000, 'walk', 0, [['slam', 5], ['charge', 8]],                         0x4a7aff, 'A builder with a very big hammer.'],
+    ['horus',   'The Eye of Horus',     3000, 3.4, 8,  2.2, 15000, 'hover', 6, [['orbit', 2.4, 6, 5], ['stream', 7]],              0x40a0ff, 'A winged eye that sprays spirals of light.'],
+    ['dollar',  'The Dollar Phantom',   3200, 3,   9,  2.4, 16000, 'hover', 4, [['tele', 6], ['volley', 2.2, 3, .22, 6]],           0x7adf8a, 'A ghost bill with an eye. Blinks all around you.'],
+    ['grand',   'The Grand Master',     5200, 3.4, 10, 2,   20000, 'walk', 0, [['summon', 10, 'member'], ['tele', 8], ['volley', 2.6, 3, .3, 6]], 0xa050ff, 'A hooded wizard who calls club members and vanishes.'],
+    ['compass', 'The Compass and Square', 4000, 3.2, 9, 2.2, 17000, 'hover', 4, [['orbit', 2, 8, 5], ['ring', 6, 14, 5]],           0xc0c0e0, 'Spinning tools that draw circles of danger.'],
+    ['cube',    'The Crystal Mind',     3600, 2.8, 9,  2,   18000, 'hover', 5, [['ring', 4, 14, 6], ['rain', 4, 6]],                0x40d0ff, 'A glowing cube with a triangle for a brain.'],
+    ['anubis',  'The Jackal Judge',     5000, 4.2, 12, 2.2, 21000, 'walk', 0, [['charge', 5.5], ['volley', 2.2, 4, .26, 6]],        0x40384a, 'He weighs your heart. It does not go well.'],
+    ['ouro',    'The Golden Ouroboros', 4600, 2.2, 9,  3,   22000, 'hover', 5, [['orbit', 1.6, 6, 5], ['ring', 6, 16, 5]],          0xe0b840, 'A snake biting its own tail, forever.'],
+    ['puppet',  'The Puppet Master',    4200, 3.2, 9,  1.8, 19000, 'walk', 0, [['summon', 9, 'floateye'], ['tele', 7]],             0xc08040, 'A wooden puppet on strings. Who holds the strings?'],
+    ['moon',    'The Lantern Moon',     3800, 2.4, 8,  2.4, 23000, 'hover', 6, [['rain', 2.6, 6], ['stream', 6]],                   0xf0e8b0, 'A moon in a lantern that drops fire at night.'],
+    ['colossus','The Iron Colossus',    7000, 2.4, 13, 3.4, 26000, 'walk', 0, [['slam', 4.5], ['ring', 6, 12, 6]],                  0x8a8e9a, 'A giant robot. Very slow. Very strong.'],
+    ['mirror',  'The Mirror Shade',     4400, 4.6, 10, 1.6, 24000, 'walk', 0, [['tele', 4], ['charge', 6]],                         0x9ae8ff, 'A glass shadow that copies where you stand.'],
+    ['candles', 'The Candle Cult Leader', 5600, 0,  9, 2.4, 25000, 'still', 0, [['ring', 3.2, 14, 5], ['summon', 8, 'member']],     0xffc040, 'A tower of candles. It does not move. It does not need to.'],
+    ['orbs',    'The All-Seeing Orbs',  6200, 3.4, 10, 2.6, 30000, 'hover', 5, [['orbit', 1.4, 7, 5], ['volley', 2.4, 5, .26, 6]],  0xff60c0, 'Five eyeballs that see everything.']
+  ];
+  CB.forEach(r=>{
+    const [key, name, hp, spd, dmg, rad, rew, mv, hy, atk, col, about] = r;
+    const sig = name.replace(/^The /, '') + ' Sigil';
+    ED[key] = {name:name, hp:hp, speed:spd || .1, dmg:dmg, r:rad, reward:rew, boss:true, key:key, yo:rad*.8, illum:true, club:true, color:col, quips:['Defeated.'], cb:{mv, hy, atk, about}};
+    ENEMY_DROP[key] = sig; RARE[sig] = 'CS';
+  });
+  const _mk = mkEnemy;
+  mkEnemy = function(type, g){
+    const d = ED[type];
+    if(d && d.club){ g.userData.ilLegs = []; const f = MODEL[type]; if(f) f(g); g.scale.setScalar(1.15); return; }
+    return _mk(type, g);
+  };
+  const _kE2 = killEnemy;
+  killEnemy = function(e){
+    const cl = e && e.d && e.d.club, nm = cl && e.d.name;
+    _kE2(e);
+    if(!cl) return;
+    save.clubBoss[e.d.key] = true; if(S.cb === e) S.cb = null; persist();
+    const done = Object.keys(save.clubBoss).length + (save.illBoss ? 1 : 0);
+    setTimeout(()=>{ toast(nm + ' is defeated! Illuminati bosses beaten: ' + done + ' of 20.'); confirmed(done + ' of 20 bosses'); }, 1200);
+  };
+  const _rI = removeIl;
+  removeIl = function(e){ if(S.cb === e) S.cb = null; _rI(e); };
+  // ---- how each boss attacks
+  const _fv = new THREE.Vector3();
+  function shoot(e, dx, dy, dz, spd, dmg, y0){ _fv.set(dx, dy, dz).normalize(); fireFoe(e.pos.x + _fv.x*e.d.r*.7, e.pos.y + y0 + _fv.y*e.d.r*.7, e.pos.z + _fv.z*e.d.r*.7, _fv, spd, dmg, e.d.color); }
+  const ATK = {
+    volley(e, n, spread, y0){ const dmg = Math.round(e.d.dmg*.55); for(let k=0;k<n;k++){ const a = (k-(n-1)/2)*spread, dx = P.x-e.pos.x, dz = P.z-e.pos.z, c = Math.cos(a), s = Math.sin(a); shoot(e, dx*c - dz*s, P.y + 1.1 - (e.pos.y + y0), dx*s + dz*c, 8, dmg, y0); } blip(660,.08,.06,'triangle'); },
+    ring(e, n, y0){ const dmg = Math.round(e.d.dmg*.5), off = Math.random()*6.283; for(let k=0;k<n;k++){ const a = off + k/n*6.283; shoot(e, Math.cos(a), 0, Math.sin(a), 7, dmg, y0); } blip(300,.2,.1,'square'); },
+    orbit(e, n, y0){ const dmg = Math.round(e.d.dmg*.45); e.orA = (e.orA || 0) + .5; for(let k=0;k<n;k++){ const a = e.orA + k/n*6.283; shoot(e, Math.cos(a), 0, Math.sin(a), 7, dmg, y0); } blip(500,.08,.06,'sine'); },
+    stream(e){ e.strm = 7; e.strmT = 0; },
+    rain(e, n){ const dmg = Math.round(e.d.dmg*.6); for(let k=0;k<n;k++){ const x = P.x + (Math.random()-.5)*10, z = P.z + (Math.random()-.5)*10; _fv.set(0, -1, 0); fireFoe(x, P.y + 12, z, _fv, 9, dmg, e.d.color); } blip(220,.3,.1,'sawtooth'); },
+    charge(e){ const dx = P.x-e.pos.x, dz = P.z-e.pos.z, dh = Math.hypot(dx, dz) || 1; e.ch = {t:.9, dx:dx/dh, dz:dz/dh}; toast(e.d.name + ' is charging!'); blip(110,.4,.15,'sawtooth'); },
+    slam(e){ if((e.vy || 0) !== 0) return; e.pos.y += .06; e.vy = 13; e.sl = 1; e.slAir = 0; },
+    summon(e, kind){ let n = 0; for(let i=0;i<enemies.length;i++) if(enemies[i].summonedBy) n++; if(n >= 3) return; const a = Math.random()*6.283, x = e.pos.x + Math.cos(a)*4, z = e.pos.z + Math.sin(a)*4; const h = spawnEnemy(kind, x, Math.max(groundTop(Math.floor(x), e.pos.y + 3, Math.floor(z)), 0) + (kind === 'floateye' ? 2.5 : 0), z); h.summonedBy = 1; blip(300,.3,.15,'square'); },
+    tele(e){ const a = Math.random()*6.283, r = 6 + Math.random()*3, x = P.x + Math.cos(a)*r, z = P.z + Math.sin(a)*r; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 14); e.pos.x = x; e.pos.z = z; e.pos.y = Math.max(groundTop(Math.floor(x), Math.max(P.y, 0) + 3, Math.floor(z)), 0); burst(x, e.pos.y + 1.5, z, 9, 14); blip(900,.15,.1,'sine'); }
+  };
+  function clubBossTick(e, dt){
+    const d = e.d, B = d.cb, u = e.g.userData;
+    if(!e.init){ e.init = 1; e.atkL = B.atk.map(a=>({f:a[0], iv:a[1], t:a[1]*(.7 + Math.random()*.5), a:a.slice(2)})); e.awayT = 0; }
+    if(realm !== 0 || P.x >= UPPER_EDGE){ removeIl(e); return; }
+    if(P.y < -8){ e.awayT += dt; if(e.awayT > 20){ toast(d.name + ' loses interest and leaves. You can challenge it again at the club.'); removeIl(e); return; } } else e.awayT = 0;
+    const dx = P.x-e.pos.x, dz = P.z-e.pos.z, dh = Math.hypot(dx, dz) || 1, sp = d.speed*(e.enr ? 1.25 : 1);
+    if(!e.enr && e.hp <= e.max*.5){ e.enr = true; toast(d.name + ' is ENRAGED!'); blip(80,.6,.2,'sawtooth'); shake = .15; }
+    if(e.ch && e.ch.t > 0){ e.ch.t -= dt; tryMove(e, e.ch.dx*13*dt, e.ch.dz*13*dt, 1.4); if(B.mv !== 'hover') applyGravityObj(e.pos, e, dt); }
+    else if(B.mv === 'walk'){ if(dh > d.r + 1.6) tryMove(e, dx/dh*sp*dt, dz/dh*sp*dt, 1.4); applyGravityObj(e.pos, e, dt); }
+    else if(B.mv === 'hover'){
+      const want = 9, gy = groundTop(Math.floor(e.pos.x), Math.max(e.pos.y, 3), Math.floor(e.pos.z));
+      const k = dh > want + 2 ? 1 : dh < want - 3 ? -1 : 0;
+      e.pos.x += (dx/dh*k - dz/dh*.5)*sp*dt; e.pos.z += (dz/dh*k + dx/dh*.5)*sp*dt;
+      e.pos.y += (Math.max(gy, Math.min(P.y, 4)) + B.hy - e.pos.y)*Math.min(1, dt*2);
+    } else applyGravityObj(e.pos, e, dt);
+    if(e.sl){ e.slAir += dt; if(e.slAir > .2 && (e.vy || 0) === 0){ e.sl = 0; shake = .18; blip(60,.4,.2,'sawtooth'); burst(e.pos.x, e.pos.y + .3, e.pos.z, 0, 24); if(Math.hypot(P.x-e.pos.x, P.z-e.pos.z) < d.r + 5 && P.y < e.pos.y + 2.2) hurtPlayer(d.dmg); } }
+    e.g.position.set(e.pos.x, e.pos.y + (B.mv === 'hover' ? Math.sin(e.t*1.6)*.25 : 0), e.pos.z);
+    e.g.rotation.y = Math.atan2(dx, dz);
+    if(u.spin) for(let i=0;i<u.spin.length;i++){ const s = u.spin[i]; if(s.sp) s.m.rotation[s.ax] += s.sp*dt; }
+    if(u.wing) for(let i=0;i<u.wing.length;i++){ const w = u.wing[i]; w[0].rotation.z = w[1]*Math.sin(e.t*5)*.5; }
+    if(u.arm) u.arm.rotation.x = Math.sin(e.t*3)*.6;
+    if(locked){
+      for(let i=0;i<e.atkL.length;i++){ const a = e.atkL[i]; a.t -= dt*(e.enr ? 1.25 : 1); if(a.t <= 0){ a.t = a.iv*(.85 + Math.random()*.3); try{ ATK[a.f].apply(null, [e].concat(a.a)); }catch(err){ console.error('LN-council atk', err); } } }
+      if(e.strm > 0){ e.strmT -= dt; if(e.strmT <= 0){ e.strmT = .18; e.strm--; shoot(e, P.x-e.pos.x, P.y + 1.1 - (e.pos.y + 3), P.z-e.pos.z, 9, Math.round(d.dmg*.4), 3); } }
+    }
+    if(e.atkT <= 0 && dh < d.r + .9 && Math.abs(P.y - e.pos.y) < 3){ e.atkT = 1.1; hurtPlayer(Math.round(d.dmg*.7)); }
+  }
+  const _bT = bossTick;
+  bossTick = function(e, dt){ if(e.d.club) return clubBossTick(e, dt); return _bT(e, dt); };
+  // ---- calling a boss from the golden pedestal inside the club
+  function callBoss(key){
+    if(bossActive || S.boss || S.cb){ toast('A boss is already here. Beat it first!'); return false; }
+    if(realm !== 0 || P.x >= UPPER_EDGE){ toast('Bosses can only be called on the normal world surface.'); return false; }
+    if(key === 'greateye'){ spawnBoss(); return true; }
+    const d = ED[key], c = S.club.position, x = c.x + (Math.random()-.5)*8, z = c.z + 17;
+    const gy = groundTop(Math.floor(x), c.y + 4, Math.floor(z)), hov = d.cb.mv === 'hover';
+    const e = spawnEnemy(key, x, gy + (hov ? d.cb.hy : 0), z);
+    bossActive = true; S.cb = e; e.atkT = 2;
+    toast(d.name + ' steps out of the dark! ' + d.cb.about); xfiles(); shake = .1;
+    return true;
+  }
+  const pan = document.createElement('div');
+  pan.style.cssText = 'position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  pan.innerHTML = '<div style="position:relative;background:#241a06;color:#fff0c0;border:2px solid #ffd040;border-radius:12px;padding:16px 18px;width:min(560px,94vw);max-height:88vh;overflow:auto;font:15px system-ui,sans-serif">' +
+    '<button id="councilX" style="position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 22px system-ui;color:#ffd040">The Council of Twenty</div><div id="councilSub" style="opacity:.85;font-size:13px;margin:4px 0 10px"></div><div id="councilList"></div></div>';
+  document.body.appendChild(pan);
+  const cList = pan.querySelector('#councilList'), cSub = pan.querySelector('#councilSub');
+  function drawPanel(){
+    const all = [['greateye', 'The Great Eye', 'A giant golden pyramid with a watching eye. Floats above you.', !!save.illBoss]].concat(CB.map(r=>[r[0], r[1], r[11], !!save.clubBoss[r[0]]]));
+    const n = all.filter(a=>a[3]).length; cSub.textContent = 'Beaten: ' + n + ' of 20. Pick one to call. It comes out in front of the club.';
+    cList.innerHTML = '';
+    all.forEach(a=>{ const b = document.createElement('button'); b.className = 'btn';
+      b.style.cssText = 'display:block;width:100%;text-align:left;margin:4px 0;padding:8px 12px;font-size:14px;background:' + (a[3] ? '#2f6a3a' : '#5a4210') + ';color:#fff';
+      b.innerHTML = '<b>' + a[1] + (a[3] ? '  (beaten)' : '') + '</b><br><span style="opacity:.8;font-size:12px">' + a[2] + '</span>';
+      b.onclick = e=>{ e.stopPropagation(); if(callBoss(a[0])) closePanel(); }; cList.appendChild(b); });
+  }
+  function openPanel(){ drawPanel(); pan.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closePanel(){ pan.style.display = 'none'; }
+  pan.addEventListener('click', e=>{ if(e.target === pan || e.target.id === 'councilX') closePanel(); });
+  addEventListener('keydown', e=>{ if(e.code === 'Escape' && pan.style.display === 'flex') closePanel(); });
+  const _cA2 = computeAct;
+  computeAct = function(){
+    _cA2();
+    if(act || realm !== 0 || P.x >= UPPER_EDGE || won || shopOpen || !S.club) return;
+    const c = S.club.position;
+    if(Math.hypot(P.x-c.x, P.z-(c.z - 3)) < 2.4 && Math.abs(P.y - c.y) < 2.5){
+      act = {k:'illcouncil', text:'challenge a boss of the Council'};
+      const el = $('prompt'); if(locked){ const h = 'Press <kbd>F</kbd> to ' + act.text; if(h !== lastPrompt){ el.innerHTML = h; lastPrompt = h; } el.style.display = 'block'; }
+    }
+  };
+  const _dA2 = doAct;
+  doAct = function(){ if(act && act.k === 'illcouncil'){ openPanel(); return; } _dA2(); };
+  let inClub = false;
+  const _st2 = step;
+  step = function(dt){ _st2(dt);
+    try{ if(S.club && realm === 0 && P.x < UPPER_EDGE){ const c = S.club.position, ins = Math.abs(P.x-c.x) < 4.1 && Math.abs(P.z-c.z) < 4.1 && Math.abs(P.y-c.y) < 4;
+      if(ins && !inClub){ toast('Welcome to the Secret Club! Stand at the golden pedestal in the back and press F to challenge a boss.'); xfiles(); } inClub = ins; } }catch(e){} };
+  window.__council = {CB, callBoss, openPanel, MODEL, ATK, S:()=>S};
+  /* LN-council end */
 
   /* ------------------------------------------------ Planet Pyramid: pyramids, obelisks, golden grass, a floating eye */
   if(OWN_P){
