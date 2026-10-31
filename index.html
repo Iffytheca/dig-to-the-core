@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 118 (Oct 30)';
+  window.__BUILD = 'Build 119 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29207,17 +29207,19 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const EDGE = E.EDGE;
   const clr = a=>a.slice();
   // ---- blocks (kept in save.customBlocks so their ids never move)
+  function setOre(Bk, name, host, c2){ Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = host; Bk.oreCol = c2; }
   function blk(name, h, v, c1, c2, glow, pattern, ore){
     let j = BLOCKS.findIndex(b=>b.name === name);
     if(j < 0){
       const spec = {name, h, v, c1, c2, glow:glow || 0, pattern:pattern || 'plain', edge:1};
       save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
       const Bk = specToBlock(spec);
-      if(ore){ Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = ore; }
+      if(ore) setOre(Bk, name, ore, c2);
       BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
-    } else if(ore && !BLOCKS[j].ore){ const Bk = BLOCKS[j]; Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = ore; }
+    } else if(ore && !BLOCKS[j].ore) setOre(BLOCKS[j], name, ore, c2);
     return j + 1;
   }
+  const CORE0 = (()=>{ let a = 0; for(const l of LAYERS){ if(l.name === 'Core') return a; a += l.th; } return D; })();   // the real Core and Deeper Core stay everywhere
   // ---- World Edge: five layers below the glitch ground, each with an ore and caves that exist nowhere else
   const EL = [
     {name:'Glitch Basalt',    d0:14, id:blk('Glitch Basalt', 20, 20, [60,30,90], [120,60,180], 0, 'brick'),            ore:blk('Pixel Ore', 40, 600, [60,30,90], [255,60,220], .4, 'ore', 'World Edge')},
@@ -29263,11 +29265,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return null;
   }
   window.__farBox = box;
+  window.__farTest = {mine:h=>breakBlock(h), core0:CORE0};
   const _bb = baseBlock;
   baseBlock = function(x, d, z){
     const w = box(x, z);
     if(w){
       if(d < 0 || d >= D) return 0;
+      if(d >= CORE0) return _bb(x, d, z);
       if(d === 0) return w.ids[0];
       if(d < 4) return w.ids[1];
       if(d > 5 && cave(x, d, z, w.sd)) return 0;
@@ -29283,7 +29287,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(Bk && (Bk.cave || /acid/i.test(Bk.name || ''))) return E.EB.stone || r;
       return r;
     }
-    if(r && d >= 14 && d < D && E.zone && E.zone(x, z) === 1){
+    if(r && d >= 14 && d < CORE0 && E.zone && E.zone(x, z) === 1){
       const L = edgeLayer(d);
       if(cave(x, d, z, 5200)) return 0;
       if(hash3(x>>1, d>>1, z>>1, 5300) < .03 && hash3(x, d, z, 5301) < .6) return L.ore;
@@ -29375,22 +29379,25 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const inDen = (x, z)=>Math.abs(x - CX) <= HALF && Math.abs(z - CZ) <= HALF;
   window.__farBox = (x, z)=>FB(x, z) || (inDen(x, z) ? {void:1} : null);
   // blocks
+  function setOre(Bk, name, host, c2){ Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = host; Bk.oreCol = c2; }
   function blk(name, h, v, c1, c2, glow, pattern, ore){
     let j = BLOCKS.findIndex(b=>b.name === name);
     if(j < 0){
       const spec = {name, h, v, c1, c2, glow:glow || 0, pattern:pattern || 'plain', edge:1};
       save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
-      const Bk = specToBlock(spec); if(ore){ Bk.ore = true; Bk.oreName = name; Bk.cat = 'ore'; Bk.hostName = ore; }
+      const Bk = specToBlock(spec); if(ore) setOre(Bk, name, ore, c2);
       BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
-    }
+    } else if(ore && !BLOCKS[j].ore) setOre(BLOCKS[j], name, ore, c2);
     return j + 1;
   }
+  const CORE0 = window.__farTest ? window.__farTest.core0 : D;
   const top = blk('Voidstone', 40, 80, [14,6,26], [90,30,150], .15, 'brick'), mid = blk('Void Dirt', 50, 120, [8,4,16], [60,20,100], 0, 'plain'),
         deep = blk('Black Stone', 90, 300, [4,3,8], [40,20,70], 0, 'brick'), pearl = blk('Void Pearl', 100, 6000, [8,4,16], [200,120,255], .9, 'ore', 'The Void');
   const _bb = baseBlock;
   baseBlock = function(x, d, z){
     if(inDen(x, z)){
       if(d < 0 || d >= D) return 0;
+      if(d >= CORE0) return _bb(x, d, z);
       if(d === 0) return top;
       if(d < 4) return mid;
       if(hash3(x>>1, d>>1, z>>1, 6001) < .02 && hash3(x, d, z, 6002) < .6) return pearl;
