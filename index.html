@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 126 (Oct 31)';
+  window.__BUILD = 'Build 127 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -16928,6 +16928,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     /* LN-facts: real things get real facts, meme items get their meme fact, everything else gets its own made-up fact */
     if(e && real){ window.__factLabel = e.set === 'meme' ? 'Meme fact:' : 'Silly fact:'; return real.trim(); }
     const rf = window.__realFact && window.__realFact(name); if(rf) return rf;
+    if(window.__isFantasy && window.__isFantasy(name, inf)){ window.__factLabel = 'Magical fact:'; return window.__magical(name); }
     window.__factLabel = 'Made-up fact:'; if(window.__madeUp) return window.__madeUp(name);
     if(!real || h < .33) return fake();
     if(h < .6){                                              // mixed up: one true bit, one made-up bit
@@ -16967,7 +16968,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
       '<div style="opacity:.8;font-size:12px;margin:4px 0 8px">'+f.lines.join('<br>')+'</div>'+
       '<div><b style="color:#7fd0ff">'+(window.__factLabel || 'Fact:')+'</b> '+f.fact+'</div>'+
       '<div style="margin-top:8px"><b style="color:#ff9a4a">FAKE NEWS (100% made up):</b> '+fakeNewsFor(f.name)+'</div>'+   /* LN-fakenews3 */
-      '<div style="margin-top:8px;font-size:11px;opacity:.55">Real things have real facts. Meme items have meme facts. Made-up items have made-up facts.</div>';
+      '<div style="margin-top:8px;font-size:11px;opacity:.55">Real things have real facts, meme items have meme facts, fantasy items have magical facts, and silly items have made-up facts.</div>';
     pop.style.display = 'block'; blip(880,.06,.08,'triangle');
     document.getElementById('factX').onclick = e=>{ e.stopPropagation(); pop.style.display = 'none'; };
   }
@@ -30102,6 +30103,19 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const fill = t=>t.split('{n}').join(n).split('{w}').join(pick(WHO, n, 'w')).split('{y}').join(num(n, 'y', 1100, 2999)).split('{x}').join(num(n, 'x', 3, 997)).split('{z}').join(num(n, 'z', 1, 9)).split('{adj}').join(pick(ADJ, n, 'adj')).split('{food}').join(pick(FOOD, n, 'f'));
     return fill(pick(A, n, 'a') + ' ' + pick(B, n, 'b') + ' ' + pick(C, n, 'c'));
   }
+  // magical facts for fantasy items that look beautiful (not meme, not silly)
+  const SRC = ['starlight','moonbeams','a sleeping dragon\'s dream','the first sunrise','a lullaby sung by the sea','frozen lightning','the last whisper of a comet','a rainbow that never faded','the breath of an ancient cloud','a wish made on a falling star','morning dew from a hidden garden','the glow of a thousand fireflies'];
+  const SAGE = ['the Moon Queen','a forgotten star-weaver','the Cloud Dragon','an elf who lived inside a mountain','the Keeper of Dreams','a wandering sky whale','the Sun Prince','the oldest fairy in the Deep'];
+  const MA = ['Legend says the {n} was woven from {s} by {w}.','Long ago, {w} hid the first {n} deep underground so only a patient digger could find it.','The {n} is said to remember every dream dreamed near it.','Fairy tales tell of a {n} that lit the way home for lost travellers.','The old songs call the {n} "a drop of {s}".'];
+  const MB = ['In the dark it glows softly, like it is smiling.','When you hold it, it hums a tune only you can hear.','It shimmers in colours that have no names yet.','Those who carry it dream of flying over silver oceans.','On quiet nights it floats just a tiny bit above the ground.','It sparkles brighter when someone nearby is being kind.','Its light never fades, not even in the deepest cave.'];
+  const MC = ['Wishing on it is said to work, once.','Treat it gently. It is older than any kingdom.','Magic folk say it is a seed of a future star.','It makes even a dusty cave feel like a castle.','Every one is different, and each one is a little bit alive.','Keep it close, and the night will never feel dark.'];
+  const FANT = /(crystal|gem|star|void|mythic|angel|dream|moon|cosmic|aurora|prism|rainbow|galaxy|nebula|universe|divine|heavenly|celestial|spirit|ecto|opal|pearl|mirror|reflection|lullaby|whisper|haunted|lantern|nova|quasar|plasma|dark matter|infinity|eternal|storm|thunder|comet|heart|soul|mythril|adamantite|starlight|radiant|shimmer|skystone|cloud|glow|wormhole|antimatter|big bang|bounce diamond|candy diamond|diamond)/i, SILLY = /(toilet|sock|toast|duck|carrot|pizza|jail|flag|hard hat|scaffold|nonsense|suspicious|pencil|brush|chicken|potato|banana|cheese|poop|booger|fart|noodle)/i;
+  function magical(n){
+    const fill = t=>t.split('{n}').join(n).split('{s}').join(pick(SRC, n, 's')).split('{w}').join(pick(SAGE, n, 'sw'));
+    return fill(pick(MA, n, 'ma') + ' ' + pick(MB, n, 'mb') + ' ' + pick(MC, n, 'mc'));
+  }
+  window.__isFantasy = (n, inf)=>!SILLY.test(n) && (FANT.test(n) || (inf && inf.kind === 'mat' && inf.tier >= 4));
+  window.__magical = magical;
   window.__realFact = n=>REAL[n.replace(/\s*\(Sector.*\)$/, '')] || null;
   window.__madeUp = madeUp;
   window.__realFactCount = Object.keys(REAL).length;
