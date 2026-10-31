@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 137 (Oct 31)';
+  window.__BUILD = 'Build 138 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25507,7 +25507,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   /* LN-animaltech start: animals smelt introduced ore in furnaces and invent food technology and other technology from introduced discoveries (Irfan 2026-10-31) */
   const BARS = [[/iron/i, 'Iron Bar'], [/copper/i, 'Copper Bar'], [/silver/i, 'Silver Bar'], [/gold/i, 'Gold Bar'], [/titanium/i, 'Titanium Bar']];
-  const TECHS = ['food technology', 'a water mill', 'glass blowing', 'a printing press', 'clock making', 'a telescope', 'a bicycle', 'an electric lantern', 'a hot air balloon', 'a pizza oven'];
+  const TECHS = ['food technology', 'medicine', 'food safety', 'fire safety', 'road safety', 'a water mill', 'glass blowing', 'a printing press', 'clock making', 'a telescope', 'a bicycle', 'an electric lantern', 'a hot air balloon', 'a pizza oven'];
+  const GIZ = ['Gizmo', 'Gadget', 'Contraption', 'Doohickey', 'Widget', 'Thingamajig'], POOL = ['Wood', 'Rock', 'Feather', 'Button', 'Spoon', 'Sock', 'Rope', 'Pebble'];
   const aniPl = n=>(n.animal ? n.animal + 's' : 'residents');
   function townTech(n, cat, e){
     n.techQ = n.techQ || [];
@@ -25515,9 +25516,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const bar = (BARS.find(x=>x[0].test(e.name)) || [])[1] || null;
       n.techQ.push({t:24, k:'smelt', ore:e.name, bar});
       toast('The ' + aniPl(n) + ' of ' + n.name + ' are building a furnace to smelt your ' + e.name + '!');
-    } else if(cat === 'disc'){
+    }
+    if(cat !== 'disc'){
+      const others = Object.keys(save.inv || {}).filter(k=>k !== e.name && save.inv[k] > 0), other = others.length ? others[Math.floor(Math.random()*others.length)] : POOL[Math.floor(Math.random()*POOL.length)];
+      n.techQ.push({t:36, k:'craft', a:e.name, b:other});
+      if(cat !== 'ore') toast('The ' + aniPl(n) + ' of ' + n.name + ' start crafting something with your ' + e.name + ' and a ' + other + '!');
+    }
+    if(cat === 'disc'){
       n.techs = n.techs || [];
-      let t = TECHS.find(x=>n.techs.indexOf(x) < 0 && (n.techs.length > 0 || x === 'food technology')) || null;
+      let t = TECHS.find(x=>n.techs.indexOf(x) < 0) || null;
       if(t){ n.techs.push(t); n.techQ.push({t:30, k:'tech', tech:t, d:e.name}); toast('The ' + aniPl(n) + ' of ' + n.name + ' are inspired by ' + e.name + ' and start inventing ' + t + '!'); }
     }
   }
@@ -25528,7 +25535,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const done = n.techQ.filter(q=>q.t <= 0); if(!done.length) return;
       n.techQ = n.techQ.filter(q=>q.t > 0);
       done.forEach(q=>{
-        if(q.k === 'smelt'){
+        if(q.k === 'craft'){
+          const nm = q.a + ' ' + q.b + ' ' + GIZ[Math.floor(Math.random()*GIZ.length)];
+          if(window.__inventionNames && !window.__inventionNames[nm]){ let h = 0; for(let i=0;i<nm.length;i++) h = (h*31 + nm.charCodeAt(i)) & 255; window.__inventionNames[nm] = [80 + h % 150, 80 + (h*7) % 150, 80 + (h*13) % 150]; }
+          addItem(nm, 1);
+          news('NEWS: The ' + aniPl(n) + ' of ' + n.name + ' crafted a ' + nm + ' out of a ' + q.a + ' and a ' + q.b + '. Nobody knows what it does. It was a present for the miner.', true);
+          toast(n.name + ' crafted a ' + nm + ' and gave it to you!');
+        } else if(q.k === 'smelt'){
           n.furnace = true; n.smelted = n.smelted || {};
           if(q.bar){ n.smelted[q.bar] = (n.smelted[q.bar] || 0) + 1; addItem(q.bar, 2);
             news('NEWS: The ' + aniPl(n) + ' of ' + n.name + ' built a FURNACE and smelted the ' + q.ore + ' into shiny bars! They sent two ' + q.bar + 's to the miner who brought it.', true);
@@ -25537,7 +25550,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
             news('NEWS: The ' + aniPl(n) + ' of ' + n.name + ' tried to smelt a ' + q.ore + ' in their new furnace. It turned into very pretty beads. They gave the miner $300.', true);
             toast(n.name + ' turned your ' + q.ore + ' into beads and gave you $300.'); }
         } else {
-          if(q.tech === 'food technology'){ save.foodPower = save.foodPower || {}; save.foodPower['Animal Stew'] = 7; addItem('Animal Stew', 2); n.foodTech = true;
+          if(q.tech === 'medicine'){ save.foodPower = save.foodPower || {}; save.foodPower['Animal Medicine'] = 9; addItem('Animal Medicine', 2); n.medicine = true;
+            news('NEWS: The ' + q.d + ' helped the ' + aniPl(n) + ' of ' + n.name + ' invent MEDICINE! The town doctor gave the miner two bottles of Animal Medicine.', true);
+            toast(n.name + ' invented medicine and sent you 2 Animal Medicine!');
+          } else if(q.tech === 'food safety' || q.tech === 'fire safety' || q.tech === 'road safety'){ n.safety = n.safety || {}; n.safety[q.tech] = true; save.coins += 500;
+            news('NEWS: Thanks to the ' + q.d + ', ' + n.name + ' invented ' + q.tech.toUpperCase() + '! ' + (q.tech === 'food safety' ? 'Every sandwich now wears a tiny helmet.' : q.tech === 'fire safety' ? 'The fire station got a new hat for the fire truck.' : 'Every crossing has a very serious goose now.') + ' The miner got $500.', true);
+            toast(n.name + ' invented ' + q.tech + ' and gave you $500!');
+          } else if(q.tech === 'food technology'){ save.foodPower = save.foodPower || {}; save.foodPower['Animal Stew'] = 7; addItem('Animal Stew', 2); n.foodTech = true;
             news('NEWS: Thanks to the ' + q.d + ', the ' + aniPl(n) + ' of ' + n.name + ' invented FOOD TECHNOLOGY! Their first dish, Animal Stew, is so good they sent the miner two bowls.', true);
             toast(n.name + ' invented food technology and sent you 2 Animal Stew!');
           } else { save.coins += 400;
