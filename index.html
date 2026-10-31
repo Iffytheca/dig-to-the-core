@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 132 (Oct 31)';
+  window.__BUILD = 'Build 133 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25555,8 +25555,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     btn('A new crop', cropView, 'Pick a crop. The town farm starts growing it.');
     btn('A new animal', animalView, 'Bring a kind of animal they have never seen. Some residents will tame one.');
     btn('A material', matView, 'Give them blocks from your bag. They build a quarry and a monument with it.');
-    const g = save.inv && save.inv['Tripod Gem'] || 0;
-    btn('A Tripod Gem (' + g + ' in your bag)', ()=>{ if(giveGem(n)) close(); }, 'Their crafters polish it into a Pristine Polished Tripod Gem and make jewelry.', g ? '#7a3a8a' : '#3a3a4a');
+    btn('An ore', ()=>openPicker('ore', townCb(n)), 'Pick any ore you own. They show it to everyone.');
+    btn('A gem', ()=>openPicker('gem', townCb(n)), 'Pick any gem you own. Their crafters make jewelry (a Tripod Gem gets polished into something amazing).', '#7a3a8a');
+    btn('Loot', ()=>openPicker('loot', townCb(n)), 'Pick loot you own, like treasure, fossils or things from kills.');
+    btn('A discovery', ()=>openPicker('disc', townCb(n)), 'Pick one of your unique discoveries.');
+    btn('An item', ()=>openPicker('item', townCb(n)), 'Pick anything else in your bag.');
   }
   function backBtn(){ btn('Back', mainView, null, '#3a3a4a'); }
   function cropView(){
@@ -25583,6 +25586,58 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       persist(); close(); }));
     backBtn();
   }
+  /* ------------------------------------------------ pick something you own: tabs, search, scroll (Irfan 2026-10-31) */
+  const CATS = [['ore', 'Ores'], ['gem', 'Gems'], ['loot', 'Loot'], ['disc', 'Discoveries'], ['item', 'All items']];
+  const isGemName = k=>/gem|crystal|diamond|ruby|sapphire|emerald|opal|pearl|amethyst|quartz|jade|topaz/i.test(k);
+  function listFor(cat){
+    const out = [], inv = save.inv || {};
+    if(cat === 'disc'){ Object.keys(save.mats || {}).forEach(k=>{ const i = k.indexOf('|'); out.push({name:k.slice(i + 1), n:save.mats[k], ref:'m:' + k, tier:+k.slice(0, i)}); }); out.sort((a, b)=>b.tier - a.tier || b.n - a.n); return out; }
+    Object.keys(inv).forEach(k=>{
+      if(!(inv[k] > 0)) return; const c = itemMeta(k).cat;
+      const ok = cat === 'ore' ? c === 'Ores' : cat === 'gem' ? (c === 'Gems' || isGemName(k)) : cat === 'loot' ? (c === 'Loot' || c === 'Rare finds' || c === 'Treasure' || c === 'Fossils') : true;
+      if(ok) out.push({name:k, n:inv[k], ref:'i:' + k});
+    });
+    return out.sort((a, b)=>b.n - a.n);
+  }
+  const REACT = {
+    ore:['melted it down and cast a giant statue of', 'put it in the town museum next to', 'wrote a proud poem about', 'started a mine to find more of'],
+    gem:['made fancy jewelry from', 'put it in the mayor\'s crown instead of', 'built a sparkly fountain around', 'made every window shiny with'],
+    loot:['hung it in the town hall, a bit like', 'held a parade for', 'put it in a very safe box with', 'argued for an hour about'],
+    disc:['named a street after', 'put it on the town flag next to', 'made a holiday called "Day of"', 'wrote a school song about'],
+    item:['put it on display in front of', 'built a little house for', 'made a tiny hat for', 'asked everyone to say hello to']
+  };
+  function townCb(n){
+    return (cat, e)=>{
+      if(e.name === 'Tripod Gem'){ if(giveGem(n)) close(); return; }
+      if(!consumeRef(e.ref, 1)){ toast('You do not have that any more.'); return; }
+      let pw = 1; try{ pw = Math.max(1, (e.tier != null ? e.tier + 1.2 : itemPower(e.name)) || 1); }catch(err){}
+      const gift = Math.round(100 + pw*80); save.coins += gift; n.shown = (n.shown || 0) + 1; if(cat === 'gem'){ n.jewel = true; n.gems = (n.gems || 0) + 1; }
+      const act = rnd(REACT[cat] || REACT.item);
+      news('NEWS: A miner brought a ' + e.name + ' to ' + n.name + '. ' + who(n) + ' ' + act + ' it, and now the whole town is talking.', true);
+      toast(n.name + ' loves your ' + e.name + '!  Thank-you gift +$' + gift.toLocaleString()); blip(900, .12, .1, 'triangle');
+      persist(); close();
+    };
+  }
+  function openPicker(cat, cb, titleText){
+    cat = cat || 'item'; panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+    pB.innerHTML = ''; pT.textContent = titleText || ('Introduce something to ' + (town ? town.name : 'them')); pS.textContent = 'Pick one thing you own. Scroll the list, or type to search.';
+    const tabs = document.createElement('div'); tabs.style.cssText = 'margin-bottom:6px';
+    CATS.forEach(([k, label])=>{ const t = document.createElement('button'); t.className = 'btn'; t.textContent = label; t.style.cssText = 'margin:2px 4px 2px 0;padding:6px 10px;font-size:13px;color:#fff;background:' + (k === cat ? '#2e7d32' : '#2a5a4a'); t.onclick = ev=>{ ev.stopPropagation(); openPicker(k, cb, titleText); }; tabs.appendChild(t); });
+    pB.appendChild(tabs);
+    const inp = document.createElement('input'); inp.type = 'search'; inp.placeholder = 'Search...'; inp.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:2px solid #4a8a6a;background:#0e1a14;color:#eef6f0;font:14px system-ui;margin-bottom:6px';
+    ['keydown', 'keyup', 'keypress'].forEach(ev=>inp.addEventListener(ev, e=>e.stopPropagation())); pB.appendChild(inp);
+    const box = document.createElement('div'); box.style.cssText = 'max-height:44vh;overflow:auto;border:1px solid #2a5a4a;border-radius:8px;padding:4px'; pB.appendChild(box);
+    const all = listFor(cat);
+    const draw = ()=>{
+      const q = inp.value.trim().toLowerCase(); box.innerHTML = '';
+      const hits = all.filter(e=>!q || e.name.toLowerCase().indexOf(q) >= 0).slice(0, 300);
+      if(!hits.length){ box.innerHTML = '<div style="opacity:.7;padding:8px">' + (all.length ? 'Nothing matches that.' : 'You do not have any of these yet.') + '</div>'; return; }
+      hits.forEach(e=>{ const b = document.createElement('button'); b.className = 'btn'; b.style.cssText = 'display:block;width:100%;margin:3px 0;padding:8px 10px;font-size:14px;text-align:left;background:#2a5a4a;color:#fff'; b.innerHTML = '<b>' + e.name.replace(/</g, '&lt;') + '</b> <span style="opacity:.75">x' + e.n.toLocaleString() + '</span>'; b.onclick = ev=>{ ev.stopPropagation(); cb(cat, e); }; box.appendChild(b); });
+    };
+    inp.oninput = draw; draw();
+    const back = document.createElement('button'); back.className = 'btn'; back.textContent = 'Back'; back.style.cssText = 'margin-top:8px;padding:8px 14px;color:#fff;background:#3a3a4a'; back.onclick = ev=>{ ev.stopPropagation(); if(town && !cb.alien) mainView(); else close(); }; pB.appendChild(back);
+  }
+  window.__introPick = {openPicker, close};
   function open(){
     if(!onEarth()){ toast('Introduce things to towns on the normal world surface.'); return; }
     town = nearTown(70);
@@ -25678,7 +25733,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(e.code === 'KeyH'){ if(shop.style.display === 'flex') closeShop(); else if(locked && nearBase()) openShop(); }
   });
   { const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Introduce (U)'; b.style.cssText = 'margin:6px 6px 0;padding:8px 18px;font-size:14px;color:#fff;background:#2a6a4a';
-    b.onclick = e=>{ e.stopPropagation(); toast('Walk into a town and press U to introduce crops, animals, materials, religions, independence or a Tripod Gem.'); };
+    b.onclick = e=>{ e.stopPropagation(); toast('Walk into a town and press U to introduce crops, animals, ores, gems, loot, discoveries, items, religions or independence.'); };
     const anchor = document.getElementById('lnEggs') || document.getElementById('btnTouch');
     if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(b, anchor.nextSibling); }
 
@@ -27703,9 +27758,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   addEventListener('keydown', e=>{
     if(e.code !== 'KeyF' || e.repeat || !locked || !onUni()) return;
-    const hi = hotInfo(hotArr()[save.hotSel]); if(!hi) return;
+    const hi = hotInfo(hotArr()[save.hotSel]);
     for(let i=0;i<T3.length;i++){ if(!T3[i].g.visible) continue; for(const a of T3[i].aliens){ if(a.dead) continue; a.g.getWorldPosition(v); if(Math.hypot(v.x - P.x, v.z - P.z) < 3){
-      e.stopImmediatePropagation(); const I = i, A = a; setTimeout(()=>introduce(I, A, hi), 40); return; } } }
+      e.stopImmediatePropagation(); const I = i, A = a;
+      if(hi){ setTimeout(()=>introduce(I, A, hi), 40); return; }
+      const IP = window.__introPick; if(IP){ const cb = (cat, en)=>{ IP.close(); introduce(I, A, {name:en.name, kind:'item'}); }; cb.alien = true; IP.openPicker('item', cb, 'Introduce something to ' + T[I].n); }
+      return; } } }
   }, true);
 
   let last = performance.now();
