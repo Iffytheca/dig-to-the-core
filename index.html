@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 146 (Oct 31)';
+  window.__BUILD = 'Build 147 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -17147,6 +17147,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     }
     return real.trim();
   }
+  window.__oneFact = function(n, inf){ try{ const mf = window.__mf; return oneFact(n, mf && mf.MF && mf.MF[n], inf || {kind:'item', name:n}); }catch(e){ return null; } };  /* LN-uimenu */
   function fakeNewsFor(name){                               /* LN-fakenews3: a made-up fact, different from the Fact line */
     const num = (k, a, b)=>a + Math.floor(strHash(name+k+'fn')*(b-a+1));
     const all = FAKE_T.concat(FAKE2), t = all[Math.floor(strHash(name+'fakenews3')*all.length)];
@@ -30678,7 +30679,750 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
   window.__dinofood = {mark, near, chop, keep, isDinoA, isDinoE};
 })();
+/* LN-uihud start: a cleaner in-game HUD. Biome Tracker becomes a minimap with "You are in", the detail list folds away; layer legend and key help hide behind buttons; left and right columns line up (Irfan 2026-10-31) */
+(function(){
+  const LS = (k, d)=>{ try{ const v = localStorage.getItem(k); return v === null ? d : v === '1'; }catch(e){ return d; } };
+  const LSset = (k, v)=>{ try{ localStorage.setItem(k, v ? '1' : '0'); }catch(e){} };
+  const TOUCH = document.body.classList.contains('touchplay');
+  const GAP = 10, EDGE = 14, BTN_H = 32;
+  let trackOpen = LS('digcore_ui_tracker', false), legOn = LS('digcore_ui_legend', false), helpOn = LS('digcore_ui_help', false);
+
+  const st = document.createElement('style');
+  st.textContent = [
+    '#minedRow{display:none!important}',
+    'body.uiL #stats{width:var(--uiLW)!important;min-width:0!important}',
+    'body.uiL.uiNarrow #stats{font-size:13px}body.uiL.uiNarrow #stats b{font-size:15px}',
+    'body.uiL #menuBtn,body.uiL #planetsBtn,body.uiL #loreBtn{position:absolute!important;height:' + BTN_H + 'px!important;padding:0 4px!important;font:800 11px system-ui,sans-serif!important;letter-spacing:0!important;border-radius:9px!important;white-space:nowrap!important;overflow:hidden;z-index:30}',
+    'body.uiL #lnTicker{width:var(--uiLW)}',
+    'body.uiL:not(.uiLegOn) #layers{display:none!important}',
+    'body.uiL #layers{width:var(--uiRW)!important;min-width:0!important;left:auto!important;right:' + EDGE + 'px!important}',
+    'body.uiL:not(.uiHelpOn) #help{display:none!important}',
+    'body.uiL #help{position:fixed!important;left:auto!important;right:' + EDGE + 'px!important;width:min(360px,calc(100vw - 28px));opacity:1!important;background:rgba(14,12,10,.93)!important;text-align:left!important;font-size:12px!important;line-height:1.35!important;z-index:40;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}',
+    '#help .uiKeys{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:6px}',
+    '#help .uiKeys div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '#help .uiKeys kbd{margin-right:5px;font-size:11px;padding:0 5px}',
+    '#help .uiHdr{font-weight:800;color:#ffd54a;letter-spacing:.5px;font-size:11px;margin-top:2px}',
+    '#help #pickinfo{position:static!important;padding:0!important;background:none!important;border:0!important;backdrop-filter:none!important;font-size:12px!important;line-height:1.4!important;margin-bottom:6px}',
+    '#help #pickinfo br{display:none}#help #pickinfo span{margin-left:6px}',
+    '.uiBtn{position:fixed;z-index:9;height:' + BTN_H + 'px;padding:0 12px;border-radius:9px;border:2px solid rgba(255,255,255,.35);background:rgba(20,24,30,.72);color:#fff;font:800 12px system-ui,sans-serif;letter-spacing:.5px;cursor:pointer;display:none;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;overflow:hidden}',
+    '.uiBtn:hover{background:rgba(60,70,90,.9)}',
+    '.uiBtn.on{border-color:#ffd54a}',
+    '.uiBtn .uiSub{opacity:.75;font-weight:600;overflow:hidden;text-overflow:ellipsis}',
+    '#uiTracker{position:fixed;z-index:19;display:none;padding:8px 10px 10px;border-radius:10px;background:rgba(10,30,18,.7);border:1px solid rgba(138,255,168,.25);color:#eaffef;font:12px/1.4 system-ui,sans-serif}',
+    '#uiTracker .uiTop{display:flex;align-items:center;gap:6px;min-height:22px}',
+    '#uiTracker .uiHere{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+    '#uiTracker .uiHere b{color:#8affa8}',
+    '#uiTracker button{flex:none;width:22px;height:22px;border-radius:5px;border:0;background:rgba(0,0,0,.45);color:#fff;font:800 11px system-ui;cursor:pointer;padding:0}',
+    '#uiTracker button:hover{background:rgba(255,255,255,.2)}',
+    '#uiTracker canvas{display:block;margin:6px auto 0;width:170px;height:170px}',
+    '#uiTracker .uiList{margin-top:6px;max-height:160px;overflow:auto;font-size:11px;line-height:1.45;border-top:1px solid rgba(255,255,255,.15);padding-top:5px}',
+    '#uiTracker .uiFoot{text-align:center;font-size:10px;opacity:.6;margin-top:2px}',
+    'body.touchplay #uiTracker{left:14px;top:102px;transform:scale(.6);transform-origin:0 0}',
+    'body.touchplay .uiBtn{display:none!important}'
+  ].join('\n');
+  document.head.appendChild(st);
+  if(!TOUCH) document.body.classList.add('uiL');
+
+  // ---- blocks dug: the progress tab keeps that number, the HUD does not need it
+  try{ const m = document.getElementById('mined'); if(m && m.parentNode && m.parentNode.id !== 'stats' && !m.parentNode.id) m.parentNode.id = 'minedRow'; }catch(e){}
+
+  // ---- buttons: LAYERS (top right), ? KEYS (bottom right)
+  function mkBtn(id, label, title, onclick){
+    const b = document.createElement('button'); b.id = id; b.className = 'uiBtn'; b.title = title;
+    b.innerHTML = '<span>' + label + '</span><span class="uiSub"></span>';
+    b.onclick = e=>{ e.stopPropagation(); onclick(); try{ b.blur(); }catch(_){} };
+    document.body.appendChild(b); return b;
+  }
+  const layBtn = mkBtn('uiLayBtn', 'LAYERS', 'Show or hide the layer list', ()=>{ legOn = !legOn; LSset('digcore_ui_legend', legOn); apply(); });
+  const keyBtn = mkBtn('uiKeyBtn', '? KEYS', 'Show or hide the keys and your pickaxe', ()=>{ helpOn = !helpOn; LSset('digcore_ui_help', helpOn); apply(); });
+  keyBtn.querySelector('.uiSub').remove();
+  function apply(){
+    document.body.classList.toggle('uiLegOn', legOn);
+    document.body.classList.toggle('uiHelpOn', helpOn);
+    layBtn.classList.toggle('on', legOn); keyBtn.classList.toggle('on', helpOn);
+    layBtn.querySelector('.uiSub').textContent = '';
+    trackChev.textContent = trackOpen ? '▴' : '▾';
+    trackChev.title = trackOpen ? 'Hide the distance list' : 'Show the distance list';
+    list.style.display = trackOpen ? 'block' : 'none';
+    layout();
+  }
+
+  // ---- the key help: a tidy two column list, with the equipped pickaxe on top
+  const help = document.getElementById('help');
+  if(help){
+    const K = [['WASD','move'],['Space','jump'],['Shift','run'],['V','sprint on/off'],['Hold Click','dig / shoot'],['Right-click','place'],['1-9','carry slot'],['Wheel','carry slot'],['G','guns'],['T','reload'],['F','talk / use'],['I','items / craft'],['B','blueprint'],['E','eat'],['R','surface'],['Q','main menu'],['O','planets'],['Y','lore'],['J','biome tracker'],['P','pause']];
+    help.innerHTML = '<div class="uiHdr">EQUIPPED</div><div class="uiHdr" style="margin-top:4px">KEYS</div><div class="uiKeys">' + K.map(k=>'<div><kbd>' + k[0] + '</kbd>' + k[1] + '</div>').join('') + '</div>';
+    const pi = document.getElementById('pickinfo');
+    if(pi) help.insertBefore(pi, help.children[1]);
+    if(!TOUCH) document.body.appendChild(help);        // out of #hud so the pop-up sits above the homework card
+  }
+
+  // ---- the Biome Tracker panel: "You are in", a minimap, and the old list folded away
+  const BT = window.__biomeTracker;
+  let oldBox = null;
+  try{ const x = [...document.querySelectorAll('button')].find(b=>b.title === 'Hide (J shows it again)'); if(x) oldBox = x.parentNode; }catch(e){}
+  if(oldBox){ oldBox.id = 'uiOldTracker'; st.textContent += '\n#uiOldTracker{display:none!important}'; }
+  const panel = document.createElement('div'); panel.id = 'uiTracker';
+  panel.innerHTML = '<div class="uiTop"><div class="uiHere">You are in: <b>...</b></div><button class="uiChev"></button><button class="uiX" title="Hide (J shows it again)">X</button></div>' +
+    '<canvas width="340" height="340"></canvas><div class="uiFoot"></div><div class="uiList"></div>';
+  document.body.appendChild(panel);
+  const hereEl = panel.querySelector('.uiHere b'), trackChev = panel.querySelector('.uiChev'), list = panel.querySelector('.uiList'), foot = panel.querySelector('.uiFoot');
+  const cv = panel.querySelector('canvas'), g = cv.getContext('2d');
+  panel.querySelector('.uiX').onclick = e=>{ e.stopPropagation(); try{ BT && BT.setShown(false); }catch(_){} };
+  trackChev.onclick = e=>{ e.stopPropagation(); trackOpen = !trackOpen; LSset('digcore_ui_tracker', trackOpen); apply(); };
+  panel.addEventListener('mousedown', e=>e.stopPropagation());
+
+  const HEX = n=>'#' + ('000000' + n.toString(16)).slice(-6);
+  const LIGHT = n=>'rgb(' + [16,8,0].map(s=>Math.round(((n>>s)&255)*.55 + 255*.45)).join(',') + ')';
+  const short = nm=>{ const w = String(nm).split(/\s+/).filter(Boolean); return w.length > 1 ? w.map(x=>x[0]).join('').slice(0, 2).toUpperCase() : String(nm).slice(0, 2); };
+  let best = null, bestT = 0, lastList = '';
+  function trackerVisible(){ return !!(oldBox && oldBox.style.display === 'block'); }
+  function hereName(){
+    try{ const c = BIOME.col(Math.floor(P.x), Math.floor(P.z)); return c ? c.b.name : 'Home (the shop area)'; }catch(e){ return '?'; }
+  }
+  function niceStep(maxD){ const s = [10,25,50,100,200,250,500,1000,2000]; for(const v of s) if(maxD/v <= 3) return v; return 5000; }
+  function drawMap(){
+    const W = 340, C = W/2, R = 150;                     // canvas is 2x for sharp lines; distance uses a square-root scale so near patches spread out
+    g.setTransform(1,0,0,1,0,0); g.clearRect(0, 0, W, W);
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.arc(C, C, R + 12, 0, Math.PI*2); g.fill();
+    if(!best) return;
+    const pts = [];
+    let maxD = 30;
+    try{
+      BIOME.SET.forEach(b=>{
+        const q = best[b.k]; if(!q) return;
+        const dx = q.cx - P.x, dz = q.cz - P.z, d = Math.hypot(dx, dz);
+        const bm = BT && BT.BEAM && BT.BEAM[b.k]; const col = bm ? bm.c : (b.col || 0xffffff);
+        pts.push({dx, dz, d, col, lab:short(b.name), here: d < BIOME.S*.6 && hereName() === b.name});
+        maxD = Math.max(maxD, d);
+      });
+    }catch(e){}
+    const hx = SHOP.x - P.x, hz = SHOP.z - P.z, hd = Math.hypot(hx, hz);
+    maxD = Math.min(Math.max(maxD, Math.min(hd, 800)), 800) * 1.08;
+    const rad = d=>R*Math.sqrt(Math.max(0, d)/maxD), step = niceStep(maxD);
+    // rings
+    g.strokeStyle = 'rgba(255,255,255,.14)'; g.lineWidth = 1.5;
+    for(let r = step; r < maxD; r += step){ g.beginPath(); g.arc(C, C, rad(r), 0, Math.PI*2); g.stroke(); }
+    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.beginPath(); g.arc(C, C, R + 12, 0, Math.PI*2); g.stroke();
+    // north
+    g.font = '800 20px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#ff8a7a'; g.fillText('N', C, 12);
+    g.fillStyle = 'rgba(255,255,255,.45)'; g.font = '700 16px system-ui,sans-serif'; g.fillText('S', C, W - 11); g.fillText('W', 11, C); g.fillText('E', W - 11, C);
+    const place = (dx, dz)=>{ const d = Math.hypot(dx, dz); if(d < .01) return [C, C]; const r = Math.min(R, rad(d)); return [C + dx/d*r, C + dz/d*r]; };
+    // home (the shop)
+    { const [x, y] = place(hx, hz);
+      g.fillStyle = '#ffd54a'; g.strokeStyle = '#000'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x - 9, y - 1); g.lineTo(x, y - 10); g.lineTo(x + 9, y - 1); g.lineTo(x + 7, y - 1); g.lineTo(x + 7, y + 8); g.lineTo(x - 7, y + 8); g.lineTo(x - 7, y - 1); g.closePath(); g.fill(); g.stroke(); }
+    // biome dots
+    g.font = '800 15px system-ui,sans-serif';
+    pts.sort((a, b)=>b.d - a.d).forEach(p=>{
+      const [x, y] = place(p.dx, p.dz);
+      g.fillStyle = HEX(p.col); g.strokeStyle = p.here ? '#fff' : 'rgba(0,0,0,.8)'; g.lineWidth = p.here ? 3 : 2;
+      g.beginPath(); g.arc(x, y, p.here ? 9 : 7, 0, Math.PI*2); g.fill(); g.stroke();
+      const ly = y < 26 ? y + 17 : y - 15;
+      g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.85)'; g.strokeText(p.lab, x, ly); g.fillStyle = LIGHT(p.col); g.fillText(p.lab, x, ly);
+    });
+    // you: an arrow pointing where you look (north is up)
+    const yaw = P.yaw || 0, fx = -Math.sin(yaw), fz = -Math.cos(yaw), a = Math.atan2(fz, fx);
+    g.save(); g.translate(C, C); g.rotate(a + Math.PI/2);
+    g.fillStyle = '#fff'; g.strokeStyle = '#000'; g.lineWidth = 3;
+    g.beginPath(); g.moveTo(0, -15); g.lineTo(10, 11); g.lineTo(0, 5); g.lineTo(-10, 11); g.closePath(); g.stroke(); g.fill();
+    g.restore();
+    foot.textContent = 'ring = ' + step + ' m   house = shop';
+  }
+  function trackerTick(){
+    const vis = trackerVisible();
+    panel.style.display = vis ? 'block' : 'none';
+    if(!vis) return;
+    const now = performance.now();
+    if(!best || now - bestT > 500){ try{ best = BT && BT.nearest ? BT.nearest() : null; }catch(e){ best = null; } bestT = now; }
+    const h = hereName(); if(hereEl.textContent !== h) hereEl.textContent = h;
+    drawMap();
+    if(trackOpen && oldBox){
+      try{ const body = oldBox.firstChild; const rows = body ? [...body.children].slice(2).map(r=>r.outerHTML).join('') : ''; if(rows !== lastList){ lastList = rows; list.innerHTML = rows; } }catch(e){}
+    }
+  }
+
+  // ---- layout: left column (stats, buttons, ticker, tracker) and right column (LAYERS, legend, homework), 10 px apart
+  const $q = id=>document.getElementById(id);
+  const shown = el=>el && el.style.display !== 'none' && getComputedStyle(el).display !== 'none';
+  const setI = (el, k, v)=>{ if(el && el.style.getPropertyValue(k) !== v) el.style.setProperty(k, v, 'important'); };
+  let hwBox = null, hwMini = null, hunger = null, stam = null;
+  function findBits(){
+    if(!hwBox || !hwMini){
+      for(const d of document.body.children){
+        if(!d.style) continue;
+        if(d.style.zIndex === '29' && d.style.top === '356px'){ if(d.tagName === 'BUTTON') hwMini = d; else hwBox = d; }
+      }
+    }
+    if(!hunger || !stam){
+      for(const d of document.body.children){
+        if(!d.style || d.style.position !== 'fixed' || d.tagName !== 'DIV') continue;
+        const t = (d.textContent || '').slice(0, 8);
+        if(/^HUNGER/.test(t)){ hunger = d; d.id = d.id || 'uiHunger'; }
+        else if(/^STAMINA/.test(t)){ stam = d; d.id = d.id || 'uiStam'; }
+      }
+    }
+  }
+  function layout(){
+    if(TOUCH) return;
+    findBits();
+    const W = innerWidth, H = innerHeight, narrow = W < 760;
+    document.body.classList.toggle('uiNarrow', narrow);
+    const LW = narrow ? Math.floor((W - 2*EDGE - GAP)*.55) : 270;
+    const RW = narrow ? W - 2*EDGE - GAP - LW : 300;
+    document.documentElement.style.setProperty('--uiLW', LW + 'px');
+    document.documentElement.style.setProperty('--uiRW', RW + 'px');
+    // both columns start under the news bar if it sits across the top
+    let top0 = EDGE;
+    const nb = $q('newsbar');
+    if(nb && shown(nb)){ const r = nb.getBoundingClientRect(); if(r.height > 0 && r.top < 60) top0 = Math.max(top0, Math.round(r.bottom) + 8); }
+    // left
+    const stats = $q('stats');
+    if(stats){ setI(stats, 'top', top0 + 'px'); setI(stats, 'left', EDGE + 'px'); }
+    let y = stats ? Math.round(stats.getBoundingClientRect().bottom) + GAP : top0;
+    const btns = ['menuBtn', 'planetsBtn', 'loreBtn'].map($q).filter(b=>b && shown(b));
+    if(btns.length){
+      let per = btns.length; while(per > 1 && (LW - 8*(per - 1))/per < 84) per--;
+      const bw = Math.floor((LW - 8*(per - 1))/per);
+      btns.forEach((b, i)=>{ const r = Math.floor(i/per), c = i % per;
+        setI(b, 'top', (y + r*(BTN_H + 8)) + 'px'); setI(b, 'left', (EDGE + c*(bw + 8)) + 'px'); setI(b, 'width', bw + 'px'); setI(b, 'right', 'auto'); });
+      y += Math.ceil(btns.length/per)*(BTN_H + 8) - 8 + GAP;
+    }
+    const tk = $q('lnTicker');
+    if(tk && shown(tk)){ setI(tk, 'top', y + 'px'); setI(tk, 'left', EDGE + 'px'); y += Math.round(tk.getBoundingClientRect().height) + GAP; }
+    panel.style.left = EDGE + 'px'; panel.style.top = y + 'px'; panel.style.width = LW + 'px';
+    { // the folded-out list never runs into the bars or the carry slots
+      let lim = H - 90; const hs = hunger && shown(hunger) ? hunger.getBoundingClientRect() : null;
+      if(hs && hs.left < EDGE + LW + 4) lim = Math.min(lim, hs.top);
+      const hotT = $q('hotbar') ? $q('hotbar').getBoundingClientRect() : null; if(hotT && hotT.left < EDGE + LW + 4 && hotT.height) lim = Math.min(lim, hotT.top);
+      const room = Math.floor(lim - GAP - (y + panel.offsetHeight - (trackOpen ? list.offsetHeight : 0)) - 6);
+      list.style.maxHeight = Math.max(60, Math.min(260, room)) + 'px';
+    }
+    // right
+    const rx = W - EDGE - RW;
+    const playing = startEl.style.display !== 'flex';
+    layBtn.style.display = playing ? 'flex' : 'none';
+    layBtn.style.left = rx + 'px'; layBtn.style.top = top0 + 'px'; layBtn.style.width = RW + 'px';
+    try{ const ln = $q('layername'); const sub = layBtn.querySelector('.uiSub'); const t = (ln ? ln.textContent : '') + (legOn ? '  ▴' : '  ▾'); if(sub.textContent !== t) sub.textContent = t; }catch(e){}
+    let ry = top0 + BTN_H + GAP;
+    const lay = $q('layers');
+    if(lay && legOn){ setI(lay, 'top', ry + 'px'); ry += Math.round(lay.getBoundingClientRect().height) + GAP; }
+    [hwBox, hwMini].forEach(b=>{ if(!b) return; setI(b, 'top', ry + 'px'); setI(b, 'right', EDGE + 'px'); });
+    if(hwBox){ setI(hwBox, 'width', RW + 'px'); setI(hwBox, 'max-width', 'none'); }
+    if(hwMini){ setI(hwMini, 'width', RW + 'px'); setI(hwMini, 'height', BTN_H + 'px'); }
+    // bottom right: ? KEYS, the help pops up above it (and above the stamina bar if they would touch)
+    keyBtn.style.display = playing ? 'flex' : 'none';
+    keyBtn.style.justifyContent = 'center';
+    keyBtn.style.right = EDGE + 'px'; keyBtn.style.bottom = EDGE + 'px'; keyBtn.style.width = '96px';
+    let hb = EDGE + BTN_H + GAP;
+    // hunger and stamina: same width, same distance either side of the carry slots
+    const hot = $q('hotbar');
+    const slots = hot ? hot.querySelectorAll('.hslot') : [];
+    if(hunger && stam && slots.length){
+      const a = slots[0].getBoundingClientRect(), z = slots[slots.length - 1].getBoundingClientRect();
+      const bw = Math.min(180, Math.floor((W - 2*EDGE - 12)/2));
+      const bh = hunger.getBoundingClientRect().height || 40;
+      let left = Math.round(a.left - 12 - bw), right = Math.round(z.right + 12);
+      if(left >= EDGE && right + bw <= W - EDGE && Math.abs(a.top - z.top) < 4){
+        const bot = Math.round(H - a.bottom + (a.height - bh)/2);
+        [[hunger, left], [stam, right]].forEach(q=>{ setI(q[0], 'left', q[1] + 'px'); setI(q[0], 'right', 'auto'); setI(q[0], 'bottom', bot + 'px'); setI(q[0], 'width', bw + 'px'); });
+      } else {                                         // narrow screen: side by side above the carry slots
+        const ht = hot.getBoundingClientRect().top, cx = W/2, bot = Math.round(H - ht + 6);
+        [[hunger, cx - 6 - bw], [stam, cx + 6]].forEach(q=>{ setI(q[0], 'left', Math.round(q[1]) + 'px'); setI(q[0], 'right', 'auto'); setI(q[0], 'bottom', bot + 'px'); setI(q[0], 'width', bw + 'px'); });
+      }
+      if(helpOn && shown(stam)){ const s = stam.getBoundingClientRect(); if(s.right > rx - 4) hb = Math.max(hb, Math.round(H - s.top) + GAP); }
+    }
+    if(help){ setI(help, 'bottom', hb + 'px'); setI(help, 'max-height', (H - hb - top0 - BTN_H - 2*GAP) + 'px'); setI(help, 'overflow', 'hidden'); }
+  }
+  apply();
+  setInterval(()=>{ try{ layout(); }catch(e){} }, 200);
+  addEventListener('resize', ()=>{ try{ layout(); }catch(e){} });
+  let lastT = 0;
+  (function loop(now){ requestAnimationFrame(loop); if(now - lastT < 100) return; lastT = now; try{ trackerTick(); }catch(e){} })(performance.now());
+  window.__uihud = {layout, apply, panel, get state(){ return {trackOpen, legOn, helpOn}; },
+    setTracker(v){ trackOpen = !!v; LSset('digcore_ui_tracker', trackOpen); apply(); },
+    setLegend(v){ legOn = !!v; LSset('digcore_ui_legend', legOn); apply(); },
+    setHelp(v){ helpOn = !!v; LSset('digcore_ui_help', helpOn); apply(); }};
+})();
+/* LN-uihud end */
+/* LN-uimenu start: the main menu becomes a clean tabbed menu (Play, Modes, Progress, Codex). Existing buttons are moved into tab panes, ids stay the same (Irfan 2026-10-31 "main menu is also very cluttery ... turn it into tabs ... overall progress or locked unlocked location ... codex ... if items discovered, a small description") */
+(function(){
+  try{
+    const box = startEl && startEl.querySelector('.box'); if(!box) return;
+    const $$ = id=>document.getElementById(id);
+    const esc = s=>String(s == null ? '' : s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const EMO = /[\u{1F000}-\u{1FFFF}☀-➿⬀-⯿▶️‍]/gu;
+    const css = document.createElement('style');
+    css.textContent = [
+      '#start{z-index:31}',                                         /* above the HUD panels (biome tracker, homework, hunger bars) so they do not cover the menu; menu popups use 50+ */
+      '#start .box.umOn{padding:0 22px 18px!important;width:min(600px,94vw);max-width:600px;box-sizing:border-box;text-align:left;overflow-y:auto;overflow-x:hidden}',
+      '#start .box.umOn > *{box-sizing:border-box}',
+      '#umHead{text-align:center;padding:16px 0 4px}',
+      '#umHead #gameTitle{font-size:30px!important;margin:0;letter-spacing:1px}',
+      '#umTabs{position:sticky;top:0;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 0;margin-bottom:6px;background:#1b1612;border-bottom:1px solid #4a3a28}',
+      '#umTabs button{padding:9px 4px;border:1px solid #5b4630;border-radius:8px;background:#2a221b;color:#d8c8b0;font-weight:700;font-size:13px;letter-spacing:1px;cursor:pointer}',
+      '#umTabs button:hover{background:#352a20}',
+      '#umTabs button.on{background:#e8a33a;color:#201408;border-color:#e8a33a}',
+      '.umPane{display:none}.umPane.on{display:block}',
+      '.umH{font-size:12px;font-weight:800;letter-spacing:1.5px;color:#e8a33a;text-transform:uppercase;margin:16px 0 8px}',
+      '.umNote{font-size:12px;opacity:.65;margin:6px 0}',
+      '#umDesc{text-align:center;opacity:.8;font-size:14px;margin:2px 0 4px}',
+      '#umMain{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px}',
+      '#umMain #play{margin:0!important;width:100%;max-width:340px;font-size:20px!important;padding:13px 20px!important}',
+      '#umMain #oldVerBtn{margin:0!important;width:100%;max-width:340px;padding:8px 14px!important;font-size:13px!important}',
+      '.umRow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}',
+      '.umRow > .btn,#umWho .btn,#umGrid > .btn{margin:0!important;width:100%;padding:9px 10px!important;font-size:14px!important;line-height:1.2;box-sizing:border-box}',
+      '#umWho > div{display:grid!important;grid-template-columns:1fr 1fr;gap:10px;margin:0!important}',
+      '#umGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}',
+      '#umGrid > .btn{min-height:44px}',
+      '.umSub{display:block;font-size:11px;font-weight:600;opacity:.75;margin-top:2px}',
+      '#umModes #lnEggs{margin:8px 0 0!important;text-align:center}',
+      '#umExtras #extras{margin-top:6px}',
+      '.umFun{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#d08ae0;margin-left:4px}',
+      '#umExtras #funnyAll{margin:10px 0 0!important;padding:8px 14px!important;font-size:13px!important}',
+      '#umCtl{margin-top:14px;border:1px solid #3a2f25;border-radius:8px;padding:6px 10px;background:#211a14}',
+      '#umCtl summary{cursor:pointer;font-weight:700;font-size:13px;opacity:.85}',
+      '#umCtl .keys{font-size:12px;line-height:1.7;margin-top:6px}',
+      '#umCtl .umKeys2{font-size:11px;opacity:.65;margin-top:4px}',
+      '#umDanger{text-align:center;margin-top:14px}',
+      '#umDanger #btnReset{margin:0!important;padding:5px 12px!important;font-size:12px!important;background:transparent!important;color:#ff7a6a!important;border:1px solid #8a2a2a!important}',
+      '#umDanger #btnReset:hover{background:#3a1512!important}',
+      '.umCard{background:#231c16;border:1px solid #3a2f25;border-radius:10px;padding:10px 12px;margin-bottom:10px}',
+      '.umLoc{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid #2e251d;font-size:14px}',
+      '.umLoc:last-child{border-bottom:0}',
+      '.umLoc small{display:block;font-size:11px;opacity:.6}',
+      '.umPill{flex:none;font-size:11px;font-weight:800;letter-spacing:1px;padding:3px 8px;border-radius:10px}',
+      '.umPill.ok{background:#1f4a2a;color:#8affa8}.umPill.no{background:#3a2a20;color:#b09a80}',
+      '.umBarW{display:flex;align-items:center;gap:10px;font-size:13px;margin:6px 0}',
+      '.umBarW span:first-child{flex:0 0 110px}',
+      '.umBar{flex:1;height:10px;background:#2e251d;border-radius:5px;overflow:hidden}',
+      '.umBar i{display:block;height:100%;background:linear-gradient(90deg,#e8a33a,#ffd54a)}',
+      '.umBarW b{flex:0 0 74px;text-align:right;font-size:12px}',
+      '.umChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}',
+      '.umChip{font-size:12px;padding:3px 8px;border-radius:10px;background:#2e251d;color:#7a6a58}',
+      '.umChip.on{background:#2a3a20;color:#cfeeb0}',
+      '.umStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}',
+      '.umStat{background:#2a221b;border-radius:8px;padding:8px 10px;text-align:center}',
+      '.umStat b{display:block;font-size:18px;color:#ffd54a}.umStat span{font-size:11px;opacity:.7;letter-spacing:1px;text-transform:uppercase}',
+      '#umCodexQ{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid #5b4630;background:#120e0b;color:#fff;font-size:14px}',
+      '#umCodexSum{font-size:12px;opacity:.7;margin:8px 0}',
+      '.umCx{padding:8px 10px;border-bottom:1px solid #2e251d;cursor:pointer}',
+      '.umCx:hover{background:#231c16}',
+      '.umCxT{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}',
+      '.umCxT b{font-size:14px}',
+      '.umCxC{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 6px;border-radius:6px;background:#2e251d;color:#c9b79c}',
+      '.umCxR{font-size:11px;font-weight:800}',
+      '.umCxD{font-size:12px;opacity:.75;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.umCx.open .umCxD{white-space:normal}',
+      '@media (max-width:520px){#start .box.umOn{padding:0 14px 14px!important}#umTabs button{font-size:11px;letter-spacing:0}#umHead #gameTitle{font-size:22px!important}.umBarW span:first-child{flex-basis:84px}}'
+    ].join('\n');
+    document.head.appendChild(css);
+
+    /* ---------- skeleton */
+    const mk = (tag, id, cls, html)=>{ const e = document.createElement(tag); if(id) e.id = id; if(cls) e.className = cls; if(html != null) e.innerHTML = html; return e; };
+    const orig = $$('btnLight') && $$('btnLight').parentNode;                // the old big button block
+    const descEl = $$('play') && $$('play').previousElementSibling;           // the long description
+    const iconEl = $$('gameTitle') && $$('gameTitle').previousElementSibling;
+    const head = mk('div', 'umHead'), tabs = mk('div', 'umTabs');
+    const TABS = [['play', 'PLAY'], ['modes', 'MODES'], ['prog', 'PROGRESS'], ['codex', 'CODEX']];
+    const pane = {};
+    const pPlay = pane.play = mk('div', 'umPlay', 'umPane'), pModes = pane.modes = mk('div', 'umModes', 'umPane'),
+          pProg = pane.prog = mk('div', 'umProg', 'umPane'), pCodex = pane.codex = mk('div', 'umCodex', 'umPane');
+    const desc = mk('div', 'umDesc', null, 'Dig through the layers, upgrade your tools and reach the core.');
+    const sMain = mk('div', 'umMain'), sWho = mk('div', 'umWho'), sSet = mk('div', 'umSet', 'umRow'), sMore = mk('div', 'umMore', 'umRow'),
+          sCtl = mk('details', 'umCtl', null, '<summary>Controls</summary>'), sDanger = mk('div', 'umDanger');
+    const hWho = mk('div', null, 'umH', 'Player and world'), hSet = mk('div', null, 'umH', 'Settings'), hMore = mk('div', null, 'umH', 'More');
+    pPlay.append(desc, sMain, hWho, sWho, hSet, sSet, hMore, sMore, sCtl, sDanger);
+    const sGrid = mk('div', 'umGrid'), sEggs = mk('div', 'umEggs'), sExtras = mk('div', 'umExtras'), sExWrap = mk('div', 'umExWrap');
+    pModes.append(mk('div', null, 'umH', 'Game modes'), mk('div', null, 'umNote', 'Pick a mode. Locked modes say how to unlock them. Changing mode restarts the world in that mode.'), sGrid, sEggs,
+      sExWrap);
+    sExWrap.append(mk('div', null, 'umH', 'Extra layers'), mk('div', null, 'umNote', 'Your vote: tick the extra layers you want. The 14 main layers are always in.'), sExtras);
+    const progBody = mk('div', 'umProgBody'), badgeCard = mk('div', 'umBadgeCard', 'umCard', '<div class="umH" style="margin-top:0">Badges <span id="umBadgeN" style="opacity:.7"></span></div><div class="umNote" style="margin-top:-4px">Hover a badge to see how to earn it.</div>');
+    pProg.append(progBody, badgeCard);
+    pCodex.innerHTML = '<div class="umH">Codex</div><div class="umNote" style="margin-top:-4px">Everything you have discovered so far. Click an entry to read all of it.</div><input id="umCodexQ" type="search" placeholder="Search the codex..." autocomplete="off"><div id="umCodexSum"></div><div id="umCodexList"></div>';
+    TABS.forEach(([k, label])=>{ const b = mk('button', null, null, label); b.type = 'button'; b.dataset.tab = k; b.onclick = e=>{ e.stopPropagation(); setTab(k); }; tabs.appendChild(b); });
+
+    let cur = 'play';
+    try{ const t = localStorage.getItem('digcore_ui_tab'); if(pane[t]) cur = t; }catch(e){}
+    function setTab(k){
+      if(!pane[k]) k = 'play'; cur = k;
+      try{ localStorage.setItem('digcore_ui_tab', k); }catch(e){}
+      TABS.forEach(([t])=>pane[t].classList.toggle('on', t === k));
+      [...tabs.children].forEach(b=>b.classList.toggle('on', b.dataset.tab === k));
+      if(k === 'prog') renderProg(); else if(k === 'codex') renderCodex();
+      box.scrollTop = 0;
+    }
+
+    /* ---------- move the old elements into the panes */
+    const put = (slot, el)=>{ if(el && el.parentNode !== slot) slot.appendChild(el); };
+    const clean = el=>{                                            // no emoji in the menu
+      if(!el) return;
+      const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+      while((n = w.nextNode())){ const t = n.nodeValue.replace(EMO, ''); if(t !== n.nodeValue) n.nodeValue = t.replace(/^\s+/, ''); }
+    };
+    const fmtMode = b=>{                                           // "Chaos Mode (locked: ...)" -> name + small lock line
+      if(b.querySelector('.umSub')) return;
+      const t = b.textContent.replace(EMO, '').trim(), m = /^(.*?)\s*\((locked[^)]*)\)\s*$/i.exec(t);
+      if(m) b.innerHTML = esc(m[1]) + '<span class="umSub">' + esc(m[2]) + '</span>';
+      else if(t !== b.textContent) b.textContent = t;
+    };
+    const MODE_RE = /Mode|Mine Anything|Eggs|Animals fly/i;
+    const SKIP = '#umTabs,#umProg,#umCodex,#umWho,#umExtras,#umCtl,#extras,#menubadges';
+    let built = false;
+    function layout(){
+      if(!built){
+        built = true;
+        box.classList.add('umOn');
+        box.insertBefore(head, box.firstChild); box.insertBefore(tabs, head.nextSibling);
+        let after = tabs; [pPlay, pModes, pProg, pCodex].forEach(p=>{ box.insertBefore(p, after.nextSibling); after = p; });
+        if(iconEl && iconEl !== head && !iconEl.id) iconEl.style.display = 'none';
+        if(descEl && !descEl.id && descEl.tagName === 'DIV') descEl.style.display = 'none';
+        setTab(cur);
+      }
+      put(head, $$('gameTitle'));
+      put(sMain, $$('play')); put(sMain, $$('oldVerBtn'));
+      // controls text + the L / M shortcut line
+      const keys = box.querySelector('.keys');
+      if(keys && keys.parentNode !== sCtl){ const wrap = keys.parentNode; put(sCtl, keys); if(wrap && wrap !== box && !wrap.closest('.umPane')) wrap.style.display = 'none'; }
+      if(orig){
+        [...orig.children].forEach(c=>{
+          if(c.tagName === 'BUTTON' || c.id) return;
+          if(c.querySelector && c.querySelector('kbd') && /shortcuts/i.test(c.textContent)){ c.className = 'umKeys2'; put(sCtl, c); }
+          else if(/^\s*Game mode\s*$/.test(c.textContent)) c.style.display = 'none';
+        });
+      }
+      // extra layers block, badges
+      const ex = $$('extras');
+      if(ex && ex.parentNode !== sExtras){
+        const wrap = ex.parentNode; put(sExtras, ex); put(sExtras, $$('funnyAll'));
+        if(wrap && wrap !== box && !wrap.closest('.umPane')){ if(wrap.style.display === 'none') sExWrap.style.display = 'none'; wrap.style.display = 'none'; }
+      }
+      if(ex) [...ex.querySelectorAll('label')].forEach(l=>{               // the clown marks a funny layer: show a small word tag instead
+        if(l.dataset.um) return; l.dataset.um = 1;
+        const w = document.createTreeWalker(l, NodeFilter.SHOW_TEXT); let n, fun = false, last = null;
+        while((n = w.nextNode())){ if(n.parentNode !== l) continue; const t = n.nodeValue.replace(EMO, ''); if(t !== n.nodeValue){ fun = true; n.nodeValue = t.replace(/\s+$/, ' '); last = n; } }
+        if(fun && last){ const f = mk('span', null, 'umFun', 'funny'); l.insertBefore(f, last.nextSibling); l.insertBefore(document.createTextNode(' '), f.nextSibling); }
+      });
+      const mb = $$('menubadges');
+      if(mb && mb.parentNode !== badgeCard){ const wrap = mb.parentNode; put(badgeCard, mb); if(wrap && wrap !== box && !wrap.closest('.umPane')) wrap.style.display = 'none'; }
+      put(sEggs, $$('lnEggs'));
+      // player / world row
+      [...box.querySelectorAll('button')].forEach(b=>{ if(/^Player:|^World:/.test(b.textContent.trim()) && b.parentNode && b.parentNode !== box && !b.closest('#umWho')) put(sWho, b.parentNode); });
+      // every other button
+      [...box.querySelectorAll('button')].forEach(b=>{
+        if(b.closest(SKIP)) return;
+        const id = b.id, t = b.textContent;
+        let slot;
+        if(id === 'play' || id === 'oldVerBtn') return;
+        if(id === 'btnReset'){ slot = sDanger; clean(b); }
+        else if(id === 'btnLight' || id === 'btnSound' || id === 'btnTouch' || /^Touch controls/.test(t)) slot = sSet;
+        else if(MODE_RE.test(t) || /^btn(Normal|Funny|Chaos|Extra|Meme|BigHead|Mine|Fly)$/.test(id) || /^btn_/.test(id)) slot = sGrid;
+        else slot = sMore;
+        put(slot, b);
+        if(slot === sGrid) fmtMode(b);
+      });
+      clean($$('funnyAll'));
+      { const p = $$('play'); if(p) clean(p); }
+      // anything else left loose in the old block (not a button) goes to More, empty old blocks hide
+      if(orig && orig.parentNode === box){
+        [...orig.children].forEach(c=>{ if(c.style.display === 'none' || c.tagName === 'BUTTON') return; if(c.textContent.trim()) put(sMore, c); });
+        if(![...orig.children].some(c=>c.style.display !== 'none')) orig.style.display = 'none';
+      }
+      [...box.children].forEach(c=>{ if(c === head || c === tabs || c.classList.contains('umPane') || c.style.display === 'none') return; if(c.textContent.trim() || c.querySelector('button,input')) put(sMore, c); else c.style.display = 'none'; });
+      hMore.style.display = sMore.children.length ? '' : 'none';
+      hWho.style.display = sWho.children.length ? '' : 'none';
+    }
+
+    /* ---------- progress */
+    const bar = (label, a, b)=>{ const p = b ? Math.min(100, Math.round(a/b*100)) : 0; return '<div class="umBarW"><span>'+esc(label)+'</span><div class="umBar"><i style="width:'+p+'%"></i></div><b>'+a.toLocaleString()+' / '+b.toLocaleString()+'</b></div>'; };
+    const loc = (name, ok, hint)=>'<div class="umLoc"><div>'+esc(name)+(!ok && hint ? '<small>'+esc(hint)+'</small>' : '')+'</div><span class="umPill '+(ok ? 'ok' : 'no')+'">'+(ok ? 'UNLOCKED' : 'LOCKED')+'</span></div>';
+    const MODE_BOSS = {memelord:['The Grand Meme Lord', 'mm2Lord'], pumpkinking:['The Pumpkin King', 'spkKing'], oc_kraken:['The Kraken', 'ocKraken'], megamech:['Mega Mech', 'robMech'],
+      trexrex:['T-Rex Rex', 'dinoRex'], frostgiant:['Frost Giant', 'iceGiant'], overlord:['The Alien Overlord', 'spcBoss'], greateye:['The Great Eye', 'illBoss'], whiskerbucks:['Mister Whisker Bucks', 'wbBeaten']};
+    function bossList(){
+      const out = [], fb = save.fboss || {}, cb = save.clubBoss || {};
+      let club = 0, clubDone = 0;
+      try{
+        for(const k in ED){ const d = ED[k]; if(!d || !d.boss) continue;
+          if(d.club){ club++; if(cb[k]) clubDone++; continue; }
+          if(MODE_BOSS[k]) continue;
+          out.push({name:d.name, ok:!!fb[k]});
+        }
+      }catch(e){}
+      for(const k in MODE_BOSS){ const nm = (typeof ED !== 'undefined' && ED[k] && ED[k].name) || MODE_BOSS[k][0]; out.push({name:nm, ok:!!fb[k] || !!save[MODE_BOSS[k][1]]}); }
+      if(!club) club = Math.max(19, Object.keys(cb).length);
+      return {out, club, clubDone:Math.max(clubDone, Object.keys(cb).length)};
+    }
+    function renderProg(){
+      try{
+        const wb = !!save.wbBeaten, illOn = typeof ILLUM !== 'undefined' && !!ILLUM;
+        let h = '<div class="umCard"><div class="umH" style="margin-top:0">Locations</div>';
+        h += loc('Earth', true) + loc('Mars', !!save.marsUnlocked, 'Reach the core of the rocket planet') + loc('TOI-1853b', !!save.toiUnlocked, 'Reach the Mars Core') +
+             loc('TOI-1853b core reached', !!save.toiCore, 'Dig all the way down on TOI-1853b') +
+             loc('Next Universe: Planet Novaria', wb, 'Beat Mister Whisker Bucks');
+        ['Sugarnova', 'Bouncia', 'Gearon', 'Glacio'].forEach(n=>{ h += loc('Planet ' + n, wb, 'Opens with the Next Universe'); });
+        h += loc('World Edge', true);
+        ['Mirror World', 'Pastel Dreamland', 'Clockwork Land', 'Ghost Isle', 'The Void'].forEach(n=>{ h += loc(n, true, ''); });
+        h += loc('Secret Club', illOn || !!save.illBoss || Object.keys(save.clubBoss || {}).length > 0, 'Play Illuminati Mode') + '</div>';
+        // biomes
+        const B = window.__biome, set = (B && B.SET) || [], seen = save.biomesSeen || {};
+        const nSeen = set.filter(b=>seen[b.k]).length;
+        h += '<div class="umCard"><div class="umH" style="margin-top:0">Biomes visited</div>' + bar('Biomes', nSeen, set.length) +
+             '<div class="umChips">' + set.map(b=>'<span class="umChip' + (seen[b.k] ? ' on' : '') + '">' + esc(seen[b.k] ? b.name : '???') + '</span>').join('') + '</div></div>';
+        // bosses
+        const bl = bossList(), bDone = bl.out.filter(b=>b.ok).length + bl.clubDone, bTot = bl.out.length + bl.club;
+        h += '<div class="umCard"><div class="umH" style="margin-top:0">Bosses beaten</div>' + bar('All bosses', bDone, bTot) + bar('Secret Club', bl.clubDone, bl.club) +
+             '<div class="umChips">' + bl.out.map(b=>'<span class="umChip' + (b.ok ? ' on' : '') + '">' + esc(b.name) + '</span>').join('') + '</div></div>';
+        // stats
+        const loreN = Object.keys(save.lore || {}).length, loreT = (window.__lore && window.__lore.LORE && window.__lore.LORE.length) || 0;
+        let bdN = 0, bdT = 0; try{ bdT = BADGES.length; bdN = BADGES.filter(b=>(save.badges || {})[b.id]).length; }catch(e){}
+        h += '<div class="umCard"><div class="umH" style="margin-top:0">Stats</div><div class="umStats">' +
+             '<div class="umStat"><b>' + (save.mined || 0).toLocaleString() + '</b><span>Blocks dug</span></div>' +
+             '<div class="umStat"><b>' + (save.kills || 0).toLocaleString() + '</b><span>Kills</span></div>' +
+             '<div class="umStat"><b>$' + Math.floor(save.coins || 0).toLocaleString() + '</b><span>Coins</span></div></div>' +
+             (loreT ? bar('Lore pages', loreN, loreT) : '') + (bdT ? bar('Badges', bdN, bdT) : '') + '</div>';
+        progBody.innerHTML = h;
+        const bn = $$('umBadgeN'); if(bn) bn.textContent = bdT ? bdN + ' / ' + bdT : '';
+      }catch(e){ console.warn('LN-uimenu progress', e); }
+    }
+
+    /* ---------- codex */
+    const CAT_ORDER = ['pickaxe', 'food', 'block', 'loot', 'item', 'material'];
+    function discovered(){
+      const m = new Map();
+      const add = (name, cat, extra)=>{ if(!name) return; name = String(name); const o = m.get(name); if(!o || CAT_ORDER.indexOf(cat) < CAT_ORDER.indexOf(o.cat)) m.set(name, Object.assign({name, cat}, extra || {})); };
+      const fp = save.foodPower || {}, ek = save.eatenKinds || {};
+      try{ (save.owned || []).forEach((o, i)=>{ if(o && PICKS[i]) add(PICKS[i].name, 'pickaxe', {pick:PICKS[i]}); }); }catch(e){}
+      Object.keys(fp).forEach(n=>add(n, 'food')); Object.keys(ek).forEach(n=>add(n, 'food'));
+      Object.keys(save.inv || {}).forEach(n=>{ if(!(save.inv[n] > 0) && !fp[n]) return;
+        let c = 'item'; try{ if(fp[n]) c = 'food'; else if(blockIdOf(n)) c = 'block'; else { const mt = itemMeta(n); c = mt.cat === 'Loot' || mt.cat === 'Rare finds' ? 'loot' : 'item'; } }catch(e){}
+        add(n, c); });
+      Object.keys(save.seen || {}).forEach(n=>add(n, 'block')); Object.keys(save.found || {}).forEach(n=>add(n, 'block'));
+      Object.keys(save.mats || {}).forEach(k=>{ const i = k.indexOf('|'); add(k.slice(i + 1), 'material', {tier:+k.slice(0, i)}); });
+      try{ GUNS.forEach(g=>{ if(save.guns && save.guns[g.key]) add(typeof gunName === 'function' ? gunName(g) : g.name, 'item'); }); }catch(e){}
+      (save.gear || []).forEach(g=>g && add(g.name, 'item'));
+      return [...m.values()].sort((a, b)=>a.name.localeCompare(b.name));
+    }
+    let universe = null;
+    function undiscovered(have){
+      if(!universe){
+        universe = new Set();
+        try{ BLOCKS.forEach(b=>{ if(b && b.name && !b.custom) universe.add(b.name); }); }catch(e){}
+        try{ Object.keys(LOOT).forEach(n=>universe.add(n)); Object.keys(RARE).forEach(n=>universe.add(n)); }catch(e){}
+        try{ Object.values(ENEMY_DROP).forEach(n=>universe.add(n)); Object.values(ANIMAL_DROP).forEach(n=>universe.add(n)); }catch(e){}
+        try{ PICKS.forEach(p=>universe.add(p.name)); }catch(e){}
+      }
+      let n = 0; universe.forEach(x=>{ if(!have.has(x)) n++; }); return n;
+    }
+    const descCache = {};
+    function describe(it){
+      const key = it.cat + '|' + it.name; if(key in descCache) return descCache[key];
+      let d = '', lab = '';
+      try{
+        if(it.cat === 'pickaxe' && it.pick) d = 'Dig power ' + it.pick.power + (it.pick.price ? ', costs $' + it.pick.price.toLocaleString() + ' in the shop.' : '. Your very first digging tool.');
+        else if(window.__oneFact){ d = window.__oneFact(it.name, it.cat === 'material' ? {kind:'mat', tier:it.tier || 0, name:it.name} : {kind:'item', name:it.name}) || ''; lab = window.__factLabel || ''; }
+      }catch(e){ d = ''; }
+      if(!d){ try{ const bi = blockIdOf(it.name); if(bi) d = 'A block worth $' + (BLOCKS[bi - 1].v || 0).toLocaleString() + ' each.'; }catch(e){} }
+      if(!d) d = it.cat === 'food' ? 'Something you can eat.' : it.cat === 'material' ? 'A unique material you discovered while digging.' : 'Something you found on your adventures.';
+      return descCache[key] = (lab && lab !== 'Fact:' ? lab + ' ' : '') + String(d).replace(/<[^>]*>/g, '');
+    }
+    function rarity(it){
+      try{
+        const R = window.__rarity; if(!R) return null;
+        const k = it.cat === 'material' && it.tier >= 0 ? it.tier : R.idx(it.name), r = R.RAR[k];
+        return r ? {n:r[0], c:r[1]} : null;
+      }catch(e){ return null; }
+    }
+    let cxAll = [], cxHave = new Set();
+    function renderCodex(fresh){
+      try{
+        if(fresh !== false){ cxAll = discovered(); cxHave = new Set(cxAll.map(x=>x.name)); }
+        const qEl = $$('umCodexQ'), q = (qEl && qEl.value || '').trim().toLowerCase();
+        const list = q ? cxAll.filter(x=>x.name.toLowerCase().indexOf(q) >= 0 || x.cat.indexOf(q) >= 0) : cxAll;
+        const MAX = 250, shown = list.slice(0, MAX);
+        $$('umCodexSum').textContent = cxAll.length + ' discovered  ·  ' + undiscovered(cxHave) + ' undiscovered' + (q ? '  ·  ' + list.length + ' match' : '') + (list.length > MAX ? '  ·  showing first ' + MAX + ', search to narrow down' : '');
+        $$('umCodexList').innerHTML = shown.length ? shown.map(it=>{
+          const r = rarity(it);
+          return '<div class="umCx"><div class="umCxT"><b>' + esc(it.name) + '</b><span class="umCxC">' + it.cat + '</span>' + (r ? '<span class="umCxR" style="color:' + r.c + '">' + esc(r.n) + '</span>' : '') + '</div><div class="umCxD">' + esc(describe(it)) + '</div></div>';
+        }).join('') : '<div class="umNote" style="padding:14px 0;text-align:center">' + (q ? 'Nothing found for that search.' : 'Nothing discovered yet. Go dig something up!') + '</div>';
+      }catch(e){ console.warn('LN-uimenu codex', e); }
+    }
+    pCodex.addEventListener('input', e=>{ if(e.target && e.target.id === 'umCodexQ') renderCodex(false); });
+    pCodex.addEventListener('keydown', e=>e.stopPropagation());
+    pCodex.addEventListener('click', e=>{ const r = e.target.closest && e.target.closest('.umCx'); if(r) r.classList.toggle('open'); e.stopPropagation(); });
+    pProg.addEventListener('click', e=>e.stopPropagation());
+
+    /* ---------- run: now, then again while modules add buttons late, and every time the menu opens */
+    const obs = new MutationObserver(recs=>{
+      if(!recs.some(r=>{ const t = r.target.nodeType === 3 ? r.target.parentNode : r.target; return t && !(t.closest && t.closest('#umProg,#umCodex,#umTabs')); })) return;
+      run();
+    });
+    function run(){
+      obs.disconnect();
+      try{ layout(); }catch(e){ console.warn('LN-uimenu', e); }
+      obs.observe(box, {childList:true, subtree:true, characterData:true});
+    }
+    run();
+    const t0 = Date.now(), iv = setInterval(()=>{ run(); if(Date.now() - t0 > 3000) clearInterval(iv); }, 250);
+    setTimeout(run, 0);
+    let wasShown = startEl.style.display === 'flex';
+    new MutationObserver(()=>{
+      const sh = startEl.style.display === 'flex' || (startEl.style.display === '' && getComputedStyle(startEl).display !== 'none');
+      if(sh && !wasShown){ run(); if(cur === 'prog') renderProg(); else if(cur === 'codex') renderCodex(); }
+      wasShown = sh;
+    }).observe(startEl, {attributes:true, attributeFilter:['style']});
+    window.__uimenu = {layout:run, setTab, renderProg, renderCodex, discovered};
+  }catch(e){ console.warn('LN-uimenu', e); }
+})();
+/* LN-uimenu end */
+
 /* LN-dinofood end */
+/* LN-uilog start: ACTIVITY LOG side panel. Every toast, item chip, news headline and badge is kept in a scrollable history (Irfan 2026-10-31 UI cleanup) */
+(function(){
+  const SIDE = 'right';                       // 'right' or 'left': the only line to change to flip the panel
+  const OTHER = SIDE === 'right' ? 'left' : 'right';
+  const MAXMEM = 300, MAXSAVE = 100, KEY = 'digcore_ui_log';
+  const CATS = {Message:'Message', Item:'Item', News:'News', Badge:'Badge'};
+  const log = [];
+  const T0 = performance.now(); let unread = 0, open = false, filter = 'All', stick = true;
+  try{ (Array.isArray(save.actLog) ? save.actLog : []).slice(-MAXSAVE).forEach(r=>{ if(r && r.length >= 3) log.push({t:String(r[0]), c:String(r[1]), x:String(r[2]), n:r[3]|0}); }); }catch(e){}
+  try{ open = localStorage.getItem(KEY) === '1'; }catch(e){}
+
+  const strip = s=>String(s == null ? '' : s).replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
+  const stamp = ()=>{ try{ const c = document.getElementById('clock'); const t = c && c.textContent.trim(); if(t) return t; }catch(e){} const d = new Date(); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  let saveT = 0;
+  function persistSoon(){ if(saveT) return; saveT = setTimeout(()=>{ saveT = 0; try{ save.actLog = log.slice(-MAXSAVE).map(e=>[e.t, e.c, e.x, e.n||0]); persist(); }catch(e){} }, 2500); }
+
+  // ---------- DOM
+  const css = document.createElement('style');
+  css.textContent = `
+  #lnLogTab{position:fixed;${SIDE}:0;bottom:120px;z-index:35;width:26px;height:92px;background:rgba(18,16,12,.82);color:#ffe9b0;border:1px solid rgba(255,255,255,.22);border-${SIDE}:none;border-radius:${SIDE==='right'?'10px 0 0 10px':'0 10px 10px 0'};cursor:pointer;pointer-events:auto;display:flex;align-items:center;justify-content:center;font:bold 12px/1 system-ui,sans-serif;letter-spacing:2px;user-select:none;-webkit-tap-highlight-color:transparent}
+  #lnLogTab span.t{writing-mode:vertical-rl;transform:rotate(180deg)}
+  #lnLogTab:hover{background:rgba(40,34,22,.95)}
+  #lnLogTab b{position:absolute;top:-10px;${OTHER}:-9px;min-width:18px;height:18px;border-radius:9px;background:#e8433a;color:#fff;font:bold 11px/18px system-ui,sans-serif;text-align:center;padding:0 4px;box-sizing:border-box;display:none}
+  #lnLog{position:fixed;${SIDE}:0;top:0;bottom:135px;width:320px;max-width:84vw;z-index:36;background:rgba(14,12,10,.88);color:#f2ead8;border-${OTHER}:1px solid rgba(255,255,255,.22);display:none;flex-direction:column;pointer-events:auto;font:13px/1.35 system-ui,sans-serif;box-shadow:0 0 18px rgba(0,0,0,.5)}
+  #lnLog.on{display:flex}
+  #lnLog .hd{display:flex;align-items:center;gap:6px;padding:8px 8px 6px 10px;border-bottom:1px solid rgba(255,255,255,.15)}
+  #lnLog .hd h3{margin:0;font-size:14px;letter-spacing:1px;flex:1;color:#ffe9b0}
+  #lnLog button{background:rgba(255,255,255,.1);color:#f2ead8;border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:3px 9px;font:12px system-ui,sans-serif;cursor:pointer}
+  #lnLog button:hover{background:rgba(255,255,255,.22)}
+  #lnLog button.on{background:#ffe9b0;color:#2a2010;border-color:#ffe9b0}
+  #lnLog .chips{display:flex;gap:5px;padding:6px 10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.1)}
+  #lnLog .list{flex:1;overflow-y:auto;padding:6px 8px;overscroll-behavior:contain}
+  #lnLog .row{display:flex;gap:6px;padding:3px 2px;border-bottom:1px solid rgba(255,255,255,.06);word-break:break-word}
+  #lnLog .row i{font-style:normal;flex:none;opacity:.55;font-size:11px;width:62px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #lnLog .row u{text-decoration:none;flex:none;width:70px;box-sizing:border-box;text-align:center;font-size:10px;font-weight:bold;border-radius:4px;padding:1px 5px;align-self:flex-start;margin-top:1px;color:#1a1408}
+  #lnLog .row em{font-style:normal;flex:1;font-size:13px}
+  #lnLog .c-Message u{background:#ffe9b0}#lnLog .c-Item u{background:#7fe3a0}#lnLog .c-News u{background:#ff8a80}#lnLog .c-Badge u{background:#c9a6ff}
+  #lnLog .empty{opacity:.5;text-align:center;padding:24px 8px}
+  body.touchplay #lnLogTab{bottom:150px}
+  @media (max-width:600px){#lnLog{width:min(320px,84vw)}}`;
+  document.head.appendChild(css);
+
+  const tab = document.createElement('div');
+  tab.id = 'lnLogTab'; tab.title = '` log  (activity history)'; tab.setAttribute('role','button'); tab.setAttribute('aria-label','Activity log');
+  tab.innerHTML = '<span class="t">LOG</span><b></b>';
+  const panel = document.createElement('div');
+  panel.id = 'lnLog';
+  panel.innerHTML = '<div class="hd"><h3>ACTIVITY LOG</h3><button data-a="clear" title="Clear history">Clear</button><button data-a="close" title="Close (`)" aria-label="Close">X</button></div>'
+    + '<div class="chips"><button data-f="All" class="on">All</button><button data-f="Item">Items</button><button data-f="News">News</button><button data-f="Message">Messages</button></div>'
+    + '<div class="list"></div>';
+  const list = panel.querySelector('.list'), badge = tab.querySelector('b');
+  document.body.appendChild(tab); document.body.appendChild(panel);
+  const dontFocus = e=>{ e.preventDefault(); };   // keep the game focused
+  tab.addEventListener('mousedown', dontFocus); panel.addEventListener('mousedown', e=>{ if(e.target.closest('button')) e.preventDefault(); });
+  tab.addEventListener('click', ()=>setOpen(!open));
+  panel.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.a === 'close') setOpen(false);
+    else if(b.dataset.a === 'clear'){ log.length = 0; unread = 0; persistSoon(); render(); }
+    else if(b.dataset.f){ filter = b.dataset.f; stick = true; panel.querySelectorAll('[data-f]').forEach(x=>x.classList.toggle('on', x === b)); render(); }
+    try{ b.blur(); }catch(er){}
+  });
+  list.addEventListener('scroll', ()=>{ stick = list.scrollTop + list.clientHeight >= list.scrollHeight - 8; });
+
+  function rowHTML(e){
+    const x = e.x.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    return '<div class="row c-'+e.c+'"><i>'+e.t.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</i><u>'+e.c+'</u><em>'+x+(e.c !== 'Item' && e.n > 1 ? ' (x'+e.n+')' : '')+'</em></div>';
+  }
+  function render(){
+    if(!open) return;
+    const rows = log.filter(e=>filter === 'All' || e.c === filter || (filter === 'Message' && e.c === 'Badge'));
+    list.innerHTML = rows.length ? rows.map(rowHTML).join('') : '<div class="empty">Nothing here yet. Messages, items and news will be kept here.</div>';
+    if(stick) list.scrollTop = list.scrollHeight;
+  }
+  function updBadge(){ badge.style.display = unread > 0 && !open ? 'block' : 'none'; badge.textContent = unread > 99 ? '99+' : unread; }
+  function setOpen(v){
+    open = !!v; panel.classList.toggle('on', open); tab.style.display = open ? 'none' : 'flex';
+    if(open){ unread = 0; stick = true; render(); }
+    updBadge(); try{ localStorage.setItem(KEY, open ? '1' : '0'); }catch(e){}
+  }
+
+  function add(c, text, n){
+    text = strip(text); if(!text) return;
+    const last = log[log.length - 1];
+    if(last && last.c === c && last.x === text && c !== 'Item'){ last.n = (last.n||1) + 1; }
+    else{ log.push({t:stamp(), c, x:text, n:n||0}); if(log.length > MAXMEM) log.shift(); if(!open && performance.now() - T0 > 8000 && !(typeof startEl !== 'undefined' && startEl.style.display === 'flex') && window.__played) unread++; }
+    if(open) renderSoon();
+    updBadge(); persistSoon();
+  }
+  let rT = 0; function renderSoon(){ if(rT) return; rT = setTimeout(()=>{ rT = 0; render(); }, 120); }
+
+  // ---------- capture: wrapper reassignment, never redefinition
+  if(typeof toast === 'function'){
+    const _toast = toast;
+    toast = function(msg){ try{ add(/^Badge earned/i.test(String(msg)) ? 'Badge' : 'Message', msg); }catch(e){} return _toast.apply(this, arguments); };
+  }
+  if(typeof pushFeed === 'function'){
+    const _pf = pushFeed, fadeT = new WeakMap();
+    pushFeed = function(name, n, col){
+      const r = _pf.apply(this, arguments);
+      try{
+        n = n || 1;
+        const last = log[log.length - 1];
+        const now = performance.now();
+        if(last && last.c === 'Item' && last.name === name && now - (last.at||0) < 2500){ last.n += n; last.x = '+'+last.n+' '+strip(name); last.at = now; if(open) renderSoon(); }
+        else{ add('Item', '+'+n+' '+name, n); const e = log[log.length - 1]; if(e && e.c === 'Item'){ e.name = name; e.at = now; } }
+        // keep the chip stack small and let chips fade faster
+        const box = document.getElementById('feed');
+        if(box){
+          while(box.children.length > 4) box.removeChild(box.firstChild);
+          const el = [...box.children].reverse().find(q=>q.textContent.slice(-name.length) === strip(name) || q.textContent.slice(-String(name).length) === String(name));
+          if(el){ clearTimeout(fadeT.get(el)); fadeT.set(el, setTimeout(()=>{ el.style.opacity = 0; }, 1500)); }
+        }
+      }catch(e){}
+      return r;
+    };
+  }
+  // news: every module pushes/unshifts into window.__newsQ, so the array itself is instrumented
+  function tapQ(Q){
+    if(!Q || Q.__lnTap) return Q;
+    try{
+      Object.defineProperty(Q, '__lnTap', {value:1, enumerable:false});
+      const p = Q.push, u = Q.unshift;
+      Q.push = function(){ for(let i = 0; i < arguments.length; i++) try{ add('News', arguments[i]); }catch(e){} return p.apply(this, arguments); };
+      Q.unshift = function(){ for(let i = 0; i < arguments.length; i++) try{ add('News', arguments[i]); }catch(e){} return u.apply(this, arguments); };
+    }catch(e){}
+    return Q;
+  }
+  try{
+    let cur = tapQ(window.__newsQ || []);
+    Object.defineProperty(window, '__newsQ', {configurable:true, get(){ return cur; }, set(v){ cur = tapQ(v); }});
+  }catch(e){ try{ tapQ(window.__newsQ); }catch(er){} }
+
+  // ---------- key: ` (Backquote). Never exits pointer lock.
+  window.addEventListener('keydown', e=>{
+    if(e.code !== 'Backquote' || e.repeat) return;
+    const t = e.target; if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+    e.preventDefault(); setOpen(!open);
+  }, true);
+
+  window.__actLog = {toast:m=>toast(m), feed:(n,k,c)=>pushFeed(n,k,c), add, log, open:setOpen, isOpen:()=>open, SIDE};
+  setOpen(open);
+})();
+/* LN-ui147 merge tweak */
+(function(){ const st = document.createElement('style'); st.textContent = '#feed{bottom:150px !important;transform:scale(.85);transform-origin:0 100%} body.touchplay #feed{bottom:190px !important}'; document.head.appendChild(st); })();
+/* LN-uilog end */
 (function(){
 })();
 
