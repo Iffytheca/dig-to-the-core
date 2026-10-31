@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 138 (Oct 31)';
+  window.__BUILD = 'Build 139 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25529,13 +25529,28 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
   }
   function techTick(T){
+    T.forEach(n=>{ try{
+      if(!n.pop || !L.pets || !(typeof enemies !== 'undefined') || !enemies.length || Math.hypot(n.x - P.x, n.z - P.z) > 120) return;
+      n.pop.forEach(q=>{ if(!q || !q.defender) return; const a = L.pets[q.id]; if(!alive(a)) return;
+        for(let i = enemies.length - 1; i >= 0; i--){ const e = enemies[i]; if(e && e.pos && !e.boss && Math.hypot(e.pos.x - a.pos.x, e.pos.z - a.pos.z) < 9){ damageEnemy(e, 12); if(Math.random() < .3) toast(q.petN + ' the ' + (a.d.name || 'animal') + ' fights a monster to protect ' + n.name + '!'); break; } } });
+    }catch(err){} });
     T.forEach(n=>{
       if(!n.techQ || !n.techQ.length) return;
       n.techQ.forEach(q=>{ q.t -= 2; });
       const done = n.techQ.filter(q=>q.t <= 0); if(!done.length) return;
       n.techQ = n.techQ.filter(q=>q.t > 0);
       done.forEach(q=>{
-        if(q.k === 'craft'){
+        if(q.k === 'dish'){
+          const an = AD[q.an] ? AD[q.an].name : 'Animal', dn = an + ' ' + rnd(['Stew', 'Pie', 'Skewers', 'Burger', 'Soup']);
+          save.foodPower = save.foodPower || {}; save.foodPower[dn] = 8; if(window.__inventionNames && !window.__inventionNames[dn]) window.__inventionNames[dn] = [200, 140, 80]; addItem(dn, 1);
+          news('NEWS: The cooks of ' + n.name + ' made a fancy ' + dn + ' from the ' + an + 's and sent one to the miner.', true); toast(n.name + ' sent you a ' + dn + '!');
+        } else if(q.k === 'lootfarm'){
+          const an = AD[q.an] ? AD[q.an].name : 'Animal', nm = (an + ' ' + (n.animal || '')).toLowerCase();
+          const L2 = /cow|bull|goat/.test(nm) ? ['Milk', 'Hide'] : /sheep|ram|lamb|alpaca|llama/.test(nm) ? ['Wool', 'Milk'] : /chick|duck|hen|goose|bird|penguin/.test(nm) ? ['Eggs', 'Feather'] : /pig|boar|hog/.test(nm) ? ['Hide', 'Bacon'] : ['Fur', 'Hide', 'Bone'];
+          const got = rnd(L2); addItem(got, 2);
+          news('NEWS: ' + n.name + ' collected ' + got + ' from the ' + an + 's and sent 2 to the miner.', true); toast(n.name + ' sent you 2 ' + got + ' from the ' + an + 's!');
+          if(q.rep > 1) n.techQ.push({t:60, k:'lootfarm', an:q.an, rep:q.rep - 1});
+        } else if(q.k === 'craft'){
           const nm = q.a + ' ' + q.b + ' ' + GIZ[Math.floor(Math.random()*GIZ.length)];
           if(window.__inventionNames && !window.__inventionNames[nm]){ let h = 0; for(let i=0;i<nm.length;i++) h = (h*31 + nm.charCodeAt(i)) & 255; window.__inventionNames[nm] = [80 + h % 150, 80 + (h*7) % 150, 80 + (h*13) % 150]; }
           addItem(nm, 1);
@@ -25642,7 +25657,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function animalView(){
     const n = town; pB.innerHTML = ''; pS.textContent = 'Pick an animal to bring to ' + n.name + '.';
     const ks = tameKinds().filter(k=>(n.newAnimals || []).indexOf(k) < 0).sort(()=>Math.random() - .5).slice(0, 8);
-    ks.forEach(k=>btn(AD[k].name, ()=>{ introduceAnimal(n, k, true); toast('You brought ' + AD[k].name + 's to ' + n.name + '!'); setTimeout(()=>{ if(towns().indexOf(n) >= 0) tame(n, null, k); }, 4000); close(); }));
+    ks.forEach(k=>btn(AD[k].name, ()=>roleView(n, k), 'Then choose what the town uses it for.'));
+    backBtn();
+  }
+  /* LN-animaltech3: what does the town use an introduced animal for? (Irfan 2026-10-31) */
+  function roleView(n, k){
+    pB.innerHTML = ''; pT.textContent = 'What will ' + n.name + ' use the ' + AD[k].name + ' for?'; pS.textContent = 'The animals walk around the town, and you can still attack them.';
+    const go = (role, msg)=>{ introduceAnimal(n, k, true); n.roles = n.roles || {}; n.roles[k] = role; n.techQ = n.techQ || []; toast(msg);
+      if(role === 'food') n.techQ.push({t:30, k:'dish', an:k});
+      else if(role === 'loot') n.techQ.push({t:30, k:'lootfarm', an:k, rep:3});
+      else setTimeout(()=>{ if(towns().indexOf(n) >= 0){ const q = tame(n, null, k); if(q && role === 'defend') q.defender = true; } }, 4000);
+      persist(); close(); };
+    btn('Food', ()=>go('food', 'The ' + AD[k].name + 's of ' + n.name + ' will be cooked into dishes.'), 'Their cooks make dishes from it and send you one.');
+    btn('Loot (milk, hide, fur...)', ()=>go('loot', n.name + ' will collect loot from the ' + AD[k].name + 's.'), 'They collect milk, hide, fur or more, and send it to you.');
+    btn('A companion', ()=>go('pet', 'A resident of ' + n.name + ' will make a ' + AD[k].name + ' a companion.'), 'A resident tames one as a pet.');
+    btn('A defending companion', ()=>go('defend', 'A ' + AD[k].name + ' will guard ' + n.name + '!'), 'A tamed one that fights monsters near the town.');
     backBtn();
   }
   function matView(){
