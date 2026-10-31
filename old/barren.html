@@ -3731,6 +3731,14 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
   openInv = function(){};   /* no inventory, no crafting */
   /* no loot and no drops */
   addItem = function(){}; rollMaterial = function(){};
+
+  /* shop: pickaxes only (no rocket, no guns, no badges) and the Heart never disappears (Irfan 2026-10-31) */
+  var orsh = renderShop;
+  renderShop = function(){ orsh();
+    var L = document.getElementById('shoplist'); if(L) Array.prototype.slice.call(L.children).forEach(function(c){ var n = c.querySelector && c.querySelector('.nm'); if(!n || !/(Pickaxe|Shovel)$/.test(n.textContent)) L.removeChild(c); });
+    Array.prototype.forEach.call(document.querySelectorAll('#shop button'), function(bt){ if(/Reset all/i.test(bt.textContent)) bt.style.display = 'none'; });
+    var bd = document.getElementById('shopbadges'); if(bd && bd.parentElement) bd.parentElement.style.display = 'none'; };
+  setInterval(function(){ heartMined = false; save.heartMined = false; heart.visible = true; }, 300);
   window.__dig.breakBlock2 = breakBlock; window.__dig.collides = collides; window.__dig.inside = inside;
 })();
 
