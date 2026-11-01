@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 150 (Oct 31)';
+  window.__BUILD = 'Build 151 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -26076,14 +26076,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   if(!pend) return;
   const i = PICKS.findIndex(p=>p.tag === 'marsS');
   if(i < 0) return;
-  save.owned[i] = true; save.equipped = i; save.marsUnlocked = 1; persist();
+  save.owned[i] = true; save.equipped = i; persist();   /* LN-planetlock: no free Mars */
   try{ equipGun(null); updatePickModel(); updatePickInfo(); }catch(e){}
   const t = setInterval(()=>{
     if(startEl.style.display === 'flex' || !locked || won) return;
     clearInterval(t);
     try{ localStorage.setItem('digcore_gift_marssoul', '1'); }catch(e){}
-    toast('GIFT: You got the ' + PICKS[i].name + ', the strongest pickaxe in the game! Mars is unlocked. Blast off!');
-    if(!(realm === 0 && P.x >= M.MARS_EDGE)) setTimeout(()=>{ try{ M.go(true); }catch(e){ console.warn('LN-planetlife', e); } }, 1500);
+    toast('GIFT: You got the ' + PICKS[i].name + ', the strongest pickaxe in the game! Dig to the core of the rocket planet to unlock Mars.');
+    if(save.marsUnlocked && !(realm === 0 && P.x >= M.MARS_EDGE)) setTimeout(()=>{ try{ M.go(true); }catch(e){ console.warn('LN-planetlife', e); } }, 1500);
   }, 500);
 })();
 /* LN-planetlife end */
@@ -26534,15 +26534,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   if(!pend) return;
   const i = PICKS.findIndex(p=>p.tag === 'toi8');
   if(i < 0) return;
-  save.owned[i] = true; save.equipped = i; save.toiUnlocked = 1; save.marsUnlocked = 1; persist();
+  save.owned[i] = true; save.equipped = i; persist();   /* LN-planetlock: no free TOI */
   try{ equipGun(null); updatePickModel(); updatePickInfo(); }catch(e){}
   const t = setInterval(()=>{
     if(startEl.style.display === 'flex' || !locked || won) return;
     if(typeof launch !== 'undefined' && launch) return;               // let the Mars gift ride finish first
     clearInterval(t);
     try{ localStorage.setItem('digcore_gift_toicore', '1'); }catch(e){}
-    toast('GIFT: You got the ' + PICKS[i].name + ', the toughest pickaxe in the game (power 375,000)! TOI-1853b is unlocked. Blast off!');
-    if(!T.onTOI()) setTimeout(()=>{ try{ T.go(); }catch(e){ console.warn('LN-toigift', e); } }, 1500);
+    toast('GIFT: You got the ' + PICKS[i].name + ', the toughest pickaxe in the game (power 375,000)! Reach the Mars Core to unlock TOI-1853b.');
+    if(save.toiUnlocked && !T.onTOI()) setTimeout(()=>{ try{ T.go(); }catch(e){ console.warn('LN-toigift', e); } }, 1500);
   }, 500);
 })();
 /* LN-toigift end */
@@ -27382,7 +27382,6 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-unireadd start: the Next Universe and Planet Novaria are open right away, with a 4th rocket choice and a one-time trip (Irfan 2026-10-29) */
 (function(){
   const U = window.__uni; if(!U) return;
-  if((save.marsCores || 0) < 5){ save.marsCores = 5; persist(); }       // the Mars portal is open too
   const pB = document.getElementById('mrsB'); if(!pB) return;
   const anchor = document.getElementById('mrsC') || pB;
   const panel = pB.closest('div[style*="inset:0"]') || pB.parentNode.parentNode;
@@ -27434,7 +27433,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-planetsbtn start: PLANETS button + key P, every planet open (Irfan 2026-10-29) */
 (function(){
   const MR = window.__mars; if(!MR || !MR.openPick) return;
-  function unlockAll(){ save.rocket = save.rocket || 1; save.marsUnlocked = 1; save.toiUnlocked = 1; if((save.marsCores || 0) < 5) save.marsCores = 5; persist(); }
+  function unlockAll(){ if(!save.rocket){ save.rocket = 1; persist(); } }   /* LN-planetlock: planets unlock by their goals only */
   unlockAll();
   function openPlanets(){
     if(typeof launch !== 'undefined' && launch) return;
@@ -29443,6 +29442,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
+    if(window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
@@ -32022,6 +32022,24 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   refreshMineBtn();
 })();
 /* LN-ansnd end */
+/* LN-planetlock start: planets stay locked until their goal is done (Irfan 2026-11-01 "fix it like i didn't do goals to unlock planet") */
+(function(){
+  const MR = window.__mars; if(!MR || !MR.openPick) return;
+  const open = ()=>!(window.__wbOpen && !window.__wbOpen());
+  function relabel(){
+    const ok = open();
+    const d = document.getElementById('mrsD');
+    if(d){ d.disabled = !ok; d.style.opacity = ok ? 1 : .5; d.textContent = '4   NEXT UNIVERSE (Planet Novaria)' + (ok ? '' : ' (locked)'); d.title = ok ? '' : (save.toiCore ? 'Beat Mister Whisker Bucks at the shop to open the Next Universe' : 'Reach the core of TOI-1853b, then beat Mister Whisker Bucks'); }
+    for(let i = 0; i < 4; i++){ const b = document.getElementById('mrsP' + i); if(!b) continue; b.disabled = !ok; b.style.opacity = ok ? 1 : .5; b.textContent = b.textContent.replace(/ \(locked\)$/, '') + (ok ? '' : ' (locked)'); }
+    const h = document.getElementById('mrsHint');
+    if(h && !ok && !document.getElementById('mrsLockHint')){ const q = document.createElement('div'); q.id = 'mrsLockHint'; q.style.cssText = 'opacity:.8;font-size:13px;margin-top:4px'; h.parentNode.appendChild(q); }
+    const q = document.getElementById('mrsLockHint'); if(q){ q.style.display = ok ? 'none' : 'block'; q.textContent = 'Locked planets: Mars opens at the core of the rocket planet, TOI-1853b at the Mars Core, the Next Universe and its planets when you beat Mister Whisker Bucks after the TOI-1853b core.'; }
+  }
+  const _op = MR.openPick;
+  MR.openPick = function(){ const r = _op.apply(this, arguments); try{ relabel(); }catch(e){} return r; };
+  window.__planetLock = {open, relabel};
+})();
+/* LN-planetlock end */
 /* LN-uilog end */
 (function(){
 })();
