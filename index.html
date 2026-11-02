@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 151 (Oct 31)';
+  window.__BUILD = 'Build 152 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -2690,6 +2690,7 @@ function resetProgress(){
   try{
     localStorage.removeItem(SAVE_KEY); localStorage.removeItem(EDIT_KEY);
     for(let i = localStorage.length - 1; i >= 0; i--){ const k = localStorage.key(i); if(k && k.indexOf(SAVE_KEY + '_') === 0 && (PROFILE || k.indexOf(SAVE_KEY + '_p_') !== 0)) localStorage.removeItem(k); }   // this player's saved worlds and planet edits
+    try{ const raw = []; for(let i = 0; i < localStorage.length; i++) raw.push(localStorage.key(i)); raw.forEach(k=>{ const at = k.indexOf('@'), base = at < 0 ? k : k.slice(0, at), pr = at < 0 ? '' : k.slice(at + 1); if(base.indexOf('digcore_gift_') === 0 && pr === (PROFILE || '')) localStorage.removeItem(base); }); }catch(e){}   /* LN-wbfix: gifts return after a reset */
     ['digcore_gift_uni','digcore_stairs','digcore_chaos_unlocked','digcore_chaos','digcore_extra_unlocked','digcore_extra'].forEach(k=>localStorage.removeItem(k)); localStorage.removeItem(EDIT_KEY + '_shift');
     if(alsoUnlocks) localStorage.removeItem(UNLOCK_KEY);
   }catch(e){}
@@ -5451,8 +5452,8 @@ function fightAttack(dt){
   for(const t of list){
     _bo.copy(t.c).sub(camera.position);
     const tca = _bo.dot(_dir);
-    if(tca < 0 || tca > (mineAny ? 11 : (t.k === 'n' ? 9 : 6.4)) || _bo.lengthSq() - tca*tca > t.r*t.r) continue; /* LN-nwfix */
-    const bh = castRay(); if(bh && bh.t < tca - .5) continue;
+    if(tca < 0 || tca > (mineAny ? 11 : ((t.k === 'n' || t.wb) ? 9 : 6.4)) || _bo.lengthSq() - tca*tca > t.r*t.r) continue; /* LN-nwfix, LN-wbfix */
+    const bh = castRay(); if(bh && bh.t < tca - .5 && !t.wb) continue;
     hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
     const pw = PICKS[save.equipped].power; let dmg = (pw >= 1e6 || mineAny) ? 1e12 : (pw*1.4 + 8)*dt*(1 + gear.dmg);   // the world-breaking pickaxes one-shot anything
     dmg = maBossDmg(t, dmg);
@@ -30582,6 +30583,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---- the duel
   const WBPOS = ()=>({x:SHOP.x - 7, z:SHOP.z - 9});
   function callWB(){
+    if(bossActive && !enemies.some(q=>q.boss)) bossActive = false;   /* LN-wbfix */
     if(bossActive){ toast('A boss is already here. Beat it first!'); return; }
     const w = WBPOS(), x = w.x - 4, z = w.z - 12, gy = groundTop(Math.floor(x), 12, Math.floor(z));
     const e = spawnEnemy('whiskerbucks', x, gy, z);
@@ -32040,6 +32042,24 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__planetLock = {open, relabel};
 })();
 /* LN-planetlock end */
+/* LN-wbfix start: Mister Whisker Bucks can always be hit and always goes down (Irfan 2026-11-02 "why cant i defeat mister whisker bucks") */
+(function(){
+  // bigger hit box for the Money Mech
+  const _ft = fightTargets;
+  fightTargets = function(){
+    const list = _ft.apply(this, arguments);
+    for(const t of list) if(t.k === 'e' && t.e && t.e.d && t.e.d.wb){ t.r = Math.max(t.r, 4.6); t.wb = true; }
+    return list;
+  };
+  // every hit on him takes at least a quarter percent of his health, whatever pickaxe or gun you use
+  const _de = damageEnemy;
+  damageEnemy = function(e, dmg){
+    try{ if(e && e.d && e.d.wb && dmg > 0 && isFinite(dmg)) dmg = Math.max(dmg, (e.max || 9500)*.0025); }catch(err){}
+    return _de.call(this, e, dmg);
+  };
+  window.__wbfix = {dbg:{aim(){ const e = enemies.find(q=>q.d && q.d.wb); if(!e) return false; camera.lookAt(e.pos.x, e.pos.y + (e.d.yo || 1), e.pos.z); return true; }, hit(dt){ mouseDown = true; const r = fightAttack(dt || .05); mouseDown = false; return r; }, boss(){ const e = enemies.find(q=>q.d && q.d.wb); return e ? {hp:e.hp, max:e.max, x:e.pos.x, y:e.pos.y, z:e.pos.z} : null; }, active:()=>bossActive}};
+})();
+/* LN-wbfix end */
 /* LN-uilog end */
 (function(){
 })();
