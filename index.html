@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 152 (Oct 31)';
+  window.__BUILD = 'Build 153 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -27188,6 +27188,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const end = e=>{ if(e.cancelable) e.preventDefault(); b.classList.remove('on'); g && g(); }; b.addEventListener('touchend', end, {passive:false}); b.addEventListener('touchcancel', end, {passive:false}); };
     on(atk, ()=>{
       let best = null, bd = 8;
+      for(const e of enemies){ if(!e.pos) continue; const d = Math.hypot(e.pos.x - P.x, e.pos.z - P.z, e.pos.y - P.y) - (e.boss ? 6 : 0); if(d < bd){ bd = d; best = e; } }   /* LN-wbfix2: enemies and bosses first */
       for(const a of animals){ if(!a.pos || a.pet) continue; const d = Math.hypot(a.pos.x - P.x, a.pos.z - P.z, a.pos.y - P.y); if(d < bd){ bd = d; best = a; } }
       if(best){ const dx = best.pos.x - P.x, dz = best.pos.z - P.z, dy = (best.pos.y + (best.d && best.d.yo || .6)) - (P.y + 1.6);
         P.yaw = Math.atan2(-dx, -dz); P.pitch = Math.max(-1.5, Math.min(1.5, Math.atan2(dy, Math.hypot(dx, dz)))); }
@@ -32060,6 +32061,29 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__wbfix = {dbg:{aim(){ const e = enemies.find(q=>q.d && q.d.wb); if(!e) return false; camera.lookAt(e.pos.x, e.pos.y + (e.d.yo || 1), e.pos.z); return true; }, hit(dt){ mouseDown = true; const r = fightAttack(dt || .05); mouseDown = false; return r; }, boss(){ const e = enemies.find(q=>q.d && q.d.wb); return e ? {hp:e.hp, max:e.max, x:e.pos.x, y:e.pos.y, z:e.pos.z} : null; }, active:()=>bossActive}};
 })();
 /* LN-wbfix end */
+/* LN-wbfix2 start: hitting Mister Whisker Bucks always takes a clear bite (12 percent of his health per second of hitting, at any frame rate), and shows the damage (Irfan 2026-11-03 "health bar never drops") */
+(function(){
+  const _de = damageEnemy;
+  let popEl = null, popT = null;
+  function showDmg(e, n){
+    try{
+      if(!popEl){ popEl = document.createElement('div'); popEl.id = 'wbDmg'; popEl.style.cssText = 'position:fixed;left:50%;top:38%;transform:translate(-50%,-50%);z-index:46;pointer-events:none;font:900 26px system-ui,sans-serif;color:#ffd54a;text-shadow:0 2px 6px #000,0 0 12px #000;opacity:0;transition:opacity .25s'; document.body.appendChild(popEl); }
+      popEl.textContent = '-' + Math.round(n).toLocaleString() + '   (' + Math.max(0, Math.round(e.hp/e.max*100)) + '% left)'; popEl.style.opacity = 1;
+      clearTimeout(popT); popT = setTimeout(()=>{ popEl.style.opacity = 0; }, 500);
+    }catch(err){}
+  }
+  damageEnemy = function(e, dmg){
+    try{
+      if(e && e.d && e.d.wb && dmg > 0 && isFinite(dmg)){
+        const now = performance.now()*.001, dtc = Math.min(.1, Math.max(1/120, now - (e._wbHitT || now - .05))); e._wbHitT = now;
+        dmg = Math.max(dmg, (e.max || 9500)*.12*dtc, 40);
+        showDmg(e, dmg);
+      }
+    }catch(err){}
+    return _de.call(this, e, dmg);
+  };
+})();
+/* LN-wbfix2 end */
 /* LN-uilog end */
 (function(){
 })();
