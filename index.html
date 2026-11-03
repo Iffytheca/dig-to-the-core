@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 169 (Oct 31)';
+  window.__BUILD = 'Build 170 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -32767,7 +32767,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   setInterval(()=>{ try{
     const el = document.querySelector('#newsbar .txt'); if(!el) return;
     const t = el.textContent.trim(); if(!t || t === lastTxt) return; lastTxt = t;
-    save.newsLog.push({w:timeLabel(), t}); if(save.newsLog.length > 80) save.newsLog.shift(); persist();
+    save.newsLog.push({w:timeLabel(), t, id:'n' + Date.now().toString(36) + Math.floor(Math.random()*1e6).toString(36)}); /* LN-newsfix */ if(save.newsLog.length > 80) save.newsLog.shift(); persist();
     const c = document.getElementById('newsCount'); if(c) c.textContent = String(save.newsLog.length);
   }catch(e){} }, 400);
   const panel = document.createElement('div');
@@ -32783,7 +32783,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const list = panel.querySelector('#newsLogList');
     list.innerHTML = '<div id="newsLogTk" style="position:relative;height:24px;overflow:hidden;background:rgba(140,20,20,.9);border:1px solid rgba(255,255,255,.35);border-radius:6px;color:#fff;font:700 13px/24px system-ui,sans-serif;margin-bottom:10px;white-space:nowrap"><span style="position:absolute;top:0;left:0;will-change:transform"></span></div>' +
       (L.length ? L.slice().reverse().map((e, i)=>'<div style="margin-bottom:8px;padding:6px 8px;background:rgba(255,255,255,.06);border-radius:6px"><span style="color:#ffd54a;font-weight:800;font-size:12px">' + e.w + '</span> <button class="newsWatch" data-i="' + (L.length - 1 - i) + '" style="float:right;border:0;border-radius:6px;background:#ffd54a;color:#4a1010;font:800 11px system-ui;padding:3px 8px;cursor:pointer">WATCH</button><br>' + String(e.t).replace(/</g, '&lt;') + '<div class="newsVid"></div></div>').join('') : '<div style="opacity:.7">Nothing yet. Keep playing and the news will pile up here.</div>');
-    try{ const V = window.__newsVid; if(V){ V.startTicker(list.querySelector('#newsLogTk')); list.querySelectorAll('.newsWatch').forEach(b=>{ b.onclick = ev=>{ ev.stopPropagation(); const e = (save.newsLog || [])[+b.dataset.i]; if(e) V.play(b.parentNode.querySelector('.newsVid'), e.t); }; }); const first = list.querySelector('.newsWatch'); if(first) first.click(); } }catch(e){ console.warn('LN-newsvid', e); }
+    try{ const V = window.__newsVid; if(V){ V.startTicker(list.querySelector('#newsLogTk')); list.querySelectorAll('.newsWatch').forEach(b=>{ b.onclick = ev=>{ ev.stopPropagation(); const e = (save.newsLog || [])[+b.dataset.i]; if(e) V.play(b.parentNode.querySelector('.newsVid'), e.t, e.id); }; }); const first = list.querySelector('.newsWatch'); if(first) first.click(); } }catch(e){ console.warn('LN-newsvid', e); }
   }
   function openN(){ refresh(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
   function closeN(){ panel.style.display = 'none'; try{ window.__newsVid && window.__newsVid.stop(); }catch(e){} }
@@ -33002,10 +33002,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   // ---- the player inside the panel
   let cur = null;
-  function play(holder, text){
+  function play(holder, text, id){
     stop(); const RC = window.__newsRec;
-    if(RC){ holder.innerHTML = '<div style="opacity:.7;font-size:12px">Loading the footage...</div>'; RC.get(text, blob=>{ if(blob){ const v = document.createElement('video'); v.src = URL.createObjectURL(blob); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000'; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); } else playCartoon(holder, text); }); return; }
+    if(RC){ holder.innerHTML = '<div style="opacity:.7;font-size:12px">Loading the footage...</div>'; RC.get(id || text, blob=>{ if(!blob && id){ RC.get(text, b2=>show(b2)); return; } show(blob); }); return; }
     playCartoon(holder, text);
+    function show(blob){ if(blob){ const v = document.createElement('video'); v.src = URL.createObjectURL(blob); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000'; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); } else playCartoon(holder, text); }
   }
   function playCartoon(holder, text){
     stop(); const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000';
@@ -33038,8 +33039,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const clips = {};                                          // headline text -> Blob (this session), also kept in IndexedDB
   // ---- the clip store
   let db = null;
-  try{ const rq = indexedDB.open('digcore_newsclips', 1); rq.onupgradeneeded = ()=>{ rq.result.createObjectStore('clips', {keyPath:'t'}); }; rq.onsuccess = ()=>{ db = rq.result; }; }catch(e){}
-  function put(t, blob){ clips[t] = blob; try{ if(!db) return; const tx = db.transaction('clips', 'readwrite'), st = tx.objectStore('clips'); st.put({t, blob, at:Date.now()}); const keep = (save.newsLog || []).map(e=>e.t); st.getAllKeys().onsuccess = ev=>{ const ks = ev.target.result || []; if(ks.length > 60) ks.filter(k=>keep.indexOf(k) < 0).slice(0, ks.length - 60).forEach(k=>st.delete(k)); }; }catch(e){} }
+  try{ const rq = indexedDB.open('digcore_newsclips', 2); rq.onupgradeneeded = ()=>{ const d = rq.result; try{ if(d.objectStoreNames.contains('clips')) d.deleteObjectStore('clips'); }catch(e){} d.createObjectStore('clips', {keyPath:'t'}); }; rq.onsuccess = ()=>{ db = rq.result; }; }catch(e){}
+  function put(t, blob){ clips[t] = blob; try{ if(!db) return; const tx = db.transaction('clips', 'readwrite'), st = tx.objectStore('clips'); st.put({t, blob, at:Date.now()}); const keep = (save.newsLog || []).map(e=>e.id || e.t); st.getAllKeys().onsuccess = ev=>{ const ks = ev.target.result || []; if(ks.length > 60) ks.filter(k=>keep.indexOf(k) < 0).slice(0, ks.length - 60).forEach(k=>st.delete(k)); }; }catch(e){} }
   function get(t, cb){ if(clips[t]) return cb(clips[t]); try{ if(!db) return cb(null); const rq = db.transaction('clips').objectStore('clips').get(t); rq.onsuccess = ()=>cb(rq.result ? rq.result.blob : null); rq.onerror = ()=>cb(null); }catch(e){ cb(null); } }
   // ---- recording
   let rec = null;
@@ -33061,19 +33062,19 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(VW - 54, 6, 48, 16); cx.fillStyle = '#f44'; cx.beginPath(); cx.arc(VW - 44, 14, 4, 0, 6.283); cx.fill(); cx.fillStyle = '#fff'; cx.font = 'bold 10px Arial'; cx.fillText('LIVE', VW - 36, 18);
     if(t >= R.dur) stop();
   }
-  function start(text, at, r, dur){
+  function start(text, at, r, dur, key){
     if(rec) return false;
     let mr; try{ const st = cv.captureStream(FPS); mr = new MediaRecorder(st, {mimeType:'video/webm;codecs=vp8', videoBitsPerSecond:500000}); }catch(e){ try{ mr = new MediaRecorder(cv.captureStream(FPS)); }catch(err){ return false; } }
     const parts = []; mr.ondataavailable = e=>{ if(e.data && e.data.size) parts.push(e.data); };
-    mr.onstop = ()=>{ try{ const blob = new Blob(parts, {type:'video/webm'}); if(blob.size > 500) put(text, blob); }catch(e){} };
-    rec = {mr, text, cap:text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, ''), at:at ? {x:at.x, y:at.y, z:at.z} : null, r:r || 9, a0:Math.random()*6.283, dur:dur || 7, t0:performance.now(), iv:setInterval(frame, 1000/FPS)};
+    mr.onstop = ()=>{ try{ const blob = new Blob(parts, {type:'video/webm'}); if(blob.size > 500) put(key || text, blob); }catch(e){} };
+    rec = {mr, text, key:key || text, cap:text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, ''), at:at ? {x:at.x, y:at.y, z:at.z} : null, r:r || 9, a0:Math.random()*6.283, dur:dur || 7, t0:performance.now(), iv:setInterval(frame, 1000/FPS)};
     mr.start(250); return true;
   }
   function stop(){ if(!rec) return; clearInterval(rec.iv); try{ rec.mr.stop(); }catch(e){} rec = null; }
   // ---- what to film
   const qText = re=>{ const Q = window.__newsQ || []; return Q.find(t=>re.test(t)) || null; };
   const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
-  let lastPR = null, lastCT = null, ctPhase = -1, nN = (save.nations || []).length, pending = [];
+  let lastPR = null, lastCT = null, ctPhase = -1, nN = (save.nations || []).length, pending = [], pendingBusy = 0;
   setInterval(()=>{ try{
     if(startEl.style.display === 'flex' || won) return;
     const PR = PRO.PR, CT = PRO.CT;
@@ -33090,7 +33091,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     nN = ns.length;
     // every other headline gets a clip of what you were looking at when it came in
     const L = save.newsLog || []; const last = L.length ? L[L.length-1] : null;
-    if(last && !last.rec){ last.rec = 1; if(!rec && !clips[last.t]) get(last.t, b=>{ if(!b && !rec){ if(window.__newsStage) window.__newsStage.film(last.t); else start(last.t, null, 0, 5); } }); }
+    for(const e of L){ if(!e.rec){ e.rec = 1; pending.push(e); if(pending.length > 4) pending.shift(); } }
+    if(!rec && pending.length && !pendingBusy){ const e = pending.shift(), k = e.id || e.t; if(!clips[k] && !clips[e.t]){ pendingBusy = 1; get(k, b=>{ pendingBusy = 0; if(!b && !rec){ if(window.__newsStage) window.__newsStage.film(e.t, k); else start(e.t, null, 0, 5, k); } }); } }
   }catch(e){ console.warn('LN-newsrec', e); } }, 500);
   window.__newsRec = {start, stop, get, clips, get rec(){ return rec; }, cv};
 })();
@@ -33123,11 +33125,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const W = window.__whisker; if(W && W.pig) return {obj:W.pig.position, r:5, who:'pigeon'};
     return {x:SHOP.x, z:SHOP.z, r:9, who:'shop'};
   }
-  function film(text){
+  function film(text, key){
     if(RC.rec) return false;
     const s = findSubject(text), T = text.toLowerCase();
     const pos = ()=>s.obj ? {x:s.obj.x, y:s.obj.y + .8, z:s.obj.z} : {x:s.x, y:gy(s.x, s.z) + .8, z:s.z};
     const p0 = pos(), props = [];
+    s.r = Math.max(4, (s.r || 7) * (.7 + Math.random()*.7));
+    const SIGNS = ['EYEWITNESS', 'I SAW IT', 'NO COMMENT', 'WOW', 'TOTALLY TRUE', 'NOT FAKE', 'ASK ME', 'BIG IF TRUE', 'SOURCE: ME', 'TRUST ME'];
+    const POOL = ['duckling', 'frog', 'llama', 'tutucow', 'discosheep', 'sunchicken', 'uddercow', 'diaperpig', 'fatclown', 'wingdonkey', 'duck', 'banana'].filter(k=>AD[k]);
+    if(s.who === 'pigeon' || s.who === 'shop' || s.who === 'nation' || s.who === 'bobcity'){ try{ const kk = POOL[Math.floor(Math.random()*POOL.length)], ang = Math.random()*6.283, wd = 2.2 + Math.random()*1.5; const w = spawnAnimal(kk, p0.x + Math.cos(ang)*wd, p0.z + Math.sin(ang)*wd); if(w){ w.newsTemp = 1; w.fleeT = 0; s.witness = w; const sg = sprite(SIGNS[Math.floor(Math.random()*SIGNS.length)], '#ffffff', '#202020', 2.6); scene.add(sg); props.push(sg); sg.isSign = true; } }catch(e){} }
     const cap = text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, '');
     const words = cap.split(' ').slice(0, 4).join(' ');
     const head = sprite(/^fake news/i.test(text) ? 'FAKE NEWS!' : /^breaking/i.test(text) ? 'BREAKING!' : words.toUpperCase(), '#ffd54a', '#4a1010', 4.5); scene.add(head); props.push(head);
@@ -33135,15 +33141,15 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(/mad|angry|crime|invade|stole|bonk|attack|furious|war/.test(T)){ const ex = sprite('!', '#c02020', '#ffffff', 1.2); scene.add(ex); props.push(ex); ex.isMark = true; }
     if(/\$|money|coin|price|invest|rich|bank/.test(T)){ const dl = sprite('$', '#1a8a3a', '#ffffff', 1.2); scene.add(dl); props.push(dl); dl.isMark = true; }
     const party = /party|won|celebrat|holiday|new law|birthday|festival|rainbow/.test(T);
-    if(!RC.start(text, p0, s.r, 7)){ props.forEach(p=>scene.remove(p)); if(s.temp) try{ removeAnimal(s.temp); }catch(e){} return false; }
+    if(!RC.start(text, p0, s.r, 7, key)){ props.forEach(p=>scene.remove(p)); if(s.temp) try{ removeAnimal(s.temp); }catch(e){} if(s.witness) try{ removeAnimal(s.witness); }catch(e){} return false; }
     const t0 = performance.now();
     const iv = setInterval(()=>{
       try{
         const R = RC.rec, q = pos(), t = (performance.now() - t0)/1000;
         if(R && R.at){ R.at.x = q.x; R.at.y = q.y; R.at.z = q.z; }
-        props.forEach((pr, i)=>{ if(pr.isTrophy) pr.position.set(q.x, q.y + 2.6 + Math.sin(t*3)*.15, q.z), pr.rotation.y += .05; else if(pr.isMark) pr.position.set(q.x + .9, q.y + 3.4 + Math.sin(t*5)*.2, q.z); else pr.position.set(q.x, q.y + 3.6, q.z); });
+        props.forEach((pr, i)=>{ if(pr.isSign){ const w = s.witness; if(w){ pr.position.set(w.pos.x, w.pos.y + 2.2 + Math.sin(t*4)*.1, w.pos.z); w.fleeT = 0; } } else if(pr.isTrophy) pr.position.set(q.x, q.y + 2.6 + Math.sin(t*3)*.15, q.z), pr.rotation.y += .05; else if(pr.isMark) pr.position.set(q.x + .9, q.y + 3.4 + Math.sin(t*5)*.2, q.z); else pr.position.set(q.x, q.y + 3.6, q.z); });
         if(party && Math.random() < .35) burst(q.x + (Math.random()-.5)*4, q.y + 3 + Math.random()*2, q.z + (Math.random()-.5)*4, Math.min(BLOCKS.length-1, 3), 8);
-        if(!R || t > 8){ clearInterval(iv); props.forEach(p=>scene.remove(p)); if(s.temp) setTimeout(()=>{ try{ removeAnimal(s.temp); }catch(e){} }, 1500); }
+        if(!R || t > 8){ clearInterval(iv); props.forEach(p=>scene.remove(p)); if(s.temp) setTimeout(()=>{ try{ removeAnimal(s.temp); }catch(e){} }, 1500); if(s.witness) setTimeout(()=>{ try{ removeAnimal(s.witness); }catch(e){} }, 1500); }
       }catch(e){ clearInterval(iv); }
     }, 100);
     return true;
