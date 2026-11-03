@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 168 (Oct 31)';
+  window.__BUILD = 'Build 169 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -32824,9 +32824,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const CONTESTS = ['pie eating','mud sliding','loudest noise','staring','best hat','longest nap','silliest walk','fastest sneeze','biggest splash','hide and seek'];
   function makeTrophy(){
     const g = new THREE.Group(), gold = new THREE.MeshLambertMaterial({color:0xffd040, emissive:0x553300});
-    g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.28, .18, .45, 12), gold), {position:new THREE.Vector3(0, .5, 0)}));
-    g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .5), gold), {position:new THREE.Vector3(0, .2, 0)}));
-    g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .2, 8), gold), {position:new THREE.Vector3(0, .3, 0)}));
+    [[new THREE.CylinderGeometry(.28, .18, .45, 12), .5], [new THREE.BoxGeometry(.5, .08, .5), .2], [new THREE.CylinderGeometry(.06, .06, .2, 8), .3]].forEach(q=>{ const m = new THREE.Mesh(q[0], gold); m.position.set(0, q[1], 0); g.add(m); });
     return g;
   }
   function startContest(n){
@@ -33092,11 +33090,67 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     nN = ns.length;
     // every other headline gets a clip of what you were looking at when it came in
     const L = save.newsLog || []; const last = L.length ? L[L.length-1] : null;
-    if(last && !last.rec){ last.rec = 1; if(!rec && !clips[last.t]) get(last.t, b=>{ if(!b && !rec) start(last.t, null, 0, 5); }); }
+    if(last && !last.rec){ last.rec = 1; if(!rec && !clips[last.t]) get(last.t, b=>{ if(!b && !rec){ if(window.__newsStage) window.__newsStage.film(last.t); else start(last.t, null, 0, 5); } }); }
   }catch(e){ console.warn('LN-newsrec', e); } }, 500);
   window.__newsRec = {start, stop, get, clips, get rec(){ return rec; }, cv};
 })();
 /* LN-newsrec end */
+/* LN-newsstage start: every headline is filmed where it happened, with the real actor in the 3D world (the animal, Bob, Baba Caka, the Shopkeeper, Mister Whisker Bucks, a country, a disaster, or the Fake News Pigeon's newsroom) and little props, never a recording of your own view (Irfan 2026-11-03 "the video shouldnt be recording of my clip but what happened") */
+(function(){
+  const RC = window.__newsRec; if(!RC) return;
+  const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
+  const sprite = (text, bg, fg, w)=>{ const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(text, 512, 96, bg, fg, 'bold 44px Arial'), fog:false, depthWrite:false, transparent:true})); sp.scale.set(w || 4, .75, 1); return sp; };
+  function trophy(){ const g = new THREE.Group(), gold = new THREE.MeshLambertMaterial({color:0xffd040, emissive:0x553300});
+    const a = new THREE.Mesh(new THREE.CylinderGeometry(.28, .18, .45, 12), gold); a.position.set(0, .5, 0); g.add(a);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .5), gold); b.position.set(0, .2, 0); g.add(b); return g; }
+  function findSubject(t){
+    const T = t.toLowerCase();
+    // a country by name
+    for(const n of (save.nations || [])){ if(n.name && T.indexOf(n.name.toLowerCase()) >= 0) return {x:n.x, z:n.z, r:12, who:'nation'}; }
+    for(const c of (save.bobCities || [])){ if(c.name && T.indexOf(c.name.toLowerCase()) >= 0) return {x:c.x, z:c.z, r:12, who:'bobcity'}; }
+    if(/baba caka/.test(T)){ const B = window.__baba && window.__baba.B; if(B && B.on) return {obj:B.pos, r:7, who:'baba'}; }
+    if(/whisker|mister whisker bucks|top hat/.test(T)){ const W = window.__whisker; if(W && W.cat) return {obj:W.cat.position, r:6, who:'cat'}; }
+    if(/\bbobs?\b/.test(T)){ const bs = (window.__bobs && window.__bobs.bobs) || []; let best = null, bd = 1e9; for(const b of bs){ if(!b || !b.g) continue; const d = Math.hypot(b.g.position.x - P.x, b.g.position.z - P.z); if(d < bd){ bd = d; best = b; } } if(best) return {obj:best.g.position, r:7, who:'bob'}; }
+    // an animal by its name, the nearest one, or a stand-in spawned just for the camera
+    let hit = null; for(const k in AD){ const nm = AD[k] && AD[k].name; if(!nm) continue; const l = nm.toLowerCase(); if(T.indexOf(l) >= 0 && (!hit || l.length > hit.l.length)) hit = {k, l}; }
+    if(!hit){ for(const k in AD){ const nm = AD[k] && AD[k].name; if(!nm) continue; const l = nm.toLowerCase(), last = l.split(' ').pop(); if(last.length > 2 && new RegExp('\\b' + last + 's?\\b').test(T)){ hit = {k, l}; break; } } }
+    if(hit){ let best = null, bd = 1e9; for(const a of animals){ if(a && a.d && a.d.name.toLowerCase() === hit.l){ const d = Math.hypot(a.pos.x - P.x, a.pos.z - P.z); if(d < bd){ bd = d; best = a; } } }
+      if(best) return {obj:best.pos, r:7, who:'animal'};
+      try{ const ang = Math.random()*6.283, x = P.x + Math.cos(ang)*22, z = P.z + Math.sin(ang)*22; const a = spawnAnimal(hit.k, x, z); if(a){ a.newsTemp = 1; return {obj:a.pos, r:7, who:'animal', temp:a}; } }catch(e){} }
+    if(/shop|price|sale|sold|buy|bought/.test(T)) return {x:SHOP.x, z:SHOP.z, r:9, who:'shop'};
+    const DS = window.__disaster, S = DS && DS.cur;
+    if(S && /flood|tornado|storm|volcano|meteor|rain|hail|lightning|avalanche|rainbow|disaster|weather/.test(T) && typeof S.x === 'number') return {x:S.x, z:S.z, r:16, who:'disaster'};
+    const W = window.__whisker; if(W && W.pig) return {obj:W.pig.position, r:5, who:'pigeon'};
+    return {x:SHOP.x, z:SHOP.z, r:9, who:'shop'};
+  }
+  function film(text){
+    if(RC.rec) return false;
+    const s = findSubject(text), T = text.toLowerCase();
+    const pos = ()=>s.obj ? {x:s.obj.x, y:s.obj.y + .8, z:s.obj.z} : {x:s.x, y:gy(s.x, s.z) + .8, z:s.z};
+    const p0 = pos(), props = [];
+    const cap = text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, '');
+    const words = cap.split(' ').slice(0, 4).join(' ');
+    const head = sprite(/^fake news/i.test(text) ? 'FAKE NEWS!' : /^breaking/i.test(text) ? 'BREAKING!' : words.toUpperCase(), '#ffd54a', '#4a1010', 4.5); scene.add(head); props.push(head);
+    if(/won|winner|record|champion|prize|trophy|contest/.test(T)){ const tr = trophy(); scene.add(tr); props.push(tr); tr.isTrophy = true; }
+    if(/mad|angry|crime|invade|stole|bonk|attack|furious|war/.test(T)){ const ex = sprite('!', '#c02020', '#ffffff', 1.2); scene.add(ex); props.push(ex); ex.isMark = true; }
+    if(/\$|money|coin|price|invest|rich|bank/.test(T)){ const dl = sprite('$', '#1a8a3a', '#ffffff', 1.2); scene.add(dl); props.push(dl); dl.isMark = true; }
+    const party = /party|won|celebrat|holiday|new law|birthday|festival|rainbow/.test(T);
+    if(!RC.start(text, p0, s.r, 7)){ props.forEach(p=>scene.remove(p)); if(s.temp) try{ removeAnimal(s.temp); }catch(e){} return false; }
+    const t0 = performance.now();
+    const iv = setInterval(()=>{
+      try{
+        const R = RC.rec, q = pos(), t = (performance.now() - t0)/1000;
+        if(R && R.at){ R.at.x = q.x; R.at.y = q.y; R.at.z = q.z; }
+        props.forEach((pr, i)=>{ if(pr.isTrophy) pr.position.set(q.x, q.y + 2.6 + Math.sin(t*3)*.15, q.z), pr.rotation.y += .05; else if(pr.isMark) pr.position.set(q.x + .9, q.y + 3.4 + Math.sin(t*5)*.2, q.z); else pr.position.set(q.x, q.y + 3.6, q.z); });
+        if(party && Math.random() < .35) burst(q.x + (Math.random()-.5)*4, q.y + 3 + Math.random()*2, q.z + (Math.random()-.5)*4, Math.min(BLOCKS.length-1, 3), 8);
+        if(!R || t > 8){ clearInterval(iv); props.forEach(p=>scene.remove(p)); if(s.temp) setTimeout(()=>{ try{ removeAnimal(s.temp); }catch(e){} }, 1500); }
+      }catch(e){ clearInterval(iv); }
+    }, 100);
+    return true;
+  }
+  window.__newsStage = {film, findSubject};
+})();
+/* LN-newsstage end */
 
 
 
