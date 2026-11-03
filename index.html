@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 154 (Oct 31)';
+  window.__BUILD = 'Build 155 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -5527,7 +5527,7 @@ function updateGunHud(){
   if(!curGun){ el.style.display = 'none'; return; }
   const g = curGun, m = magOf(g), res = save.ammo[g.key] || 0;
   el.style.display = 'block';
-  el.innerHTML = '<b>'+gunName(g)+'</b><br><span style="font-size:26px;font-weight:800">'+(mineAny ? '∞' : Math.ceil(m))+'</span> <span style="opacity:.7">/ '+(mineAny ? '∞' : res)+'</span>'+(gunRel > 0 ? '<br><span style="color:#ffd54a">RELOADING...</span>' : '')+'<br><span style="font-size:10px;opacity:.6">G switch &middot; T reload</span>';
+  el.innerHTML = '<b>'+gunName(g)+'</b><br><span style="font-size:26px;font-weight:800">'+Math.ceil(m)+'</span> <span style="opacity:.7">/ '+res+'</span>'+(gunRel > 0 ? '<br><span style="color:#ffd54a">RELOADING...</span>' : '')+'<br><span style="font-size:10px;opacity:.6">G switch &middot; T reload</span>';
 }
 function equipGun(g){
   curGun = g; gunRel = 0; gunCD = .15; save.gunEq = g ? g.key : null;
@@ -5549,13 +5549,13 @@ function cycleGun(){
 function startReload(g){
   gunSave();
   if(gunRel > 0 || magOf(g) >= g.mag) return;
-  if(!mineAny && !(save.ammo[g.key] > 0)){ toast('Out of ammo for the '+gunName(g)+'! Buy more from the shopkeeper.'); return; }
+  if(!(save.ammo[g.key] > 0)){ toast('Out of ammo for the '+gunName(g)+'! Buy more from the shopkeeper.'); return; }
   gunRel = g.rel; blip(300,.05,.1,'square'); setTimeout(()=>blip(200,.05,.1,'square'), 250); updateGunHud();
 }
 function finishReload(g){
   gunSave();
-  const need = g.mag - magOf(g), take = mineAny ? need : Math.min(need, save.ammo[g.key] || 0);
-  save.mag[g.key] = magOf(g) + take; if(!mineAny) save.ammo[g.key] = (save.ammo[g.key]||0) - take;
+  const need = g.mag - magOf(g), take = Math.min(need, save.ammo[g.key] || 0);
+  save.mag[g.key] = magOf(g) + take; save.ammo[g.key] = (save.ammo[g.key]||0) - take;
   blip(420,.06,.1,'square'); persist(); updateGunHud();
 }
 
@@ -5709,8 +5709,8 @@ function gunUpdate(dt){
   gunSave();
   const mag = magOf(g);
   if(g.kind === 'flame'){
-    if(mouseDown && (mag > 0 || mineAny)){
-      if(!mineAny) save.mag[g.key] = Math.max(0, mag - g.burn*dt);
+    if(mouseDown && mag > 0){
+      save.mag[g.key] = Math.max(0, mag - g.burn*dt);
       camera.getWorldDirection(_dir);
       muzzlePos(g, _mz); const o = camera.position, bdist = rayBlockDist(o, _dir, g.range);
       for(let i=0;i<2;i++) spawnFlame(_mz, _dir);
@@ -5723,20 +5723,20 @@ function gunUpdate(dt){
       }
       if(Math.random() < dt*12) blip(60+Math.random()*30,.08,.08,'sawtooth');
       if(gunHudT <= 0){ gunHudT = .1; updateGunHud(); }
-      if(magOf(g) <= 0 && !mineAny) startReload(g);
+      if(magOf(g) <= 0) startReload(g);
     } else if(edge && mag <= 0) startReload(g);
     return;
   }
   if(!(g.auto ? mouseDown : edge) || gunCD > 0) return;
-  if(mag <= 0 && !mineAny){ startReload(g); return; }
+  if(mag <= 0){ startReload(g); return; }
   clickEdge = 0; gunCD = 1/g.rate; recoil = 1; flashT = .05; flashM.material.color.setHex(0xffe07a);
-  if(!mineAny) save.mag[g.key] = mag - 1;
+  save.mag[g.key] = mag - 1;
   blip(g.snd[0], g.snd[1], g.snd[2], 'sawtooth'); blip(g.snd[0]*4, .03, g.snd[2]*.5, 'square');
   if(g.kind === 'rocket'){ camera.getWorldDirection(_dir); launchRocket2(g, _dir); }
   else for(let i=0; i<(g.pellets||1); i++) fireBullet(g, spreadDir(g.spread), g.dmg);
   shake = Math.max(shake, g.kick*.012); P.pitch = Math.max(-1.55, Math.min(1.55, P.pitch + g.kick*.005));
   updateGunHud();
-  if(magOf(g) <= 0 && !mineAny) startReload(g);
+  if(magOf(g) <= 0) startReload(g);
 }
 function gunAnim(bob){
   const g = curGun, rel = gunRel > 0 ? Math.sin(Math.min(1, gunRel/g.rel)*Math.PI) : 0;
