@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 153 (Oct 31)';
+  window.__BUILD = 'Build 154 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -5448,6 +5448,12 @@ function gravityPulse(){
 function fightAttack(dt){
   if(!mouseDown) return false;
   camera.getWorldDirection(_dir);
+  if(window.__wbAuto){ const t = window.__wbAuto(camera.position, _dir); if(t){   /* LN-wbfix3 */
+    hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
+    const pw = PICKS[save.equipped].power; let dmg = (pw >= 1e6 || mineAny) ? 1e12 : (pw*1.4 + 8)*dt*(1 + gear.dmg);
+    dmg = maBossDmg(t, dmg); damageEnemy(t.e, dmg);
+    if(Math.random() < dt*10){ blip(180+Math.random()*80,.06,.07,'square'); burst(t.c.x, t.c.y, t.c.z, 9, 1); }
+    return true; } }
   const list = fightTargets().concat(corpses.map(c=>({k:'c', corpse:c, c:c.c, r:c.r})));
   for(const t of list){
     _bo.copy(t.c).sub(camera.position);
@@ -5605,6 +5611,7 @@ function fireBullet(g, dir, dmg){
     if(tca < 0 || tca > bt || _bo.lengthSq() - tca*tca > t.r*t.r) continue;
     best = t; bt = tca;
   }
+  if(!best && window.__wbAuto) best = window.__wbAuto(o, dir);   /* LN-wbfix3 */
   if(best){ gunTargetHit(best, mineAny ? 1e12 : dmg*(1+gear.dmg)); burst(best.c.x, best.c.y, best.c.z, 9, 2); }
   else if(bd <= g.range){
     const x = o.x+dir.x*bd, y = o.y+dir.y*bd, z = o.z+dir.z*bd, id = get(Math.floor(x), Math.floor(-y), Math.floor(z));
@@ -32084,6 +32091,24 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-wbfix2 end */
+/* LN-wbfix3 start: near Mister Whisker Bucks every swing and every shot lands (within 5 blocks from any angle, up to 13 blocks when roughly facing him), blocks never get in the way (Irfan 2026-11-03 "still his damage isn't dropping") */
+(function(){
+  window.__wbAuto = function(o, dir){
+    try{
+      for(const e of enemies){
+        if(!e.d || !e.d.wb) continue;
+        const cx = e.pos.x, cy = e.pos.y + (e.d.yo || 3), cz = e.pos.z;
+        const dx = cx - o.x, dy = cy - o.y, dz = cz - o.z, d = Math.hypot(dx, dy, dz) || 1;
+        if(d > 13) continue;
+        const dot = (dx*dir.x + dy*dir.y + dz*dir.z)/d;
+        if(d > 5 && dot < .25) continue;
+        return {k:'e', e, c:new THREE.Vector3(cx, cy, cz), r:e.d.r + .35, wb:true};
+      }
+    }catch(err){}
+    return null;
+  };
+})();
+/* LN-wbfix3 end */
 /* LN-uilog end */
 (function(){
 })();
