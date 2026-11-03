@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 164 (Oct 31)';
+  window.__BUILD = 'Build 166 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -4610,7 +4610,7 @@ addEventListener('keydown',e=>{
   }
   if(bp.on && locked && e.code==='KeyZ') bp.rot = (bp.rot + 3) % 4;
   if(bp.on && locked && e.code==='KeyX') bp.rot = (bp.rot + 1) % 4;
-  if(e.code==='KeyC' && !won){ if(invOpen) closeInv(); else if(!shopOpen && !dlgOpen) openInv(); return; }
+  if(e.code==='KeyC' && !won){ return; }   /* LN-ckeys: C alone opens the items on release, C + 1-9 clicks a top button */
   if(e.code==='KeyI' && !won){ if(invOpen) closeInv(); else if(!shopOpen && !dlgOpen) openInv(); return; }
   if(e.code==='KeyF' && !won){ if(shopOpen){ closeShop(); } else if(dlgOpen){ closeDlg(); } else if(locked && act){ doAct(); } return; }
   if(e.code==='KeyE' && !won){ if(locked && !shopOpen && !eatHeld()) toast('Nothing to eat in this carry slot. Put food in it first. (Q = main menu)'); return; }
@@ -30727,7 +30727,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     '#minedRow{display:none!important}',
     'body.uiL #stats{width:var(--uiLW)!important;min-width:0!important}',
     'body.uiL.uiNarrow #stats{font-size:13px}body.uiL.uiNarrow #stats b{font-size:15px}',
-    'body.uiL #menuBtn,body.uiL #planetsBtn,body.uiL #loreBtn{position:absolute!important;height:' + BTN_H + 'px!important;padding:0 4px!important;font:800 11px system-ui,sans-serif!important;letter-spacing:0!important;border-radius:9px!important;white-space:nowrap!important;overflow:hidden;z-index:30}',
+    'body.uiL #menuBtn,body.uiL #planetsBtn,body.uiL #loreBtn,body.uiL #newsBtn{position:absolute!important;height:' + BTN_H + 'px!important;padding:0 4px!important;font:800 11px system-ui,sans-serif!important;letter-spacing:0!important;border-radius:9px!important;white-space:nowrap!important;overflow:hidden;z-index:30}',
     'body.uiL #lnTicker{width:var(--uiLW)}',
     'body.uiL:not(.uiLegOn) #layers{display:none!important}',
     'body.uiL #layers{width:var(--uiRW)!important;min-width:0!important;left:auto!important;right:' + EDGE + 'px!important}',
@@ -30785,7 +30785,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---- the key help: a tidy two column list, with the equipped pickaxe on top
   const help = document.getElementById('help');
   if(help){
-    const K = [['WASD','move'],['Space','jump'],['Shift','run'],['V','sprint on/off'],['Hold Click','dig / shoot'],['Right-click','place'],['1-9','carry slot'],['Wheel','carry slot'],['G','guns'],['T','reload'],['F','talk / use'],['I','items / craft'],['B','blueprint'],['E','eat'],['R','surface'],['Q','main menu'],['O','planets'],['Y','lore'],['J','biome tracker'],['P','pause']];
+    const K = [['WASD','move'],['Space','jump'],['Shift','run'],['V','sprint on/off'],['Hold Click','dig / shoot'],['Right-click','place'],['1-9','carry slot'],['C + 1-9','click a top button (MAP, HOMEWORK, LAYERS, LOG, KEYS, MINE ANY, PLANETS, LORE, NEWS)'],['Wheel','carry slot'],['G','guns'],['T','reload'],['F','talk / use'],['I','items / craft'],['B','blueprint'],['E','eat'],['R','surface'],['Q','main menu'],['O','planets'],['Y','lore'],['J','biome tracker'],['P','pause']];
     help.innerHTML = '<div class="uiHdr">EQUIPPED</div><div class="uiHdr" style="margin-top:4px">KEYS</div><div class="uiKeys">' + K.map(k=>'<div><kbd>' + k[0] + '</kbd>' + k[1] + '</div>').join('') + '</div>';
     const pi = document.getElementById('pickinfo');
     if(pi) help.insertBefore(pi, help.children[1]);
@@ -30916,7 +30916,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const stats = $q('stats');
     if(stats){ setI(stats, 'top', top0 + 'px'); setI(stats, 'left', EDGE + 'px'); }
     let y = stats ? Math.round(stats.getBoundingClientRect().bottom) + GAP : top0;
-    const btns = ['menuBtn', 'planetsBtn', 'loreBtn'].map($q).filter(b=>b && shown(b));
+    const btns = ['menuBtn', 'planetsBtn', 'loreBtn', 'newsBtn'].map($q).filter(b=>b && shown(b));
     if(btns.length){
       let per = btns.length; while(per > 1 && (LW - 8*(per - 1))/per < 84) per--;
       const bw = Math.floor((LW - 8*(per - 1))/per);
@@ -31470,7 +31470,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const st = document.createElement('style');
   st.textContent = [
     // gone from the screen in touch mode (their jobs moved to the button column or to the drawer chips)
-    H + '#planetsBtn,' + H + '#loreBtn,' + H + '#lnLogTab,' + H + '#uiKeyBtn,' + H + '#uiLayBtn{display:none!important}',
+    H + '#planetsBtn,' + H + '#loreBtn,' + H + '#newsBtn,' + H + '#lnLogTab,' + H + '#uiKeyBtn,' + H + '#uiLayBtn{display:none!important}',
     // news bar: top centre between the stats and the button column
     H + '#newsbar{left:160px!important;right:' + NEWS_R + 'px!important;top:8px!important;bottom:auto!important;height:22px!important;font-size:12px!important;line-height:22px!important;overflow:hidden!important}',
     H + '#newsbar .lbl{padding:0 6px!important;font-size:11px!important}',
@@ -31506,7 +31506,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function addBtns(){
     const w = $q('tcw'); if(!w || w.dataset.uitouch) return !!w;
     w.dataset.uitouch = 1;
-    [['PLANETS', 'planetsBtn', 102], ['LORE', 'loreBtn', 149]].forEach(q=>{
+    [['PLANETS', 'planetsBtn', 102], ['LORE', 'loreBtn', 149], ['NEWS', 'newsBtn', 196]].forEach(q=>{
       const b = document.createElement('div'); b.className = 'tb sm'; b.id = 'tc' + q[0][0] + q[0].slice(1).toLowerCase();
       b.textContent = q[0]; b.style.cssText = 'right:106px;top:' + q[2] + 'px;font-size:' + (q[0].length > 5 ? 8 : 10) + 'px';
       const fire = ()=>{ const o = $q(q[1]); if(o) o.click(); };
@@ -31851,7 +31851,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const RW = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--uiRW')) || 300;
     const s = byId('stats'), sr = s ? s.getBoundingClientRect() : null;
     let y = sr && sr.height ? Math.round(sr.bottom) + GAP : 120;
-    ['menuBtn', 'planetsBtn', 'loreBtn'].forEach(id=>{ const b = byId(id); if(visible(b)) y = Math.max(y, Math.round(b.getBoundingClientRect().bottom) + GAP); });
+    ['menuBtn', 'planetsBtn', 'loreBtn', 'newsBtn'].forEach(id=>{ const b = byId(id); if(visible(b)) y = Math.max(y, Math.round(b.getBoundingClientRect().bottom) + GAP); });
     colL.style.left = EDGE + 'px'; colL.style.top = y + 'px'; colL.style.width = LW + 'px';
     // left stack stops above the hunger bar / carry slots
     let lim = H - 90;
@@ -32750,6 +32750,172 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-nomagic end */
+/* LN-protest start: animal protests in the countries with silly signs, animal contests with a winner animation, and a NEWS button that opens a log of everything the news bar said (Irfan 2026-11-03 "animals in country can make protest ... news button ... show animation like a pig won contest") */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const newsQ = (t, front)=>{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; };
+  const plural = n=>/s$/.test(n) ? n : n + 's';
+  const timeLabel = ()=>{ try{ const h = (tod*24 + 6) % 24, hh = Math.floor(h), mm = Math.floor((h - hh)*60); return 'Day ' + (Math.floor((tod*24 + 6)/24) + 1) + '  ' + (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm; }catch(e){ return ''; } };
+  const nearNation = ()=>{ try{ if(realm !== 0 || P.x >= UPPER_EDGE) return null; const ns = (save.nations || []).filter(n=>Math.hypot(n.x - P.x, n.z - P.z) < 60 && animals.filter(a=>a.nation === n.id).length >= 3); return ns.length ? pick(ns) : null; }catch(e){ return null; } };
+  const members = n=>animals.filter(a=>a.nation === n.id && !a.king && !a.police).slice(0, 5);
+  const signTex = (t, bg, fg)=>new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(t, 512, 96, bg, fg, 'bold 40px Arial'), transparent:true, depthWrite:false}));
+  const sparkle = (x, y, z, n)=>{ try{ burst(x, y, z, Math.min(BLOCKS.length-1, 3), n || 10); }catch(e){} };
+
+  // ---- the news log and the NEWS button
+  save.newsLog = save.newsLog || [];
+  let lastTxt = '';
+  setInterval(()=>{ try{
+    const el = document.querySelector('#newsbar .txt'); if(!el) return;
+    const t = el.textContent.trim(); if(!t || t === lastTxt) return; lastTxt = t;
+    save.newsLog.push({w:timeLabel(), t}); if(save.newsLog.length > 80) save.newsLog.shift(); persist();
+    const c = document.getElementById('newsCount'); if(c) c.textContent = String(save.newsLog.length);
+  }catch(e){} }, 400);
+  const panel = document.createElement('div');
+  panel.style.cssText = 'position:fixed;inset:0;z-index:71;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+  panel.innerHTML = '<div style="position:relative;background:#2a1414;color:#fff0f0;border:3px solid #ffd54a;border-radius:10px;padding:18px 20px;max-width:680px;width:92vw;max-height:86vh;overflow:auto;font:15px/1.45 system-ui,sans-serif">' +
+    '<button id="newsLogX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 24px system-ui,sans-serif;color:#ffd54a;margin-bottom:2px">DIG NEWS: everything that happened</div>' +
+    '<div id="newsLogSub" style="opacity:.8;margin-bottom:10px;font-size:13px"></div><div id="newsLogList"></div></div>';
+  document.body.appendChild(panel);
+  function refresh(){
+    const L = save.newsLog || [];
+    panel.querySelector('#newsLogSub').textContent = L.length + ' stories so far. Newest first. The ticker at the top keeps rolling too.';
+    panel.querySelector('#newsLogList').innerHTML = L.length ? L.slice().reverse().map(e=>'<div style="margin-bottom:8px;padding:6px 8px;background:rgba(255,255,255,.06);border-radius:6px"><span style="color:#ffd54a;font-weight:800;font-size:12px">' + e.w + '</span><br>' + String(e.t).replace(/</g, '&lt;') + '</div>').join('') : '<div style="opacity:.7">Nothing yet. Keep playing and the news will pile up here.</div>';
+  }
+  function openN(){ refresh(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closeN(){ panel.style.display = 'none'; }
+  panel.addEventListener('click', e=>{ if(e.target === panel || e.target.id === 'newsLogX') closeN(); });
+  addEventListener('keydown', e=>{ if(e.code === 'Escape' && panel.style.display === 'flex') closeN(); });
+  { const st = document.createElement('style');
+    st.textContent = '#newsBtn{position:absolute;top:174px;left:360px;z-index:30;padding:6px 14px;font:700 14px system-ui,sans-serif;color:#fff;background:rgba(150,30,30,.9);border:2px solid rgba(255,255,255,.45);border-radius:10px;cursor:pointer;letter-spacing:1px}' +
+      '#newsBtn b{background:#ffd54a;color:#4a1010;border-radius:8px;padding:0 6px;margin-left:4px;font-size:12px}' +
+      'body.touchplay #newsBtn{top:8px;left:auto;right:260px}';
+    document.head.appendChild(st);
+    const b = document.createElement('button'); b.id = 'newsBtn'; b.innerHTML = 'NEWS <b id="newsCount">' + save.newsLog.length + '</b>'; b.onclick = e=>{ e.stopPropagation(); openN(); }; document.body.appendChild(b);
+    setInterval(()=>{ const p = document.getElementById('planetsBtn'); if(p) b.style.display = getComputedStyle(p).display === 'none' ? 'none' : ''; }, 500);
+  }
+
+  // ---- protests
+  const CAUSES = ['BRING DINOSAURS BACK','BAN MONDAYS','MORE NAPS NOW','FREE THE SOCKS','LOWER CHEESE PRICES','GIVE PIGS WINGS','WE WANT A MOON','NO MORE BOBS','MAKE DIRT TASTIER','TWO LUNCHES A DAY','RAIN SHOULD BE JUICE','LET DUCKS VOTE','BIGGER HATS FOR ALL','SAVE THE PUDDLES','MORE HOLES, LESS DIGGING','KING MUST DANCE','TURN THE SUN DOWN','FREE SNACKS ON TUESDAY'];
+  const YES = ['The King gave in! "{c}" is now the law of {n}.','The King said yes before anyone finished the first chant. "{c}" is the law in {n} now.','{n} voted. "{c}" won by one vote. The vote was a duck.'];
+  const NO = ['The King of {n} said no. The protesters went home for snacks.','The King of {n} listened carefully, then fell asleep. Protest over.','The protest in {n} ended when it started raining. Nobody brought a coat.'];
+  let PR = null, CT = null, nextT = 70 + Math.random()*50;
+  function startProtest(n){
+    n = n || nearNation(); if(!n) return false;
+    const ms = members(n); if(ms.length < 2) return false;
+    const cause = pick(CAUSES), cx = (n.fx || n.x), cz = (n.fz || n.z);
+    PR = {n, cause, cx, cz, t:25 + Math.random()*15, ang:0, chant:3, ms:ms.map((a, i)=>{ const sp = signTex(cause, '#f4e4b0', '#8a1a1a'); sp.scale.set(4.4, .8, 1); scene.add(sp); return {a, sp, off:i}; })};
+    newsQ('PROTEST: The ' + plural(n.animal) + ' of ' + n.name + ' are marching with signs that say "' + cause + '".', true);
+    if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast('A protest in ' + n.name + '! The ' + plural(n.animal) + ' want: ' + cause);
+    return true;
+  }
+  function endProtest(){
+    if(!PR) return; const n = PR.n, ok = Math.random() < .5;
+    const line = pick(ok ? YES : NO).split('{c}').join(PR.cause).split('{n}').join(n.name);
+    newsQ((ok ? 'BREAKING: ' : 'NEWS: ') + line, true);
+    if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast(line);
+    if(ok){ n.law = PR.cause.toLowerCase(); persist(); let k = 0; const fw = setInterval(()=>{ sparkle(PR.cx + (Math.random()-.5)*8, (PR.ms[0] ? PR.ms[0].a.pos.y : P.y) + 4 + Math.random()*4, PR.cz + (Math.random()-.5)*8, 14); if(++k > 10) clearInterval(fw); }, 350); }
+    PR.ms.forEach(m=>{ scene.remove(m.sp); m.a.moving = false; }); PR = null;
+  }
+  // ---- contests
+  const CONTESTS = ['pie eating','mud sliding','loudest noise','staring','best hat','longest nap','silliest walk','fastest sneeze','biggest splash','hide and seek'];
+  function makeTrophy(){
+    const g = new THREE.Group(), gold = new THREE.MeshLambertMaterial({color:0xffd040, emissive:0x553300});
+    g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.28, .18, .45, 12), gold), {position:new THREE.Vector3(0, .5, 0)}));
+    g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(.5, .08, .5), gold), {position:new THREE.Vector3(0, .2, 0)}));
+    g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, .2, 8), gold), {position:new THREE.Vector3(0, .3, 0)}));
+    return g;
+  }
+  function startContest(n){
+    n = n || nearNation(); if(!n) return false;
+    const ms = members(n).slice(0, 3); if(ms.length < 2) return false;
+    const kind = pick(CONTESTS), cx = n.x, cz = n.z;
+    CT = {n, kind, cx, cz, t:0, phase:0, ms:ms.map((a, i)=>{ const sp = signTex('CONTESTANT ' + (i+1), '#ffffff', '#1a1a6a'); sp.scale.set(3.6, .7, 1); scene.add(sp); return {a, sp, off:i}; })};
+    newsQ('NEWS: The ' + kind + ' contest has started in ' + n.name + '! ' + ms.length + ' brave ' + plural(n.animal) + ' are taking part.', true);
+    if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast('A ' + kind + ' contest is starting in ' + n.name + '! Come and watch.');
+    return true;
+  }
+  function finishContest(){
+    if(!CT) return; const w = pick(CT.ms), n = CT.n, name = (w.a.tagName || w.a.name || ('a ' + n.animal));
+    CT.ms.forEach(m=>{ if(m !== w){ scene.remove(m.sp); m.a.moving = false; } });
+    w.sp.material.map = textTex('WINNER!', 512, 96, '#ffd54a', '#4a1010', 'bold 44px Arial'); w.sp.material.needsUpdate = true;
+    w.tro = makeTrophy(); scene.add(w.tro);
+    const line = 'BREAKING: ' + (w.a.king ? 'The King' : 'A ' + n.animal) + ' named ' + name + ' WON the ' + CT.kind + ' contest in ' + n.name + '! The prize is a shiny trophy and a nap.';
+    newsQ(line, true); if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast(line.replace('BREAKING: ', ''));
+    CT.phase = 2; CT.t = 0; CT.win = w; CT.ms = [w];
+  }
+  function endContest(){ if(!CT) return; CT.ms.forEach(m=>{ scene.remove(m.sp); if(m.tro) scene.remove(m.tro); m.a.moving = false; }); CT = null; }
+  // ---- the loop
+  function march(m, tx, tz, dt, sp){
+    const a = m.a; if(animals.indexOf(a) < 0) return false;
+    const dx = tx - a.pos.x, dz = tz - a.pos.z, d = Math.hypot(dx, dz);
+    if(d > .3){ const s = Math.min(d, sp*dt); a.pos.x += dx/d*s; a.pos.z += dz/d*s; a.moving = true; a.fleeT = 0; try{ a.g.rotation.y = Math.atan2(dx, dz); }catch(e){} }
+    m.sp.position.set(a.pos.x, a.pos.y + 2.6, a.pos.z);
+    if(m.tro){ m.tro.position.set(a.pos.x, a.pos.y + 1.9, a.pos.z); m.tro.rotation.y += dt*2; }
+    return true;
+  }
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won) return;
+      if(realm !== 0){ if(PR) endProtest(); if(CT) endContest(); return; }
+      if(PR){
+        PR.t -= dt; PR.ang += dt*.6; PR.chant -= dt;
+        const k = PR.ms.length; let alive = 0;
+        PR.ms.forEach(m=>{ const an = PR.ang + m.off*6.283/k; if(march(m, PR.cx + Math.cos(an)*4.5, PR.cz + Math.sin(an)*4.5, dt, 2.4)) alive++; });
+        if(PR.chant <= 0){ PR.chant = 5; if(Math.hypot(PR.cx - P.x, PR.cz - P.z) < 30) toast('"' + PR.cause + '! ' + PR.cause + '!" chant the ' + plural(PR.n.animal) + '.'); }
+        if(PR.t <= 0 || !alive) endProtest();
+      } else if(CT){
+        CT.t += dt;
+        if(CT.phase === 0){ CT.ms.forEach(m=>march(m, CT.cx + (m.off - 1)*2.6, CT.cz + 5, dt, 2.6)); if(CT.t > 7){ CT.phase = 1; CT.t = 0; } }
+        else if(CT.phase === 1){ CT.ms.forEach(m=>{ march(m, CT.cx + (m.off - 1)*2.6 + Math.sin(CT.t*6 + m.off)*1.2, CT.cz + 5 + Math.cos(CT.t*5 + m.off)*1.2, dt, 4); }); if(CT.t > 8) finishContest(); }
+        else { const w = CT.win; march(w, CT.cx, CT.cz + 5, dt, 2); if(CT.t < 4 && Math.random() < .5) sparkle(w.a.pos.x + (Math.random()-.5)*3, w.a.pos.y + 3, w.a.pos.z + (Math.random()-.5)*3, 6); if(CT.t > 12) endContest(); }
+      } else {
+        nextT -= dt;
+        if(nextT <= 0){ nextT = 90 + Math.random()*80; if(!(Math.random() < .5 ? startProtest() : startContest())) nextT = 25; }
+      }
+    }catch(e){ console.warn('LN-protest', e); }
+  })(last);
+  window.__protest = {startProtest, startContest, endProtest, endContest, open:openN, close:closeN, get PR(){ return PR; }, get CT(){ return CT; }, CAUSES, CONTESTS};
+})();
+/* LN-protest end */
+/* LN-ckeys start: hold C and press 1-9 to click the top buttons (MAP, HOMEWORK, LAYERS, LOG, KEYS, MINE ANY, PLANETS, LORE, NEWS). Plain 1-9 stay carry slots. Tapping C alone still opens the items (Irfan 2026-11-03 "press c then 1 to 9") */
+(function(){
+  let held = false, used = false, badges = [];
+  function buttons(){
+    const out = [];
+    try{ document.querySelectorAll('#drwChips button, #drwChips .chip').forEach(b=>{ if(b.offsetParent !== null && out.indexOf(b) < 0) out.push(b); }); }catch(e){}
+    ['planetsBtn','loreBtn','newsBtn'].forEach(id=>{ const b = document.getElementById(id); if(b && b.offsetParent !== null && getComputedStyle(b).display !== 'none') out.push(b); });
+    return out.slice(0, 9);
+  }
+  function showBadges(){
+    hideBadges();
+    buttons().forEach((b, i)=>{ const s = document.createElement('span'); s.textContent = String(i + 1);
+      s.style.cssText = 'position:absolute;top:-9px;left:-7px;min-width:18px;height:18px;line-height:18px;border-radius:9px;background:#ffd54a;color:#4a1010;font:900 12px system-ui;text-align:center;pointer-events:none;z-index:60;box-shadow:0 1px 3px rgba(0,0,0,.5)';
+      if(getComputedStyle(b).position === 'static') b.style.position = 'relative';
+      b.appendChild(s); badges.push(s); });
+  }
+  function hideBadges(){ badges.forEach(s=>{ try{ s.remove(); }catch(e){} }); badges = []; }
+  addEventListener('keydown', e=>{
+    if(/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+    if(e.code === 'KeyC'){ if(!held){ held = true; used = false; showBadges(); } e.stopImmediatePropagation(); e.preventDefault(); return; }
+    if(held && /^Digit[1-9]$/.test(e.code)){
+      used = true; const k = +e.code.slice(5) - 1, bs = buttons(), b = bs[k];
+      e.stopImmediatePropagation(); e.preventDefault();
+      if(b){ b.click(); } else toast('C + ' + (k + 1) + ': there is no button number ' + (k + 1) + ' right now.');
+    }
+  }, true);
+  addEventListener('keyup', e=>{
+    if(e.code !== 'KeyC') return;
+    const tap = held && !used; held = false; hideBadges();
+    if(tap && !won && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')){ try{ if(invOpen) closeInv(); else if(!shopOpen && !dlgOpen) openInv(); }catch(err){} }
+  }, true);
+  addEventListener('blur', ()=>{ held = false; hideBadges(); });
+  window.__ckeys = {buttons};
+})();
+/* LN-ckeys end */
 
 
 
