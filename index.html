@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 162 (Oct 31)';
+  window.__BUILD = 'Build 163 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -1843,6 +1843,28 @@ const SPOOKY_LAYERS = (function(){
 })();
 if(SPK_L){ LAYERS.length = 0; SPOOKY_LAYERS.slice().sort((a,b)=>a.h-b.h).forEach(l=>LAYERS.push(l)); }
 /* LN-spooky end (layers) */
+/* LN-modecores start: every mode gets its own Even Deeper Core (Irfan 2026-11-03 "different mode have different version of even deeper core and deeper core"). It appears below the mode's deeper core once the stairs in the Core are fixed, like the normal one. */
+(function(){
+  let fixed = false; try{ fixed = localStorage.getItem('digcore_stairs') === '1'; }catch(e){}
+  if(!fixed || LAYERS.some(l=>l.stairs)) return;
+  const M = window.__layersOwner || (MEME ? 'meme' : HILARIOUS ? 'funny' : null);
+  if(!M) return;
+  const DEF = {
+    funny:      ['Secret Sauce Core',   [255,120,60],  [[255,230,120],[200,40,30],[255,255,255]], ['Top secret. Do not tell the burrito.','It is the sauce under the sauce.','Spicy, sweet and impossible.']],
+    meme:       ['Final Boss Core',     [255,80,200],  [[255,255,255],[120,40,255],[255,200,60]], ['The final layer. GG.','Nobody expected a layer under the Goated Core.','Certified deepest.']],
+    illuminati: ['All-Seeing Core',     [255,220,80],  [[40,30,10],[255,255,200],[200,150,30]],   ['It sees you. It always did.','Every triangle points here.','The last secret of the club.']],
+    space:      ['Black Hole Core',     [40,20,70],    [[180,120,255],[255,255,255],[10,0,20]],   ['Even light cannot dig this deep.','Everything falls in. Nothing falls out.','Your pickaxe feels heavy here.']],
+    iceage:     ['Absolute Zero Core',  [220,245,255], [[255,255,255],[120,200,255],[180,240,255]], ['Colder than cold. Atoms stopped moving.','Your breath froze mid-air.','The ice of the ice.']],
+    dino:       ['Dino Egg Core',       [230,210,150], [[255,245,200],[120,180,60],[160,120,60]],  ['The biggest egg ever. Do not wake it.','Something is tapping from inside.','Warm. Suspiciously warm.']],
+    robot:      ['Quantum Core',        [120,255,220], [[255,255,255],[30,120,255],[255,60,220]],  ['It is on and off at the same time.','01010111 01101111 01110111.','The mainframe under the mainframe.']],
+    ocean:      ['Abyss Core',          [20,40,90],    [[60,160,255],[255,255,255],[10,20,50]],    ['Deeper than the deepest trench.','It is dark. It is quiet. Something glows.','The ocean keeps its best secret here.']],
+    spooky:     ['Phantom Core',        [120,100,160], [[255,255,255],[60,20,90],[200,180,255]],   ['You can see through it. Almost.','Boo. It said boo.','Even ghosts do not dig this deep.']]
+  };
+  const d = DEF[M] || ['Even Deeper ' + (LAYERS[LAYERS.length-1] || {name:'Core'}).name, [214,176,255], [[255,255,255],[255,150,235]], ['Deeper than deep.']];
+  LAYERS.push({name:d[0], extra:1, stairs:1, funny:1, th:8, h:900, v:5000, base:d[1], amp:36, sp:d[2], p:.3, glow:1, quips:d[3], lnQuips:d[3], modeCore:M});
+  window.__modeCore = {name:d[0], mode:M};
+})();
+/* LN-modecores end */
 if(CHAOS) LAYERS[0] = Object.assign({}, LAYERS[0], {name: HILARIOUS ? 'Burnt Frosting' : 'Dead Grass', base:[112,92,48], amp:22, sp:[[80,62,30],[150,128,70],[60,50,40]], quips:['Crunchy. And dead.','Nothing grows here any more.','It smells like smoke.']});
 /* LN-sonnet start (terrain layers) */
 const LN_RENAME = {};      // Extra Chaos: original layer name -> new name (ore hosts, bosses, texture classes use it)
@@ -28608,7 +28630,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{ if(h && h.d >= 3 && Math.random() < .012){
       const left = LORE.filter(q=>q[4] === 'scroll' && !got(q[0]));
       if(left.length) unlock(pick(left)[0], 'You found a Lore Scroll');
-      else { save.coins += 300; persist(); toast('You found a Lore Scroll, but you already know this story. You sold it for $300.'); }
+      else if(!(window.__endlessLore && window.__endlessLore('You found a Lore Scroll'))){ save.coins += 300; persist(); toast('You found a Lore Scroll, but you already know this story. You sold it for $300.'); }
     } }catch(e){}
     return r;
   };
@@ -28636,14 +28658,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   document.body.appendChild(panel);
   function refresh(){
     const n = Object.keys(save.lore).length;
-    panel.querySelector('#loreSub').textContent = 'The true (mostly) history of ' + GAME + '. Pages found: ' + n + ' of ' + LORE.length + '. Find Lore Scrolls while digging, and visit new places to unlock more.';
+    panel.querySelector('#loreSub').textContent = 'The true (mostly) history of ' + GAME + '. Pages found: ' + n + ' of ' + LORE.length + (n >= LORE.length ? '. The main story is complete: every Lore Scroll now writes a brand new page.' : '. Find Lore Scrolls while digging, and visit new places to unlock more.');
     const ch = []; LORE.forEach(q=>{ if(ch.indexOf(q[1]) < 0) ch.push(q[1]); });
     panel.querySelector('#loreList').innerHTML = ch.map(c=>{
       const items = LORE.filter(q=>q[1] === c), k = items.filter(q=>got(q[0])).length;
       return '<div style="font:900 18px Georgia,serif;color:#ffd890;margin:12px 0 6px;border-bottom:1px solid rgba(200,160,96,.5)">' + c + '  <span style="font-size:13px;opacity:.7">(' + k + '/' + items.length + ')</span></div>' +
         items.map(q=>got(q[0]) ? '<div style="margin-bottom:9px"><b style="color:#fff0c8">' + q[2] + '</b><br>' + q[3] + '</div>'
           : '<div style="margin-bottom:9px;opacity:.45"><b>??? Missing page</b><br>' + (q[4] === 'scroll' ? 'Dig to find this Lore Scroll.' : q[4] === 'novaria' ? 'Visit Planet Novaria.' : q[4] === 'mars' ? 'Visit Mars.' : q[4] === 'deep' ? 'Dig very deep.' : 'Be outside at night.') + '</div>').join('');
-    }).join('');
+    }).join('') + (function(){ const G = save.loreGen || []; if(!G.length) return ''; return '<div style="font:900 18px Georgia,serif;color:#ffd890;margin:12px 0 6px;border-bottom:1px solid rgba(200,160,96,.5)">Endless Lore  <span style="font-size:13px;opacity:.7">(' + G.length + ' pages, and counting)</span></div>' + G.slice().reverse().map(g=>'<div style="margin-bottom:9px"><b style="color:#fff0c8">' + g.n + '. ' + g.t + '</b><br>' + g.x + '</div>').join(''); })();
   }
   function openL(){ refresh(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
   function closeL(){ panel.style.display = 'none'; }
@@ -32630,6 +32652,72 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-waterland end */
+/* LN-morelore start: more lore chapters, the book fills itself, and endless generated pages once the main story is known (Irfan 2026-11-03 "expand game lore and fill all the lore in my book and there can be infinite lore after revealing main lore") */
+(function(){
+  const L = window.__lore; if(!L || !L.LORE) return;
+  const FILL_ALL = true;                                   // Irfan's card: fill the book now
+  const GAME = 'Deep Chaos Diggers';
+  const NEW = [
+    ['d1','The Diggers','The First Digger','The first digger was a worm called Gerald. He dug for 400 years, found the Core, said "hm", and went back up for lunch. Every miner since has been trying to beat Gerald.','scroll'],
+    ['d2','The Diggers','The Deepest Hole','The deepest hole ever dug goes all the way down to the Even Deeper Core and then stops, because the digger ran out of snacks. The hole is still there. Nobody has found it again.','scroll'],
+    ['d3','The Diggers','What Waits Below','Below the Even Deeper Core there is a door. Nobody has opened it. Some say it leads to the next universe. Some say it is a broom cupboard. Both sides are very loud about it.','scroll'],
+    ['d4','The Diggers','The Pickaxe Oath','Every pickaxe takes an oath on its first swing: to dig, to not complain, and to never, ever be used as a spoon. Most pickaxes keep it. Most.','scroll'],
+    ['c1','The Cores','The Real Core','The Core is warm because it is embarrassed. It has been the centre of attention for 4 billion years and still does not know what to do with its hands.','scroll'],
+    ['c2','The Cores','The Broken Stairs','The stairs in the Core were built by a very tall Bob who forgot that stairs need every step. Fix them and the world goes one layer deeper. The Bob is sorry.','scroll'],
+    ['c3','The Cores','One Core for Every World','Every mode has its own Deeper Core and its own Even Deeper Core: the Secret Sauce Core, the Final Boss Core, the All-Seeing Core, the Black Hole Core, the Absolute Zero Core, the Dino Egg Core, the Quantum Core, the Abyss Core and the Phantom Core. They do not talk to each other.','scroll'],
+    ['c4','The Cores','The Door at the Bottom','Under every Even Deeper Core there is the same door, with the same sign: BACK IN 5 MINUTES. The sign has been there for a very long time.','scroll'],
+    ['e1','Exotic Finds','Rarer Than Divine','Divine items are jokes the ground tells. Exotic items are not jokes. They are 1 in 25,000, they glow pink, and the ground is very proud of them.','scroll'],
+    ['e2','Exotic Finds','Absolute Zero','Absolute Zero was found by a miner who touched it, froze, and thawed out two weeks later with a great idea for ice cream. The idea was "ice cream, but colder".','scroll'],
+    ['e3','Exotic Finds','The Godly Lego Brick','The Godly Lego Brick is the missing piece of every set ever made. Step on it in the dark and the whole universe hears you.','scroll'],
+    ['e4','Exotic Finds','Temu Luggage','The Temu Luggage cost 2 coins. It has survived 10,000 years, a flood, three volcanoes and a Bob. The handle is a sticker. It is the toughest thing in the game and nobody knows why.','scroll'],
+    ['r1','Disasters','Where Weather Comes From','Weather is made in a factory on a cloud. Tornadoes are the ones that came out wrong. Rainbows are the ones that came out too right.','scroll'],
+    ['r2','Disasters','The Flood That Helped','Floods are not angry. They are just very enthusiastic about filling holes. Dig a pool and a flood will finish it for you, then feel proud.','scroll'],
+    ['r3','Disasters','Volcanoes Only Live in Mountains','A volcano tried living in a desert once. It got sand in its lava and never spoke of it again. Now they stay in the mountains with the avalanches, who are better listeners.','scroll'],
+    ['g1','World Edge and the Void','The Edge of the Map','The world ends at 30,000 blocks because the mysterious miner ran out of paper. Beyond the edge the ground is made of missing textures and old bugs. They are friendly bugs.','scroll'],
+    ['g2','World Edge and the Void','The Void Creature','In the Void lives a big black cube. Feed it money and it loves you. Feed it a cookie and it loves you more. It has never eaten a vegetable and it never will.','scroll'],
+    ['g3','World Edge and the Void','The Far Worlds','Past the edge there are four worlds: a mirror, a pastel dream, a clockwork land and a ghost isle. They were built as spare parts and got lonely.','scroll'],
+    ['t1','The Cities','Why Animal Cities Grow','Animal cities only grow while you are underground, because animals get shy about building. Hide in a cave for a day and come up to a skyline.','scroll'],
+    ['t2','The Cities','The Future Comes Fast','Every city invents solar panels, then a dome, then hover cars, in about four minutes. Humans took 300 years. Animals say we were not trying.','scroll'],
+    ['h1','The Diggers','Why Water Saves You','Water is soft because it is still deciding what shape to be. Fall into it from any height and it catches you, then pretends it was not a big deal.','scroll'],
+    ['h2','The Diggers','The Lore Scrolls','Lore Scrolls are written by the ground itself, slowly, with a very small pencil. Once you know the main story the ground starts making new stories up. It cannot stop. It loves it.','scroll']
+  ];
+  NEW.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])) L.LORE.push(r); });
+
+  // ---- endless lore: generated pages after the main story is complete
+  save.loreGen = save.loreGen || [];
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const THINGS = ()=>[].concat(window.__EXOTIC_NAMES || [], (window.__DIVINE_NAMES || []).slice(0, 60), ['the Shopkeeper','Mister Whisker Bucks','Isaac Newton','Baba Caka','the Bob King','a rubber duck','a Udder Cow','the Fake News Pigeon','the Void Creature','the Mysterious Miner','a kiwi bird','a Lore Scroll','the Core Heart','a luggage packet','the Omniverse Pickaxe']);
+  const PLACES = ['the Core','the Even Deeper Core','Mars','TOI-1853b','Planet Novaria','the World Edge','the Void','the Mirror World','the Ghost Isle','the Clockwork Land','a cheese cave','the shopkeeper\'s basement','the maze','a Bob town','the Pastel Dreamland','the bottom of the ocean','a volcano','the night sky','the far side of the map'];
+  const VERBS = ['was lost in','was invented in','was buried under','first appeared in','was voted mayor of','fell asleep in','was stolen from','rolled all the way to','was found floating above','started a bakery in','got stuck in','went on holiday to','was declared king of','was sneezed out of','was traded for a sandwich in'];
+  const BECAUSE = ['because somebody dared it to','because the Bobs were watching','because it was Tuesday','because gravity was on a break','because the ground said please','because nobody told it not to','because the map was upside down','because it wanted to see the stars','because the Shopkeeper raised the prices','because the pigeon printed it in the news','because a worm called Gerald said so','because of a very long sneeze'];
+  const ENDS = ['Nobody has seen it since.','It is still there. Probably.','Every digger knows this. Now you do too.','The ground has not stopped giggling.','This is why we do not talk about Tuesdays.','It left a note. The note just says "oops".','A statue was built. It fell over.','It is a holiday now, but nobody knows the date.','The Bobs made a song about it. It has one word.','Scientists are baffled. The worm is not.','It was later sold for $300.','And that is why rocks are hard.'];
+  const TITLES = ['The Tale of','The Secret of','Why','The Day','The Legend of','What Happened to','The Truth About','The Last Time Anyone Saw'];
+  const cap = s=>s.charAt(0).toUpperCase() + s.slice(1);
+  function genPage(){
+    const t = pick(THINGS()), p = pick(PLACES);
+    const title = pick(TITLES) + ' ' + cap(t);
+    const text = cap(t) + ' ' + pick(VERBS) + ' ' + p + ' ' + pick(BECAUSE) + '. ' + cap(pick(THINGS())) + ' saw it happen and told ' + pick(THINGS()) + ', who did not believe it. ' + pick(ENDS);
+    return {t:title, x:text, n:save.loreGen.length + 1};
+  }
+  const mainDone = ()=>L.LORE.every(q=>L.got(q[0]));
+  window.__endlessLore = function(how){
+    if(!mainDone()) return false;
+    const pg = genPage(); save.loreGen.push(pg); if(save.loreGen.length > 400) save.loreGen.shift(); persist();
+    toast((how || 'New lore page') + ': "' + pg.t + '". Endless lore page ' + pg.n + '. Press Y to read it.');
+    blip(660, .1, .08, 'triangle'); setTimeout(()=>blip(990, .14, .08, 'triangle'), 120);
+    return true;
+  };
+  window.__moreLore = {NEW, genPage, mainDone};
+  // ---- fill the book
+  if(FILL_ALL) setTimeout(()=>{ try{
+    if(save.loreFilled) return;
+    const missing = L.LORE.filter(q=>!L.got(q[0]));
+    missing.forEach(q=>{ save.lore[q[0]] = Date.now(); });
+    save.loreFilled = 1; persist();
+    if(missing.length) toast('Your Lore Book is full! ' + missing.length + ' new pages were written in. Press Y to read the whole story. From now on every Lore Scroll is a brand new page.');
+  }catch(e){ console.warn('LN-morelore fill', e); } }, 12000);
+})();
+/* LN-morelore end */
 /* LN-lego start: Exotic item Godly Lego Brick (Irfan 2026-11-03 "add new exotic item called godly lego brick"), given free once like the other Exotics */
 (function(){
   const N = 'Godly Lego Brick', D = 'The one brick that every set was missing. It is made of a plastic that cannot be scratched, cannot be lost under the sofa, and cannot be stepped on in the dark without a sound like a thunderclap. Snap it onto anything and that thing becomes a little bit holy.';
