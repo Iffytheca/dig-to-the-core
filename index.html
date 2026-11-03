@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 167 (Oct 31)';
+  window.__BUILD = 'Build 168 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33005,6 +33005,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---- the player inside the panel
   let cur = null;
   function play(holder, text){
+    stop(); const RC = window.__newsRec;
+    if(RC){ holder.innerHTML = '<div style="opacity:.7;font-size:12px">Loading the footage...</div>'; RC.get(text, blob=>{ if(blob){ const v = document.createElement('video'); v.src = URL.createObjectURL(blob); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000'; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); } else playCartoon(holder, text); }); return; }
+    playCartoon(holder, text);
+  }
+  function playCartoon(holder, text){
     stop(); const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000';
     holder.innerHTML = ''; holder.appendChild(cv);
     const cx = cv.getContext('2d'), c = clipOf(text), t0 = performance.now();
@@ -33023,6 +33028,75 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__newsVid = {clipOf, play, stop, draw, startTicker:(el)=>{ tk = el; tkLast = performance.now(); if(!tkRaf) tkRaf = requestAnimationFrame(tickerTick); }};
 })();
 /* LN-newsvid end */
+/* LN-newsrec start: real game footage for the news. A second camera films protests, contests and new countries in the actual 3D world (and your own view for every other headline), the clip is saved as a video and the NEWS panel plays it (Irfan 2026-11-03 "should look like actual game graphic and it should be video") */
+(function(){
+  const PRO = window.__protest; if(!PRO || typeof MediaRecorder === 'undefined') return;
+  const VW = 360, VH = 200, FPS = 10;
+  const rt = new THREE.WebGLRenderTarget(VW, VH); rt.texture.encoding = THREE.sRGBEncoding;
+  const buf = new Uint8Array(VW*VH*4);
+  const cv = document.createElement('canvas'); cv.width = VW; cv.height = VH; const cx = cv.getContext('2d');
+  const img = cx.createImageData(VW, VH);
+  const evCam = new THREE.PerspectiveCamera(62, VW/VH, .1, 260);
+  const clips = {};                                          // headline text -> Blob (this session), also kept in IndexedDB
+  // ---- the clip store
+  let db = null;
+  try{ const rq = indexedDB.open('digcore_newsclips', 1); rq.onupgradeneeded = ()=>{ rq.result.createObjectStore('clips', {keyPath:'t'}); }; rq.onsuccess = ()=>{ db = rq.result; }; }catch(e){}
+  function put(t, blob){ clips[t] = blob; try{ if(!db) return; const tx = db.transaction('clips', 'readwrite'), st = tx.objectStore('clips'); st.put({t, blob, at:Date.now()}); const keep = (save.newsLog || []).map(e=>e.t); st.getAllKeys().onsuccess = ev=>{ const ks = ev.target.result || []; if(ks.length > 60) ks.filter(k=>keep.indexOf(k) < 0).slice(0, ks.length - 60).forEach(k=>st.delete(k)); }; }catch(e){} }
+  function get(t, cb){ if(clips[t]) return cb(clips[t]); try{ if(!db) return cb(null); const rq = db.transaction('clips').objectStore('clips').get(t); rq.onsuccess = ()=>cb(rq.result ? rq.result.blob : null); rq.onerror = ()=>cb(null); }catch(e){ cb(null); } }
+  // ---- recording
+  let rec = null;
+  function frame(){
+    if(!rec) return;
+    const R = rec, t = (performance.now() - R.t0)/1000;
+    // the camera: orbit the event, or sit on the player's shoulder
+    if(R.at){ const a = t*.45 + R.a0, r = R.r; evCam.position.set(R.at.x + Math.cos(a)*r, R.at.y + 4.5 + Math.sin(t*.7)*.6, R.at.z + Math.sin(a)*r); evCam.lookAt(R.at.x, R.at.y + 1.2, R.at.z); }
+    else { evCam.position.copy(camera.position); evCam.quaternion.copy(camera.quaternion); }
+    try{
+      const prev = renderer.getRenderTarget(); renderer.setRenderTarget(rt); renderer.render(scene, evCam); renderer.setRenderTarget(prev);
+      renderer.readRenderTargetPixels(rt, 0, 0, VW, VH, buf);
+      const d = img.data; for(let y=0;y<VH;y++){ const s = (VH-1-y)*VW*4, o = y*VW*4; d.set(buf.subarray(s, s + VW*4), o); }
+      cx.putImageData(img, 0, 0);
+    }catch(e){ console.warn('LN-newsrec frame', e); }
+    // caption and the LIVE badge
+    cx.fillStyle = 'rgba(140,20,20,.9)'; cx.fillRect(0, VH - 26, VW, 26); cx.fillStyle = '#ffd54a'; cx.fillRect(0, VH - 26, 72, 26); cx.fillStyle = '#4a1010'; cx.font = 'bold 11px system-ui,sans-serif'; cx.textAlign = 'left'; cx.fillText('DIG NEWS', 6, VH - 9);
+    cx.fillStyle = '#fff'; cx.font = 'bold 11px system-ui,sans-serif'; const cap = R.cap.length > 48 ? R.cap.slice(0, 46) + '...' : R.cap; cx.fillText(cap, 78, VH - 9);
+    cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(VW - 54, 6, 48, 16); cx.fillStyle = '#f44'; cx.beginPath(); cx.arc(VW - 44, 14, 4, 0, 6.283); cx.fill(); cx.fillStyle = '#fff'; cx.font = 'bold 10px Arial'; cx.fillText('LIVE', VW - 36, 18);
+    if(t >= R.dur) stop();
+  }
+  function start(text, at, r, dur){
+    if(rec) return false;
+    let mr; try{ const st = cv.captureStream(FPS); mr = new MediaRecorder(st, {mimeType:'video/webm;codecs=vp8', videoBitsPerSecond:500000}); }catch(e){ try{ mr = new MediaRecorder(cv.captureStream(FPS)); }catch(err){ return false; } }
+    const parts = []; mr.ondataavailable = e=>{ if(e.data && e.data.size) parts.push(e.data); };
+    mr.onstop = ()=>{ try{ const blob = new Blob(parts, {type:'video/webm'}); if(blob.size > 500) put(text, blob); }catch(e){} };
+    rec = {mr, text, cap:text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, ''), at:at ? {x:at.x, y:at.y, z:at.z} : null, r:r || 9, a0:Math.random()*6.283, dur:dur || 7, t0:performance.now(), iv:setInterval(frame, 1000/FPS)};
+    mr.start(250); return true;
+  }
+  function stop(){ if(!rec) return; clearInterval(rec.iv); try{ rec.mr.stop(); }catch(e){} rec = null; }
+  // ---- what to film
+  const qText = re=>{ const Q = window.__newsQ || []; return Q.find(t=>re.test(t)) || null; };
+  const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
+  let lastPR = null, lastCT = null, ctPhase = -1, nN = (save.nations || []).length, pending = [];
+  setInterval(()=>{ try{
+    if(startEl.style.display === 'flex' || won) return;
+    const PR = PRO.PR, CT = PRO.CT;
+    if(PR && PR !== lastPR){ lastPR = PR; const t = qText(/^PROTEST:/); if(t) start(t, {x:PR.cx, y:gy(PR.cx, PR.cz), z:PR.cz}, 10, 8); }
+    if(!PR) lastPR = null;
+    if(CT && (CT !== lastCT || CT.phase !== ctPhase)){
+      if(CT !== lastCT){ lastCT = CT; const t = qText(/contest has started/); if(t) start(t, {x:CT.cx, y:gy(CT.cx, CT.cz + 5), z:CT.cz + 5}, 9, 7); }
+      if(CT.phase === 2 && ctPhase !== 2){ stop(); const t = qText(/WON the .+ contest/); if(t) start(t, {x:CT.cx, y:gy(CT.cx, CT.cz + 5), z:CT.cz + 5}, 7, 8); }
+      ctPhase = CT.phase;
+    }
+    if(!CT){ lastCT = null; ctPhase = -1; }
+    const ns = save.nations || [];
+    if(ns.length > nN){ const n = ns[ns.length-1]; const t = qText(/started their own country/); if(t && !rec) start(t, {x:n.x, y:(n.G != null ? n.G + 1 : gy(n.x, n.z)), z:n.z}, 12, 7); }
+    nN = ns.length;
+    // every other headline gets a clip of what you were looking at when it came in
+    const L = save.newsLog || []; const last = L.length ? L[L.length-1] : null;
+    if(last && !last.rec){ last.rec = 1; if(!rec && !clips[last.t]) get(last.t, b=>{ if(!b && !rec) start(last.t, null, 0, 5); }); }
+  }catch(e){ console.warn('LN-newsrec', e); } }, 500);
+  window.__newsRec = {start, stop, get, clips, get rec(){ return rec; }, cv};
+})();
+/* LN-newsrec end */
 
 
 
