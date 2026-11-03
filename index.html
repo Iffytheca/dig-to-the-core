@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 163 (Oct 31)';
+  window.__BUILD = 'Build 164 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -32739,6 +32739,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 3500);
 })();
 /* LN-lego end */
+/* LN-nomagic start: discoveries of every rarity (Common..Exotic) never get a Magical fact; only the Heavenly Starlight Crystal and real magical blocks keep one (Irfan 2026-11-03 "remove magical fact except for heavenly star crystal and magical blocks") */
+(function(){
+  const clean = n=>String(n || '').replace(/\s*\(Sector.*\)$/, '').trim();
+  const KEEP = /^Heavenly Star(light)? Crystal( \(Gift\))?$/i;
+  const _isF = window.__isFantasy;
+  window.__isFantasy = function(n, inf){
+    try{ if(inf && inf.kind === 'mat' && !KEEP.test(clean(n))) return false; }catch(e){}
+    return _isF ? _isF.apply(this, arguments) : false;
+  };
+})();
+/* LN-nomagic end */
 
 
 
