@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 157 (Oct 31)';
+  window.__BUILD = 'Build 158 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -32109,6 +32109,44 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-wbfix3 end */
+/* LN-pool start: when a flood ends, the water it left in pits you dug stays there as real water (Irfan 2026-11-03 "I build a pool but flood tried to help me") */
+(function(){
+  const DS = window.__disaster; if(!DS || !DS.K || !DS.K.flood) return;
+  function fillPools(S){
+    const FL = window.__flow; if(!FL || !FL.pour || !FL.at) return 0;
+    const top = Math.round(S.base), low = top - 6, cells = [];
+    edits.forEach((t, k)=>{
+      if(t !== 0) return;
+      const d = k % 256 - 64, rest = Math.floor(k / 256), z = rest % 400000 - 200000, x = Math.floor(rest / 400000) - 200000;
+      if(d < 0 || d >= D) return;
+      const y = -d;                                              // top face of the cell
+      if(y > top || y < low) return;
+      if(Math.hypot(x + .5 - S.x, z + .5 - S.z) > 48) return;
+      if(get(x, d, z)) return;
+      cells.push({x, d, z, dist:Math.hypot(x + .5 - S.x, z + .5 - S.z)});
+    });
+    cells.sort((a, b)=>b.d - a.d || a.dist - b.dist);        // deepest first, so every cell sits on rock or water
+    let n = 0;
+    for(const c of cells){
+      if(n >= 300) break;
+      if(FL.at(c.x, c.d, c.z) >= 0) continue;
+      const under = c.d + 1 >= D || !!get(c.x, c.d + 1, c.z) || FL.at(c.x, c.d + 1, c.z) >= 0;
+      if(!under) continue;
+      if(FL.pour(c.x, c.d, c.z, 8, 0, 0) < 0) break;
+      n++;
+    }
+    return n;
+  }
+  const fl = DS.K.flood, _end = fl.end;
+  fl.end = function(S){
+    let n = 0; try{ n = fillPools(S); }catch(e){ console.warn('LN-pool', e); }
+    const r = _end.apply(this, arguments);
+    if(n > 0) setTimeout(()=>toast('The flood filled your pool! ' + n + ' blocks of water stayed behind.'), 1200);
+    return r;
+  };
+  window.__pool = {fillPools};
+})();
+/* LN-pool end */
 /* LN-uilog end */
 (function(){
 })();
