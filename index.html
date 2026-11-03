@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 158 (Oct 31)';
+  window.__BUILD = 'Build 159 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -7655,7 +7655,7 @@ const MAT_FORM = ['Chunk','Shard','Dust','Pebble','Flake','Nugget','Crumb','Spli
 const TIERS = [
   {n:'Common',    w:.60,  v:1,    col:'#cfcfcf'}, {n:'Uncommon', w:.25,  v:3,    col:'#6bff8a'}, {n:'Rare',     w:.10,  v:10,   col:'#5aa8ff'},
   {n:'Epic',      w:.04,  v:40,   col:'#c070ff'}, {n:'Legendary',w:.009, v:200,  col:'#ffb030'}, {n:'Mythic',   w:.0008, v:1000, col:'#ff5a7a'},
-  {n:'Divine',   w:.0002, v:5000, col:'#40fff0'}
+  {n:'Divine',   w:.00016, v:5000, col:'#40fff0'}, {n:'Exotic', w:.00004, v:25000, col:'#ff3cf0'}
 ];
 const MAT_CAP = 2500;
 function matVariant(base, a, b, c){
@@ -7664,7 +7664,8 @@ function matVariant(base, a, b, c){
   for(let i=0;i<TIERS.length;i++){ acc += TIERS[i].w; if(h3 <= acc){ t = i; break; } }
   let name = MAT_ADJ[Math.floor(h1*MAT_ADJ.length)]+' '+base+' '+MAT_FORM[Math.floor(h2*MAT_FORM.length)];
   if(t >= 2) name += ' (Sector '+Math.floor(a/16)+'.'+Math.floor(c/16)+')';
-  if(t === 6 && window.__DIVINE_NAMES) name = window.__DIVINE_NAMES[Math.floor(h1*window.__DIVINE_NAMES.length)];        // rarer finds carry where they came from: an endless supply of unique names
+  if(t === 6 && window.__DIVINE_NAMES) name = window.__DIVINE_NAMES[Math.floor(h1*window.__DIVINE_NAMES.length)];
+  if(t === 7 && window.__EXOTIC_NAMES) name = window.__EXOTIC_NAMES[Math.floor(h2*window.__EXOTIC_NAMES.length)]+' (Sector '+Math.floor(a/16)+'.'+Math.floor(c/16)+')';        // rarer finds carry where they came from: an endless supply of unique names
   return {key:t+'|'+name, name, tier:t};
 }
 function rollMaterial(base, x, y, z, chance, silent){
@@ -7677,8 +7678,9 @@ function rollMaterial(base, x, y, z, chance, silent){
   }
   save.mats[key] = (save.mats[key]||0) + 1;
   if(!silent) pushFeed(key.slice(key.indexOf('|')+1)+'  ['+TIERS[+key.slice(0, key.indexOf('|'))].n+']', 1, TIERS[+key.slice(0, key.indexOf('|'))].col);
-  if(v.tier === 6 && key === v.key){ save.divines = (save.divines||0) + 1; toast('DIVINE FIND!!! '+v.name+'! Only 1 in 5,000 finds are this rare!'); blip(1568,.4,.15,'triangle'); setTimeout(()=>blip(2093,.5,.12,'sine'), 200); shake = Math.max(shake, .06); }
+  if(v.tier === 6 && key === v.key){ save.divines = (save.divines||0) + 1; toast('DIVINE FIND!!! '+v.name+'! Only 1 in 6,000 finds are this rare!'); blip(1568,.4,.15,'triangle'); setTimeout(()=>blip(2093,.5,.12,'sine'), 200); shake = Math.max(shake, .06); }
   if(v.tier === 5){ save.mythics = (save.mythics||0) + 1; toast('MYTHIC find: '+v.name+'!'); blip(1320,.3,.15,'triangle'); }
+  if(v.tier === 7 && key === v.key){ save.exotics = (save.exotics||0) + 1; toast('EXOTIC FIND!!!!! '+v.name+'! Only 1 in 25,000 finds are this rare. The rarest thing in the whole game!'); blip(1760,.5,.15,'triangle'); setTimeout(()=>blip(2349,.5,.12,'sine'), 180); setTimeout(()=>blip(3136,.6,.1,'sine'), 360); shake = Math.max(shake, .1); }
 }
 function itemMeta(name){
   const bi = BLOCKS.findIndex(b=>b.name === name);
@@ -17054,7 +17056,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
     [/ghost|spook|boo|witch|haunt/i,'Halloween started over 2,000 years ago as a festival called Samhain.'],
     [/stone|rock|pebble|granite|basalt/i,'Rocks are made of minerals. The oldest rocks on Earth are about 4 billion years old.']
   ];
-  const TIER_F = ['Common: 6 out of 10 finds are this rare.', 'Uncommon: about 1 in 4 finds.', 'Rare: about 1 in 10 finds.', 'Epic: about 1 in 25 finds.', 'Legendary: about 1 in 110 finds.', 'Mythic: only 1 in 1,000 finds!', 'Divine: only 1 in 5,000 finds! The rarest thing in the whole game.'];
+  const TIER_F = ['Common: 6 out of 10 finds are this rare.', 'Uncommon: about 1 in 4 finds.', 'Rare: about 1 in 10 finds.', 'Epic: about 1 in 25 finds.', 'Legendary: about 1 in 110 finds.', 'Mythic: only 1 in 1,000 finds!', 'Divine: only 1 in 6,000 finds! Only Exotic is rarer.', 'Exotic: only 1 in 25,000 finds! The rarest thing in the whole game.'];
   const FAKE_SPECIAL = {
     'Guinness World Record':'Basement Guy earned this record for "Longest Time Guarding a Basement" (900 years). He keeps it down there as treasure, because the Bobs keep trying to invade.',
     "Bob's Propeller Hat":'Every Bob is born wearing one. Nobody has ever seen a Bob without it, not even the Bobs. Bobs are scared of exactly one thing: feet.',
@@ -27278,7 +27280,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   /* ================================================ RARITY for every block, item, loot and discovery (Common .. Divine) */
-  const RAR = [['Common','#cfcfcf'],['Uncommon','#6bff8a'],['Rare','#5aa8ff'],['Epic','#c070ff'],['Legendary','#ffb030'],['Mythic','#ff5a7a'],['Divine','#40fff0']];
+  const RAR = [['Common','#cfcfcf'],['Uncommon','#6bff8a'],['Rare','#5aa8ff'],['Epic','#c070ff'],['Legendary','#ffb030'],['Mythic','#ff5a7a'],['Divine','#40fff0'],['Exotic','#ff3cf0']];
   const byV = v=>v < 20 ? 0 : v < 300 ? 1 : v < 5000 ? 2 : v < 200000 ? 3 : v < 20000000 ? 4 : v < 2000000000 ? 5 : 6;
   function rarIdx(name){
     try{
@@ -32524,12 +32526,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-divfact start: Divine items are memes, so they get a Meme fact, never a Magical fact; only the Heavenly Star Crystal keeps its Magical fact (Irfan 2026-11-03) */
 (function(){
   const clean = n=>String(n || '').replace(/\s*\(Sector.*\)$/, '').trim();
-  const KEEP = /^Heavenly Star Crystal$/i;
+  const KEEP = /^Heavenly Star(light)? Crystal( \(Gift\))?$/i;
   function isDivine(n, inf){
     try{
       const c = clean(n);
       if(KEEP.test(c)) return false;
-      if(inf && inf.kind === 'mat' && inf.tier >= 6) return true;
+      if(inf && inf.kind === 'mat' && inf.tier === 6) return true;
       if(window.__divDesc && window.__divDesc(c)) return true;
       if(window.__divArt && window.__divArt(c)) return true;
       if((window.__DIVINE_NAMES || []).indexOf(c) >= 0) return true;
@@ -32553,6 +32555,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__divFact = {isDivine, divineMemeFact};
 })();
 /* LN-divfact end */
+/* LN-exotic start: EXOTIC rarity above Divine (Irfan 2026-11-03 "CAN WE ADD NEW RARIty exotic", card: above Divine, new rarest). Tier 7, 1 in 25,000 finds, pink-magenta colour, own names, EXOTIC FIND toast, sells for $100,000. Exotic finds get Magical facts (only Divine finds are memes). */
+(function(){
+  window.__EXOTIC_NAMES = ['Upside-Down Sunrise Crystal','Pocket Black Hole','Frozen Lightning Bolt','Bottled Yesterday','Singing Moon Pearl','Square Rainbow','Glass Volcano Seed','Time-Knot Ruby','Whispering Comet Egg','Invisible Ink Diamond','Backwards Snowflake','Gravity Marble','Dragon Breath Opal','Quiet Thunder Stone','Mirror of Tomorrow','Sleeping Star Seed','Folded Sky Shard','Cloud Anchor','Echo of the Big Bang','Living Lava Pearl','Zero Degree Fire','Lost Colour Gem','Midnight Sun Crystal','Dream Compass'];
+  // glow the EXOTIC label and the hotbar swatch
+  const st = document.createElement('style');
+  st.textContent = '.lnRar.lnExotic{text-shadow:0 0 6px #ff3cf0,0 0 12px #ff3cf0;letter-spacing:1px}';
+  document.head.appendChild(st);
+  const fix = ()=>{ try{ document.querySelectorAll('.lnRar').forEach(el=>{ if(el.textContent === 'Exotic') el.classList.add('lnExotic'); }); }catch(e){} };
+  if(typeof renderInv === 'function'){ const _ri = renderInv; renderInv = function(){ const r = _ri.apply(this, arguments); fix(); return r; }; }
+  window.__exotic = {names:window.__EXOTIC_NAMES, tier:7};
+})();
+/* LN-exotic end */
 
 
 
