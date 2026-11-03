@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 171 (Oct 31)';
+  window.__BUILD = 'Build 172 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -1312,6 +1312,7 @@
 } )();
 
 </script>
+<script>/* LN-bugs172: no emissive on unlit materials */(function(){ try{ ['MeshBasicMaterial','SpriteMaterial','LineBasicMaterial','PointsMaterial','MeshDepthMaterial'].forEach(k=>{ const C = THREE[k]; if(C && C.prototype) Object.defineProperty(C.prototype, 'emissive', {get(){ return undefined; }, set(v){}, configurable:true}); }); }catch(e){ console.warn('LN-bugs172 emissive guard', e); } })();</script>
 <script>/* LN-pause */(function(){ const raf = window.requestAnimationFrame.bind(window), si = window.setInterval.bind(window); let held = [];
   const PZ = window.__pause = {on:false, auto:false, si, resume(){ PZ.on = false; const h = held; held = []; h.forEach(cb=>raf(cb)); }};
   window.requestAnimationFrame = function(cb){ if(PZ.on){ held.push(cb); return 0; } return raf(cb); };
@@ -2781,7 +2782,7 @@ function toggleSound(){ soundOn = !soundOn; saveOpts(); if(typeof toast === 'fun
 
 /* ---------------------------------------------------------------- three setup */
 const renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.25)); /* LN-bugs172 perf */
 renderer.setSize(innerWidth, innerHeight);
 const useFx = !!(THREE.EffectComposer && THREE.UnrealBloomPass && THREE.GammaCorrectionShader && THREE.RenderPass);
 renderer.shadowMap.enabled = true;
@@ -2800,7 +2801,7 @@ const ambient = new THREE.HemisphereLight(0xbcd8ff, 0x3a2a1c, .7);
 const sun = new THREE.DirectionalLight(0xfff0d0, 1.1); sun.position.set(N/2+16,34,N/2+10);
 sun.target.position.set(N/2,-4,N/2); scene.add(sun.target);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048,2048);
+sun.shadow.mapSize.set(1024,1024); /* LN-bugs172 perf */
 Object.assign(sun.shadow.camera,{left:-22,right:22,top:22,bottom:-22,near:1,far:120});
 sun.shadow.bias = -.0004; sun.shadow.normalBias = .03;
 const torch = new THREE.PointLight(0xffd9a0, 1.2, 24, 1.2);
@@ -8233,10 +8234,10 @@ let composer = null;
 if(useFx){
   try{
     const pr = renderer.getPixelRatio();
-    const rt = new THREE.WebGLMultisampleRenderTarget(innerWidth*pr, innerHeight*pr, {format:THREE.RGBAFormat});
+    const rt = new THREE.WebGLMultisampleRenderTarget(innerWidth*pr, innerHeight*pr, {format:THREE.RGBAFormat}); rt.samples = 2; /* LN-bugs172 perf */
     composer = new THREE.EffectComposer(renderer, rt);
     composer.addPass(new THREE.RenderPass(scene, camera));
-    composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), .4, .5, .94));
+    composer.addPass(new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth/2, innerHeight/2), .4, .5, .94)); /* LN-bugs172 perf */
     composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
     window.__composer = composer;
     /* GFX-light start */ try{ GFXL.setupComposer(composer); }catch(e){ console.warn('GFX-light grade pass skipped', e); } /* GFX-light end */
@@ -8269,6 +8270,7 @@ function step(dt){
   } else P.y = ny;
 }
 
+let __shF = 0; const __dc = {}; function __set(id, prop, v){ if(__dc[id + prop] !== v){ __dc[id + prop] = v; $(id)[prop] = v; } } function __sty(id, prop, v){ if(__dc[id + prop] !== v){ __dc[id + prop] = v; $(id).style[prop] = v; } } /* LN-bugs172 perf */
 function frame(){
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), .05);
@@ -8333,7 +8335,7 @@ function frame(){
   ambient.intensity = .12 + .62*s*(.22+.78*dayF); ambient.color.copy(nightAmb).lerp(dayAmb, dayF);
   sun.intensity = (1.15*dayF + .22*(1-dayF))*s;
   sun.castShadow = lightOn;
-  renderer.shadowMap.autoUpdate = lightOn && s > .05 && dayF > .1 && realm === 0;
+  renderer.shadowMap.autoUpdate = lightOn && s > .05 && dayF > .1 && realm === 0 && ((++__shF) & 1) === 0; /* LN-bugs172 perf: every other frame */
   torch.intensity = 1.0 + (1-s)*.55 + s*(1-dayF)*1.1;
   _ld.copy(_sd); if(elev < -.02) _ld.negate(); _ld.y = Math.max(_ld.y, .22); _ld.normalize();   // moonlight takes over at night
   sun.position.copy(sun.target.position).addScaledVector(_ld, 50);
@@ -8368,10 +8370,10 @@ function frame(){
   const inUp = P.x >= UPPER_EDGE;
   const li = inUp ? -1 : (P.y >= -.1 ? -1 : layerAtDepth[d]);
   rings.forEach(r=>{ r.visible = !inUp; });
-  $('depth').textContent = Math.round(dep)+' m';
-  $('km').textContent = '(~'+Math.round(Math.min(1,dep/D)*6371).toLocaleString()+' km deep)';
-  $('coins').textContent = '$'+save.coins.toLocaleString();
-  $('mined').textContent = save.mined;
+  __set('depth', 'textContent', Math.round(dep)+' m');
+  __set('km', 'textContent', '(~'+Math.round(Math.min(1,dep/D)*6371).toLocaleString()+' km deep)');
+  __set('coins', 'textContent', '$'+save.coins.toLocaleString());
+  __set('mined', 'textContent', String(save.mined));
   if(inUp){
     if(!panelUp){ panelUp = true; renderLayerPanel(UPPER_LAYERS); lastUpName = ''; }
     const ul = P.y >= -.1 ? -1 : upperLayerAt[Math.min(UPPER_D-1, d)], nm = ul < 0 ? (((window.__marsName && window.__marsName()) || PLANET_NAME)+' surface') : UPPER_LAYERS[ul].name;
@@ -8389,7 +8391,7 @@ function frame(){
   if(locked && Math.hypot(P.vx,P.vz) < .1 && !mouseDown && P.ground) idleT += dt; else idleT = 0;
   statTick(dt); updateGhost(); gunFx(dt); hotbarT += dt; if(hotbarT > .3){ hotbarT = 0; updateHotbar(); }
   badgeT += dt; if(badgeT > .5){ badgeT = 0; checkBadges(dep, li, hrs); }
-  $('vig').style.opacity = li>=0 ? (Math.max(0,Math.min(1,(LAYERS[li].h-60)/120))*.45).toFixed(2) : 0;
+  __sty('vig', 'opacity', li>=0 ? (Math.max(0,Math.min(1,(LAYERS[li].h-60)/120))*.45).toFixed(2) : '0');
 
   // particles
   for(const p of particles){
@@ -8404,12 +8406,13 @@ function frame(){
   if(toastT>0){ toastT -= dt; if(toastT<=0) $('toast').style.opacity = 0; }
   if(badT>0) badT -= dt;
 
-  $('hpwrap').style.display = (hp < hpMax-.5 || fightOn()) ? 'block' : 'none';
-  $('hpbar').style.width = Math.max(0,hp/hpMax*100)+'%';
-  $('hpbar').style.background = hurtT>0 ? '#fff' : '#e0453a';
+  __sty('hpwrap', 'display', (hp < hpMax-.5 || fightOn()) ? 'block' : 'none');
+  __sty('hpbar', 'width', Math.max(0,hp/hpMax*100).toFixed(1)+'%');
+  __sty('hpbar', 'background', hurtT>0 ? '#fff' : '#e0453a');
   if(composer) composer.render(); else renderer.render(scene, camera);
 }
 
+window.__perf = {get renderer(){ return renderer; }, get scene(){ return scene; }, get composer(){ return composer; }, get sun(){ return sun; }, get frame(){ return frame; }, setFrame(f){ frame = f; }, get tod(){ return tod; }, set tod(v){ tod = v; }, get P(){ return P; }}; /* LN-bugs172 */
 function win(){
   award('heart');
   won = true; persist();
@@ -32817,7 +32820,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const line = pick(ok ? YES : NO).split('{c}').join(PR.cause).split('{n}').join(n.name);
     newsQ((ok ? 'BREAKING: ' : 'NEWS: ') + line, true);
     if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast(line);
-    if(ok){ n.law = PR.cause.toLowerCase(); persist(); let k = 0; const fw = setInterval(()=>{ sparkle(PR.cx + (Math.random()-.5)*8, (PR.ms[0] ? PR.ms[0].a.pos.y : P.y) + 4 + Math.random()*4, PR.cz + (Math.random()-.5)*8, 14); if(++k > 10) clearInterval(fw); }, 350); }
+    if(ok){ n.law = PR.cause.toLowerCase(); persist(); let k = 0; const fx = PR.cx, fz = PR.cz, fy = (PR.ms[0] ? PR.ms[0].a.pos.y : P.y); const fw = setInterval(()=>{ try{ sparkle(fx + (Math.random()-.5)*8, fy + 4 + Math.random()*4, fz + (Math.random()-.5)*8, 14); }catch(e){} if(++k > 10) clearInterval(fw); }, 350); } /* LN-bugs172 */
     PR.ms.forEach(m=>{ scene.remove(m.sp); m.a.moving = false; }); PR = null;
   }
   // ---- contests
@@ -33178,6 +33181,25 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__newsStage = {film, findSubject};
 })();
 /* LN-newsstage end */
+
+/* LN-perfcull start: objects beyond the fog and labels more than 75 blocks away are not drawn, they come back when you get close (Irfan 2026-11-03 "make game less laggy ... smooth gameplay and fps") */
+(function(){
+  const hid = new Set(), box = new THREE.Box3(), sph = new THREE.Sphere();
+  (window.__pause && window.__pause.si || setInterval)(()=>{ try{
+    if(startEl.style.display === 'flex') return;
+    const far = (scene.fog ? scene.fog.far : 160) + 20, px = P.x, pz = P.z;
+    for(const o of scene.children){
+      if(!(o.isMesh || o.isGroup || o.isSprite) || o.isInstancedMesh || o.isLight || o.isCamera) continue;
+      if(o.__cr == null){ try{ box.setFromObject(o); if(box.isEmpty()) o.__cr = -1; else { box.getBoundingSphere(sph); o.__cr = sph.radius + sph.center.distanceTo(o.position); } }catch(e){ o.__cr = -1; } }
+      if(o.__cr < 0 || o.__cr > 60) continue;
+      const d = Math.hypot(o.position.x - px, o.position.z - pz) - o.__cr;
+      if(d > (o.isSprite ? 75 : far)){ if(o.visible && !hid.has(o)){ o.visible = false; hid.add(o); } }
+      else if(hid.has(o)){ o.visible = true; hid.delete(o); }
+    }
+  }catch(e){ console.warn('LN-perfcull', e); } }, 400);
+  window.__perfcull = {hid};
+})();
+/* LN-perfcull end */
 
 
 
