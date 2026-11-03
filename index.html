@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 155 (Oct 31)';
+  window.__BUILD = 'Build 156 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -32483,6 +32483,30 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__memeFact = {isMeme, memeFact, memeWord};
 })();
 /* LN-memefact end */
+/* LN-divfact start: every Divine item gets a Magical fact, not only the Heavenly Star Crystal (Irfan 2026-11-03) */
+(function(){
+  const clean = n=>String(n || '').replace(/\s*\(Sector.*\)$/, '').trim();
+  function isDivine(n, inf){
+    try{
+      const c = clean(n);
+      if(inf && inf.kind === 'mat' && inf.tier >= 6) return true;
+      if(window.__divDesc && window.__divDesc(c)) return true;
+      if(window.__divArt && window.__divArt(c)) return true;
+      if((window.__DIVINE_NAMES || []).indexOf(c) >= 0) return true;
+    }catch(e){}
+    return false;
+  }
+  const _isF = window.__isFantasy;
+  window.__isFantasy = function(n, inf){ if(isDivine(n, inf)) return true; return _isF ? _isF.apply(this, arguments) : false; };
+  const _mg = window.__magical;
+  window.__magical = function(n){
+    const base = _mg ? _mg.apply(this, arguments) : '';
+    try{ if(isDivine(n)) return 'A Divine find, the rarest kind there is. ' + base; }catch(e){}
+    return base;
+  };
+  window.__divFact = {isDivine};
+})();
+/* LN-divfact end */
 
 
 
