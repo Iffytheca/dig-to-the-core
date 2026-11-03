@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 170 (Oct 31)';
+  window.__BUILD = 'Build 171 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33006,7 +33006,28 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     stop(); const RC = window.__newsRec;
     if(RC){ holder.innerHTML = '<div style="opacity:.7;font-size:12px">Loading the footage...</div>'; RC.get(id || text, blob=>{ if(!blob && id){ RC.get(text, b2=>show(b2)); return; } show(blob); }); return; }
     playCartoon(holder, text);
-    function show(blob){ if(blob){ const v = document.createElement('video'); v.src = URL.createObjectURL(blob); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000'; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); } else playCartoon(holder, text); }
+    function show(blob){ if(blob){ const v = document.createElement('video'); v.src = URL.createObjectURL(blob); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000'; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); } else playLive(holder, text, id); }
+  }
+  /* LN-newslive: the stand-in while a clip is being filmed is the news camera itself (the real 3D world), not a drawing (Irfan 2026-11-03 "some news dont mimic the graphic of the game") */
+  function playLive(holder, text, id){
+    stop(); const RC = window.__newsRec, ST = window.__newsStage; if(!RC || !ST){ playCartoon(holder, text); return; }
+    const key = id || text;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000';
+    holder.innerHTML = ''; holder.appendChild(cv); cv.className = 'newsLive';
+    const cx = cv.getContext('2d'), me = {on:true, t0:performance.now(), mine:false, asked:false}; cur = me;
+    const tick = (window.__pause && window.__pause.si || setInterval)(()=>{
+      if(!me.on){ clearInterval(tick); return; }
+      try{
+        const done = RC.clips[key] || RC.clips[text];
+        if(done){ me.on = false; clearInterval(tick); const v = document.createElement('video'); v.src = URL.createObjectURL(done); v.loop = true; v.muted = true; v.autoplay = true; v.playsInline = true; v.controls = true; v.style.cssText = cv.style.cssText; holder.innerHTML = ''; holder.appendChild(v); v.play().catch(()=>{}); return; }
+        const r = RC.rec;
+        if(!r && !me.asked){ me.asked = true; if(!ST.film(text, key)) me.asked = false; }
+        if(r && r.key === key){ me.mine = true; cx.drawImage(RC.cv, 0, 0, W, H); cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(6, 6, 92, 16); cx.fillStyle = '#ffd54a'; cx.font = 'bold 10px Arial'; cx.textAlign = 'left'; cx.fillText('FILMING NOW', 12, 18); }
+        else if(!me.mine){ cx.fillStyle = '#101418'; cx.fillRect(0, 0, W, H); cx.fillStyle = '#ffd54a'; cx.font = 'bold 14px system-ui,sans-serif'; cx.textAlign = 'center'; cx.fillText('The news camera is on its way...', W/2, H/2 - 6); cx.fillStyle = '#aaa'; cx.font = '11px system-ui,sans-serif'; cx.fillText('filming another story first', W/2, H/2 + 14); }
+        if(performance.now() - me.t0 > 40000){ me.on = false; clearInterval(tick); }
+      }catch(e){ console.warn('LN-newslive', e); me.on = false; clearInterval(tick); }
+    }, 100);
+    me.raf = 0;
   }
   function playCartoon(holder, text){
     stop(); const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.style.cssText = 'width:100%;max-width:' + W + 'px;border-radius:8px;display:block;margin:6px 0;background:#000';
@@ -33015,7 +33036,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     cur = {raf:0, on:true};
     (function f(){ if(!cur || !cur.on) return; const t = ((performance.now() - t0)/1000) % 12; try{ draw(cx, c, text, t); }catch(e){} cx.fillStyle = 'rgba(0,0,0,.5)'; cx.fillRect(W - 54, 6, 48, 16); cx.fillStyle = '#f44'; cx.beginPath(); cx.arc(W - 44, 14, 4, 0, 6.283); cx.fill(); cx.fillStyle = '#fff'; cx.font = 'bold 10px Arial'; cx.textAlign = 'left'; cx.fillText('LIVE', W - 36, 18); cur.raf = requestAnimationFrame(f); })();
   }
-  function stop(){ if(cur){ cur.on = false; cancelAnimationFrame(cur.raf); cur = null; } }
+  function stop(){ if(cur){ cur.on = false; if(cur.raf) cancelAnimationFrame(cur.raf); cur = null; } }
   // ---- the ticker inside the panel
   let tk = null, tx = 0, tw = 0, tkRaf = 0, tkLast = 0;
   function tickerTick(now){
@@ -33067,7 +33088,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     let mr; try{ const st = cv.captureStream(FPS); mr = new MediaRecorder(st, {mimeType:'video/webm;codecs=vp8', videoBitsPerSecond:500000}); }catch(e){ try{ mr = new MediaRecorder(cv.captureStream(FPS)); }catch(err){ return false; } }
     const parts = []; mr.ondataavailable = e=>{ if(e.data && e.data.size) parts.push(e.data); };
     mr.onstop = ()=>{ try{ const blob = new Blob(parts, {type:'video/webm'}); if(blob.size > 500) put(key || text, blob); }catch(e){} };
-    rec = {mr, text, key:key || text, cap:text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, ''), at:at ? {x:at.x, y:at.y, z:at.z} : null, r:r || 9, a0:Math.random()*6.283, dur:dur || 7, t0:performance.now(), iv:setInterval(frame, 1000/FPS)};
+    rec = {mr, text, key:key || text, cap:text.replace(/^(BREAKING|NEWS|PROTEST|FAKE NEWS|IMPOSSIBLE NEWS|SPOOKY NEWS|LORE CORNER): /, ''), at:at ? {x:at.x, y:at.y, z:at.z} : null, r:r || 9, a0:Math.random()*6.283, dur:dur || 7, t0:performance.now(), iv:(window.__pause && window.__pause.si || setInterval)(frame, 1000/FPS)};
     mr.start(250); return true;
   }
   function stop(){ if(!rec) return; clearInterval(rec.iv); try{ rec.mr.stop(); }catch(e){} rec = null; }
@@ -33075,7 +33096,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const qText = re=>{ const Q = window.__newsQ || []; return Q.find(t=>re.test(t)) || null; };
   const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
   let lastPR = null, lastCT = null, ctPhase = -1, nN = (save.nations || []).length, pending = [], pendingBusy = 0;
-  setInterval(()=>{ try{
+  (window.__pause && window.__pause.si || setInterval)(()=>{ try{
     if(startEl.style.display === 'flex' || won) return;
     const PR = PRO.PR, CT = PRO.CT;
     if(PR && PR !== lastPR){ lastPR = PR; const t = qText(/^PROTEST:/); if(t) start(t, {x:PR.cx, y:gy(PR.cx, PR.cz), z:PR.cz}, 10, 8); }
@@ -33143,7 +33164,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const party = /party|won|celebrat|holiday|new law|birthday|festival|rainbow/.test(T);
     if(!RC.start(text, p0, s.r, 7, key)){ props.forEach(p=>scene.remove(p)); if(s.temp) try{ removeAnimal(s.temp); }catch(e){} if(s.witness) try{ removeAnimal(s.witness); }catch(e){} return false; }
     const t0 = performance.now();
-    const iv = setInterval(()=>{
+    const iv = (window.__pause && window.__pause.si || setInterval)(()=>{
       try{
         const R = RC.rec, q = pos(), t = (performance.now() - t0)/1000;
         if(R && R.at){ R.at.x = q.x; R.at.y = q.y; R.at.z = q.z; }
