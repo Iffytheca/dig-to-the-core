@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 161 (Oct 31)';
+  window.__BUILD = 'Build 162 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -18282,7 +18282,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(P.ground){
       if(peak !== null){
         const fall = peak - P.y, safe = 4 + upV*upV/44;
-        if(fall > safe){
+        if(fall > safe && window.__waterLand && window.__waterLand()){ toast('Splash! The water broke your fall. No damage.'); burst(P.x, P.y+.3, P.z, 0, 8); blip(240,.2,.1,'sine'); }
+        else if(fall > safe){
           const dmg = Math.round((fall - safe)*3.5) + 2;
           hurtPlayer(dmg); shake = Math.max(shake, .08); burst(P.x, P.y+.1, P.z, 0, 10);
           toast(['Ouch! You fell '+Math.round(fall)+' blocks. (-'+dmg+' HP)', 'Splat! That was a '+Math.round(fall)+' block drop. (-'+dmg+' HP)', 'Your knees say NO. Fell '+Math.round(fall)+' blocks. (-'+dmg+' HP)'][Math.floor(Math.random()*3)]);
@@ -24952,7 +24953,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(!locked) return;
       // falling
       if(!P.ground){ airVy = Math.min(airVy, P.vy); topY = Math.max(topY, P.y); }
-      else { if(topY - P.y >= 7 && airVy < -15 && !(window.__pause && window.__pause.on) && performance.now() - (window.__hoverT||0) > 5000 && !(typeof GRAV !== 'undefined' && GRAV.float)){ if(soundOn) thud(); if(!startRag((Math.random()-.5), (Math.random()-.5), 4, 5)) rollT = 1.1; if(gap('falltoast', 6000)) toast(rnd(['Splat! Ragdoll landing!','Ouch! That was a big fall.','Thud! You bounced like a ragdoll.'])); } airVy = 0; topY = P.y; }
+      else { if(topY - P.y >= 7 && airVy < -15 && !(window.__waterLand && window.__waterLand()) && !(window.__pause && window.__pause.on) && performance.now() - (window.__hoverT||0) > 5000 && !(typeof GRAV !== 'undefined' && GRAV.float)){ if(soundOn) thud(); if(!startRag((Math.random()-.5), (Math.random()-.5), 4, 5)) rollT = 1.1; if(gap('falltoast', 6000)) toast(rnd(['Splat! Ragdoll landing!','Ouch! That was a big fall.','Thud! You bounced like a ragdoll.'])); } airVy = 0; topY = P.y; }
       // walking footsteps
       const hs = Math.hypot(dx, dz)/Math.max(dt, .001);
       if(P.ground && hs > 1.2 && hs < 40){
@@ -32612,6 +32613,44 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 2500);
 })();
 /* LN-exitems end */
+/* LN-waterland start: landing in water after a fall never hurts (Irfan 2026-11-03 "when you land on water when falling you survive not fall"). Checks lakes/rivers/ocean biome liquids, poured and pool water, and flood water around the landing spot. */
+(function(){
+  window.__waterLand = function(){
+    try{
+      if(realm !== 0) return false;
+      const x = P.x, z = P.z, y = P.y;
+      const DR = window.__drown;
+      if(DR && DR.waterTopAt){ for(const dy of [.1, .9, -.9, -1.9]) if(DR.waterTopAt(x, y + dy, z) != null) return true; }
+      const c = BIOME.col(Math.floor(x), Math.floor(z));
+      if(c && c.liq && c.b.liq !== 'frozen' && y < .6 && y > c.h - 2.5) return true;
+      const DS = window.__disaster, S = DS && DS.cur;
+      if(S && S.kind === 'flood' && Math.hypot(x - S.x, z - S.z) < 48 && y < S.lv + .3) return true;
+    }catch(e){}
+    return false;
+  };
+})();
+/* LN-waterland end */
+/* LN-lego start: Exotic item Godly Lego Brick (Irfan 2026-11-03 "add new exotic item called godly lego brick"), given free once like the other Exotics */
+(function(){
+  const N = 'Godly Lego Brick', D = 'The one brick that every set was missing. It is made of a plastic that cannot be scratched, cannot be lost under the sofa, and cannot be stepped on in the dark without a sound like a thunderclap. Snap it onto anything and that thing becomes a little bit holy.';
+  try{
+    window.__EXOTIC_NAMES = window.__EXOTIC_NAMES || []; if(window.__EXOTIC_NAMES.indexOf(N) < 0) window.__EXOTIC_NAMES.push(N);
+    const clean = n=>String(n || '').replace(/\s*\(Sector.*\)$/, '').trim();
+    const _ed = window.__exoDesc; window.__exoDesc = n=>(_ed && _ed(n)) || (clean(n) === N ? D : null);
+  }catch(e){ console.warn('LN-lego names', e); }
+  setTimeout(()=>{
+    try{
+      if(save.exoticGift3) return;
+      save.mats = save.mats || {}; const key = '7|'+N;
+      if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1;
+      save.mats[key] = (save.mats[key] || 0) + 1; save.exotics = (save.exotics || 0) + 1; pushFeed(N+'  [Exotic]', 1, '#ff3cf0');
+      save.exoticGift3 = 1; persist(); shake = Math.max(shake, .08);
+      toast('EXOTIC GIFT!!!!! The Godly Lego Brick is yours. Press I to see it.');
+      blip(1760, .5, .15, 'triangle'); setTimeout(()=>blip(2349, .5, .12, 'sine'), 180); setTimeout(()=>blip(3136, .6, .1, 'sine'), 360);
+    }catch(e){ console.warn('LN-lego', e); }
+  }, 3500);
+})();
+/* LN-lego end */
 
 
 
