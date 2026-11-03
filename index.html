@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 159 (Oct 31)';
+  window.__BUILD = 'Build 160 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -22157,7 +22157,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---------- a one-time gift: a Divine material (Irfan 2026-10-27)
   setTimeout(()=>{
     try{
-      if(save.divineGift) return;
+      return;  // Irfan 2026-11-03: Divine items are no longer given free (Exotic gifts instead, LN-exgift)
       const key = '6|Heavenly Starlight Crystal (Gift)';
       save.mats = save.mats || {}; if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1;
       save.mats[key] = (save.mats[key] || 0) + 1; save.divines = (save.divines || 0) + 1; persist();
@@ -22490,7 +22490,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---------- one of each new Divine item, given once so you can see them
   setTimeout(()=>{
     try{
-      if(save.divineGift2) return;
+      return;  // Irfan 2026-11-03: Divine items are no longer given free (Exotic gifts instead, LN-exgift)
       save.mats = save.mats || {};
       window.__DIVINE_NAMES.forEach(n=>{ const key = '6|'+n; if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1; save.mats[key] = (save.mats[key] || 0) + 1; save.divines = (save.divines || 0) + 1; pushFeed(n+'  [Divine]', 1, '#40fff0'); });
       save.divineGift2 = 1; persist(); shake = Math.max(shake, .06);
@@ -32567,6 +32567,26 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__exotic = {names:window.__EXOTIC_NAMES, tier:7};
 })();
 /* LN-exotic end */
+/* LN-exgift start: free gifts are Exotic now, not Divine (Irfan 2026-11-03 "dont remove divine item but they will no longer be free given but can still be found but now exotic items will be given free"). Divine items already in a save stay. The old gift crystal is now a findable Divine. */
+(function(){
+  try{
+    const HS = 'Heavenly Starlight Crystal';
+    if(window.__DIVINE_NAMES && window.__DIVINE_NAMES.indexOf(HS) < 0) window.__DIVINE_NAMES.push(HS);
+    const _dd = window.__divDesc; window.__divDesc = n=>(_dd && _dd(n)) || (n === HS ? 'A crystal full of starlight, fallen from the sky.' : null);
+  }catch(e){ console.warn('LN-exgift names', e); }
+  setTimeout(()=>{
+    try{
+      if(save.exoticGift) return;
+      const names = window.__EXOTIC_NAMES || [];
+      save.mats = save.mats || {};
+      names.forEach(n=>{ const key = '7|'+n; if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1; save.mats[key] = (save.mats[key] || 0) + 1; save.exotics = (save.exotics || 0) + 1; pushFeed(n+'  [Exotic]', 1, '#ff3cf0'); });
+      save.exoticGift = 1; persist(); shake = Math.max(shake, .08);
+      toast('EXOTIC GIFT!!!!! One of every Exotic item is yours: '+names.slice(0, 3).join(', ')+' and '+(names.length - 3)+' more. Press I to see them.');
+      blip(1760, .5, .15, 'triangle'); setTimeout(()=>blip(2349, .5, .12, 'sine'), 180); setTimeout(()=>blip(3136, .6, .1, 'sine'), 360);
+    }catch(e){ console.warn('LN-exgift', e); }
+  }, 1500);
+})();
+/* LN-exgift end */
 
 
 
