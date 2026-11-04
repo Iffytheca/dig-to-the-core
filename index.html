@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 176 (Oct 31)';
+  window.__BUILD = 'Build 177 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -21051,7 +21051,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const kindOf = w=>KINDS[w] ? w : ALIAS[w] || null;
 
   // ================= models (same space as the pickaxe in your hand)
-  const mGroup = new THREE.Group(); camera.add(mGroup); mGroup.scale.setScalar(.6); mGroup.visible = false;
+  const mGroup = new THREE.Group(); camera.add(mGroup); mGroup.scale.setScalar(.6); mGroup.visible = false; window.__meleeG = mGroup; /* LN-lava */
   function part(par, w, h, d, col, x, y, z, glow){
     const mat = new THREE.MeshLambertMaterial({color:col, emissive:new THREE.Color(col).multiplyScalar(glow || 0)}); mat.depthTest = false;
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.renderOrder = 999; par.add(m); return m;
@@ -33248,7 +33248,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return {id:save.meleeId, name, k, dps, col:pick(COLS), v:v.id};
   }
   const list = ()=>{ save.melee = save.melee || []; return save.melee; };
-  const vOf = w=>VBY[(w && w.v) || 'plain'] || VBY.plain;
+  const vOf = w=>VBY[(w && w.v) || 'plain'] || (window.__extraVars && window.__extraVars[w && w.v]) || VBY.plain;
 
   // ---------------- weapons lying on the ground
   const GW = ()=>{ save.gw = save.gw || []; return save.gw; };
@@ -33342,7 +33342,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const meleeKill = ()=>M.held && !curGun && mouseDown;
   const _ka = killAnimal;
   killAnimal = function(a){
-    let fire = null; try{ if(a && !a.__swfire && meleeKill() && vOf(M.held).id === 'fire'){ fire = cookedFor(a); a.__swfire = 1; } }catch(e){}
+    let fire = null; try{ if(a && !a.__swfire && meleeKill() && /^(fire|lava)$/.test(vOf(M.held).id)){ fire = cookedFor(a); a.__swfire = 1; } }catch(e){}
     const r = _ka.apply(this, arguments);
     try{
       if(a && a.__swfire === 1){
@@ -33363,7 +33363,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const WHISPERS = ['you missed a spot', 'my last owner was taller', 'is it lunch yet', 'why are we hitting that', 'i used to be a spoon', 'turn around. no reason', 'this is fine', 'swing with your knees', 'boo. did it work', 'i want a nap'];
   const _da = damageAnimal;
   damageAnimal = function(a, dmg){
-    try{ if(meleeKill() && vOf(M.held).id === 'fire' && a && Math.random() < .25) burst(a.pos.x, a.pos.y + (a.d.yo || .8), a.pos.z, 9, 2); }catch(e){}
+    try{ if(meleeKill() && /^(fire|lava)$/.test(vOf(M.held).id) && a && Math.random() < .25) burst(a.pos.x, a.pos.y + (a.d.yo || .8), a.pos.z, 9, 2); }catch(e){}
     return _da.apply(this, arguments);
   };
   function variantTick(dt){
@@ -33583,10 +33583,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _um = updateMining;
   updateMining = function(dt){
     const M = window.__melee;
-    if(M && M.held && !curGun && mouseDown && !mineAny){
-      hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
-      const now = performance.now()*.001; if(now - digHintT > 8){ digHintT = now; toast('Swords are for hitting, not digging. Press G for your pickaxe.'); }
-      return;
+    if(M && M.held && !curGun && !mineAny){
+      const p = PICKS[save.equipped], old = p.power;
+      if(old < 1e6){
+        p.power = Math.max(.6, old*.22);
+        const now = performance.now()*.001; if(mouseDown && now - digHintT > 12){ digHintT = now; toast('Swords are bad at digging. Press G for your pickaxe, it is much faster.'); }
+        try{ return _um.apply(this, arguments); } finally { p.power = old; }
+      }
     }
     return _um.apply(this, arguments);
   };
@@ -33615,6 +33618,95 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__farm = {CROPS, cropFor, plantable, till, plant, harvest, nearRipe, get crops(){ return crops(); }, RIPE, T:{grow:()=>crops().forEach(c=>{ c.g = RIPE; })}};
 })();
 /* LN-farm end */
+/* LN-lava start: the Lava Sword, better looking weapons in your hand, swords dig (badly), and more lore (Irfan 2026-11-04 "SWORD ARE BAD AT MINING AND EXPAND LORE AND GIVE ME LAVA SWORD AND FIX WEAPON LOOK") */
+(function(){
+  const M = window.__melee, S = window.__swords; if(!M || !S) return;
+  const KINDS = M.KINDS;
+  KINDS.lavasword = {nm:'Lava Sword', m:1.6};
+  // the Lava variant: never found by luck, only given or earned
+  const LAVA = {id:'lava', nm:'Lava', good:1, m:1.5, w:0, d:'Melts what it hits. Cooks food animals, burns the rest, and never goes cold.'};
+  window.__extraVars = Object.assign(window.__extraVars || {}, {lava:LAVA});
+  S.VARS.push(LAVA);
+
+  // ---------------- better looking blades
+  function box(par, w, h, d, col, x, y, z, glow){
+    const mat = new THREE.MeshLambertMaterial({color:col}); if(glow) mat.emissive = new THREE.Color(col).multiplyScalar(glow);
+    mat.depthTest = false; const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.renderOrder = 999; m.position.set(x, y, z); par.add(m); return m;
+  }
+  const old = window.__swordModel;
+  window.__swordModel = function(k, col){
+    const g = new THREE.Group(), wood = 0x5a3a1e, gold = 0xe0b84a, dark = new THREE.Color(col).multiplyScalar(.55).getHex(), light = new THREE.Color(col).lerp(new THREE.Color(0xffffff), .35).getHex();
+    if(k === 'sword' || k === 'katana' || k === 'lavasword'){
+      const lava = k === 'lavasword', kat = k === 'katana', L = kat ? .86 : .72, W = kat ? .07 : .11;
+      const bcol = lava ? 0x2a1410 : col, bl = lava ? 0x4a2418 : light;
+      // grip with wrap, pommel, guard
+      box(g,.065,.26,.065,wood,0,-.3,0); [-.36,-.3,-.24].forEach(y=>box(g,.075,.025,.075,0x2a1a10,0,y,0));
+      box(g,.09,.07,.09,lava ? 0xff6a1a : gold,0,-.45,0,lava ? .6 : 0);
+      box(g,kat ? .16 : .34,.05,.1,lava ? 0x3a1a10 : (kat ? 0x222222 : gold),0,-.15,0);
+      // tapered blade: three steps, a bright edge and a fuller line
+      const seg = 3; for(let i=0;i<seg;i++){ const t = i/seg, h = L/seg, w = W*(1 - t*.55); box(g,w,h+.005,.035,bcol,0,-.1 + h*i + h/2,0,lava ? .25 : .12); box(g,w*.35,h+.005,.04,bl,0,-.1 + h*i + h/2,0,lava ? .25 : .25); }
+      box(g,W*.45,.1,.034,bcol,0,-.1 + L + .04,0,lava ? .25 : .12);                                   // tip
+      if(lava){ for(let i=0;i<6;i++) box(g,.03,.05,.045,0xff7a1a,(i%2 ? .02 : -.02),-.05 + i*.12,0,1); const glow = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(' ', 32, 32, 'rgba(255,120,30,.35)', '#fff', '10px Arial'), fog:false, depthWrite:false, transparent:true})); glow.scale.set(.5, 1.1, 1); glow.position.y = .3; g.add(glow); }
+      return g;
+    }
+    return old ? old(k, col) : null;
+  };
+  // the weapon sits in your hand like a sword, not like a pickaxe
+  const mG = window.__meleeG;
+  const swingOf = ()=>pickGroup.rotation.x + .15;                                                 // 0 when still, negative while swinging
+  (function tick(){
+    requestAnimationFrame(tick);
+    try{
+      if(!mG || !mG.visible) return;
+      const sw = swingOf(), big = M.held && (M.held.v === 'giant');
+      mG.scale.setScalar(big ? 1.05 : .82);
+      mG.position.set(.62, -.48 + (pickGroup.position.y + .42), -.78);
+      mG.rotation.set(-1.05 + sw*1.3, -.55 + sw*.5, .3 + sw*.3);
+      if(M.held && M.held.k === 'lavasword' && Math.random() < .25) burst(P.x + Math.sin(P.yaw)*-.6 + (Math.random()-.5)*.3, P.y + 1.1 + Math.random()*.4, P.z + Math.cos(P.yaw)*-.6 + (Math.random()-.5)*.3, 9, 1);
+    }catch(e){}
+  })();
+
+  // ---------------- the Lava Sword is yours
+  setTimeout(()=>{ try{
+    if(save.lavaGift) return; save.lavaGift = 1;
+    save.melee = save.melee || []; save.meleeId = (save.meleeId || 0) + 1;
+    const w = {id:save.meleeId, name:'Lava Sword', k:'lavasword', dps:Math.round(36 + Math.min(40, (save.depthMax || 0)/10) + 40), col:0xff5a1a, v:'lava'};
+    save.melee.push(w); persist(); M.hold(w.id);
+    toast('A LAVA SWORD rose out of the ground and chose you. It cooks, it burns, it glows. T throws it, F picks it up. Treat it nicely.');
+    blip(220,.3,.15,'sawtooth'); setTimeout(()=>blip(440,.25,.12,'triangle'), 200);
+  }catch(e){ console.warn('LN-lava gift', e); } }, 7000);
+
+  // ---------------- more lore
+  const L = window.__lore;
+  const PAGES = [
+    ['v1','Weapons','The First Sword','The first sword was a very sharp stick. The second sword was a slightly sharper stick. The third one was actually a sword, and the stick was never asked again.','scroll'],
+    ['v2','Weapons','Why Weapons Lie Around','Weapons are left on the ground by heroes who got hungry halfway through a quest. The weapon waits. It is used to waiting. It is a weapon.','scroll'],
+    ['v3','Weapons','Good Ones and Bad Ones','A weapon is Sharp, Blessed, Lucky or Giant if it was made on a Tuesday. It is Rusty, Cursed, Wobbly, Soggy, Haunted or Sticky if it was made on a Monday. Nobody makes weapons on weekends.','scroll'],
+    ['v4','Weapons','The Haunted Ones','A Haunted weapon is haunted by its last owner, who is not dead, just very chatty and stuck. Listen to the whispers. Some of them are good advice. Most of them are about lunch.','scroll'],
+    ['v5','Weapons','The Fire Sword','The first Fire Sword was a normal sword that fell in a volcano, climbed out, and decided it liked it. It cooks anything that is food and burns anything that is not. It has strong opinions about which is which.','scroll'],
+    ['v6','Weapons','The Lava Sword','The Lava Sword is the Fire Sword\'s older sibling. It never cooled down. Rocks move out of its way. Bosses pretend not to be scared of it. Only one is ever given, and it chose you.','scroll'],
+    ['v7','Weapons','The Slap Fish','The Slap Fish is not a fish. It is a legend. It has slapped three kings, a volcano and a wall. The wall is still thinking about it.','scroll'],
+    ['v8','Weapons','Why the Pickaxe Is Bad at Fighting','A pickaxe took the Pickaxe Oath: dig, do not complain, never be a spoon. Fighting was not in the oath. Hit a boss with one and the boss just feels dug.','scroll'],
+    ['v9','Weapons','Why Swords Are Bad at Digging','A sword can dig the way a spoon can fight: slowly, badly, and with a lot of eye-rolling from the dirt.','scroll'],
+    ['f1','Farming','The First Farm','The first farmer planted a seed, waited, and got bored after four seconds. The seed grew anyway. Farming has been about waiting ever since.','scroll'],
+    ['f2','Farming','What the Hoe Says','A Hoe never wears out because it never tries very hard. Tilled dirt looks the same as untilled dirt to everyone except seeds, and seeds are very picky.','scroll'],
+    ['f3','Farming','Mystery Seeds','Mystery Seeds are swept up from under the Shopkeeper\'s counter. Nobody knows what is in them. Last week someone grew a pumpkin, a cotton candy bush and, somehow, a cookie.','scroll'],
+    ['f4','Farming','Why Rain Helps','Rain makes crops grow faster because the plants are in a hurry to get out of the rain.','scroll'],
+    ['f5','Farming','Raw Meat','Raw Meat fills you up and then takes it back, twice. The Fire Sword was invented by someone who ate raw meat exactly once.','scroll'],
+    ['n1','The News','The Fake News Pigeon','The Fake News Pigeon has never told the truth on purpose. The Dig News is the only channel in the world, so it is also the most trusted.','scroll'],
+    ['n2','The News','The Animal Protests','Animals protest about anything: bring back the dinosaurs, make Tuesday longer, less rain, more rain. The King always says yes or no. The animals always march again next week.','scroll'],
+    ['n3','The News','The Contests','Pie eating, mud sliding, longest nap. Every winner gets a trophy, and every trophy is the same trophy, passed around and polished. It is very shiny by now.','scroll'],
+    ['n4','The News','Who Films the News','A second camera follows every story. It is held by nobody. Nobody has asked who. The footage is real, the headlines are not.','scroll']
+  ];
+  try{
+    if(L && L.LORE){
+      let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+      if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); setTimeout(()=>toast(added+' new lore pages appeared in your book (Y): Weapons, Farming and The News.'), 9000); }
+    }
+  }catch(e){ console.warn('LN-lava lore', e); }
+  window.__lavasword = {LAVA, PAGES, get mG(){ return mG; }};
+})();
+/* LN-lava end */
 
 
 
