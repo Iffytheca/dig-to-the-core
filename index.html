@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 174 (Oct 31)';
+  window.__BUILD = 'Build 176 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33185,20 +33185,22 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
 /* LN-perfcull start: objects beyond the fog and labels more than 75 blocks away are not drawn, they come back when you get close (Irfan 2026-11-03 "make game less laggy ... smooth gameplay and fps") */
 (function(){
-  const hid = new Set(), box = new THREE.Box3(), sph = new THREE.Sphere();
+  const hid = new Set(), hidL = new Set(), box = new THREE.Box3(), sph = new THREE.Sphere(), sw = new THREE.Vector3();
   (window.__pause && window.__pause.si || setInterval)(()=>{ try{
     if(startEl.style.display === 'flex') return;
     const far = (scene.fog ? scene.fog.far : 160) + 20, px = P.x, pz = P.z;
+    // labels anywhere in the scene: only the ones near you are drawn (LN-clutter)
+    scene.traverse(o=>{ if(!o.isSprite || !o.parent || o.parent === scene || o.userData.keepLabel) return; sw.setFromMatrixPosition(o.matrixWorld); const far = Math.hypot(sw.x - px, sw.z - pz) > 38; if(far){ if(o.visible && !hidL.has(o)){ o.visible = false; hidL.add(o); } } else if(hidL.has(o)){ o.visible = true; hidL.delete(o); } });
     for(const o of scene.children){
       if(!(o.isMesh || o.isGroup || o.isSprite) || o.isInstancedMesh || o.isLight || o.isCamera) continue;
       if(o.__cr == null){ try{ box.setFromObject(o); if(box.isEmpty()) o.__cr = -1; else { box.getBoundingSphere(sph); o.__cr = sph.radius + sph.center.distanceTo(o.position); } }catch(e){ o.__cr = -1; } }
       if(o.__cr < 0 || o.__cr > 60) continue;
       const d = Math.hypot(o.position.x - px, o.position.z - pz) - o.__cr;
-      if(d > (o.isSprite ? 75 : far)){ if(o.visible && !hid.has(o)){ o.visible = false; hid.add(o); } }
+      if(d > (o.isSprite ? 38 : far)){ if(o.visible && !hid.has(o)){ o.visible = false; hid.add(o); } }
       else if(hid.has(o)){ o.visible = true; hid.delete(o); }
     }
   }catch(e){ console.warn('LN-perfcull', e); } }, 400);
-  window.__perfcull = {hid};
+  window.__perfcull = {hid, hidL};
 })();
 /* LN-perfcull end */
 /* LN-swords start: melee weapons lie around the world (F picks them up), T throws the one in your hand, every weapon rolls a good or bad variant, Fire weapons cook food animals and burn the rest, raw meat poisons you (Irfan 2026-11-04 "add sword and other melee weapon ... T to throw ... F to pick it up ... variants ... firesword cooks the animal ... EATING RAW MEAT DOES FILL HUNGER BUT POISON YOU") */
@@ -33432,9 +33434,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     let d = _m.apply(this, arguments);
     try{
       const M = window.__melee, pickOnly = !curGun && !(M && M.held);
-      if(pickOnly && d < 1e11 && isBoss(t)){
-        d *= .3;
-        const now = performance.now()*.001; if(now - hintT > 25){ hintT = now; toast('Your pickaxe barely scratches a boss. Press G for a sword or a gun, they hit much harder.'); }
+      if(pickOnly && d < 1e11 && t && t.k !== 'c'){
+        d *= isBoss(t) ? .3 : .5;
+        const now = performance.now()*.001; if(now - hintT > 25){ hintT = now; toast(isBoss(t) ? 'Your pickaxe barely scratches a boss. Press G for a sword or a gun, they hit much harder.' : 'The pickaxe is for digging. Press G for a sword or a gun to fight properly.'); }
       }
     }catch(e){}
     return d;
@@ -33442,6 +33444,177 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__pickboss = {isBoss};
 })();
 /* LN-pickboss end */
+/* LN-farm start: the pickaxe is for mining and the sword is for hitting; the shop sells a Hoe and Mystery Seeds; right-click with the Hoe turns grass or dirt into Farmland, right-click Farmland with any seed to plant it, crops grow and F harvests them (Irfan 2026-11-04 "PICKAXE FOR MINING ... BUY A HOE MAKE A FARMLAND AND YOU CAN PLANT A PLANT SEED ANY IF YOU HAVE IT AND SWORD FOR ATTACKING") */
+(function(){
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const FARM = ()=>blockIdOf('Farmland');
+  const CROPS = {
+    pumpkin:{item:'Pumpkin', c:0xf08a20, shape:'ball', s:.42}, watermelon:{item:'Watermelon', c:0x2a8a3a, shape:'ball', s:.4}, corn:{item:'Corn', c:0xffd84a, shape:'tall', s:.2},
+    tomato:{item:'Tomato', c:0xe83a2a, shape:'dots', s:.16}, potato:{item:'Potato', c:0xb08a50, shape:'low', s:.24}, blueberry:{item:'Blueberries', c:0x3a5aff, shape:'dots', s:.12},
+    cabbage:{item:'Cabbage', c:0xb0f08a, shape:'ball', s:.36}, sunflower:{item:'Sunflower Seeds', c:0xffd030, shape:'flower', s:.34}, chili:{item:'Chili Pepper', c:0xff2a1a, shape:'tall', s:.14},
+    carrot:{item:'Carrot', c:0xf08a20, shape:'low', s:.14}, rainbowcarrot:{item:'Rainbow Carrot', c:0xff3a3a, shape:'low', s:.14}, wheat:{item:'Wheat Bundle', c:0xe8c860, shape:'tall', s:.18},
+    cottoncandy:{item:'Cotton Candy', c:0xff9ad8, shape:'ball', s:.4}, spaghetti:{item:'Spaghetti', c:0xf0d890, shape:'tall', s:.12}, giantpea:{item:'Giant Pea', c:0x6ad04a, shape:'ball', s:.3},
+    tree:{item:'Wooden Plank', c:0x3a8a30, shape:'tree', s:.5}, banana:{item:'Banana', c:0xffe040, shape:'tall', s:.16}, pizza:{item:'Pizza', c:0xf0a040, shape:'ball', s:.4}, cookie:{item:'Cookie', c:0xb07a3a, shape:'ball', s:.3}
+  };
+  const CK = Object.keys(CROPS).filter(k=>k !== 'tree');
+  const BY_ITEM = {}; for(const k in CROPS) BY_ITEM[CROPS[k].item.toLowerCase()] = k;
+  const SEED_RX = /seed|sapling|bulb|spore|sprout|cutting/i;
+  const TILL_RX = /^(grass|dirt|soil|tough dirt|mud|sand|clay|snow|meadow|turf|loam|topsoil|gravel)/i;
+  const foodP = {Pumpkin:16, Watermelon:18, Corn:14, Tomato:12, Potato:14, Blueberries:12, Cabbage:12, 'Sunflower Seeds':8, 'Chili Pepper':10, Carrot:12, 'Rainbow Carrot':20, 'Wheat Bundle':10, 'Cotton Candy':14, 'Giant Pea':16, Banana:12};
+  try{ save.foodPower = save.foodPower || {}; for(const k in foodP) if(!save.foodPower[k]) save.foodPower[k] = foodP[k]; }catch(e){}
+  try{ Object.assign(ITEM_COL, {'Mystery Seeds':[120,90,60], 'Hoe':[150,110,70], Pumpkin:[240,138,32], Watermelon:[42,138,58], Corn:[255,216,74], Tomato:[232,58,42], Potato:[176,138,80], Blueberries:[58,90,255], Cabbage:[176,240,138], 'Chili Pepper':[255,42,26], Carrot:[240,138,32], 'Rainbow Carrot':[255,120,200], 'Cotton Candy':[255,154,216], 'Giant Pea':[106,208,74], Banana:[255,224,64]}); }catch(e){}
+
+  // what a seed grows into
+  function cropFor(name){
+    const n = (name || '').toLowerCase().replace(/\s*\(.*\)$/, '');
+    if(n === 'mystery seeds') return pick(CK);
+    if(BY_ITEM[n]) return BY_ITEM[n];
+    if(/sapling/.test(n)) return 'tree';
+    for(const k in CROPS){ const it = CROPS[k].item.toLowerCase().replace(/s$/, ''); if(n.indexOf(it) >= 0 || (n.indexOf(k) >= 0)) return k; }
+    if(/pumpkin/.test(n)) return 'pumpkin'; if(/sunflower/.test(n)) return 'sunflower'; if(/carrot/.test(n)) return 'carrot'; if(/wheat|grain/.test(n)) return 'wheat';
+    if(SEED_RX.test(n)) return pick(CK);
+    return null;
+  }
+  const plantable = name=>!!(name && (SEED_RX.test(name) || BY_ITEM[(name || '').toLowerCase()]));
+
+  // ---------------- the shop sells farm supplies
+  const _rs = renderShop;
+  renderShop = function(){
+    const r = _rs.apply(this, arguments);
+    try{
+      const list = $('shoplist'); if(!list) return r;
+      const hd = document.createElement('div'); hd.className = 'item'; hd.style.cssText = 'background:rgba(90,160,70,.18);font-weight:800'; hd.innerHTML = '<div><div class="nm">FARM SUPPLIES</div><div class="ds">Hoe: right-click grass or dirt to make Farmland. Seeds: right-click Farmland to plant. F harvests a ripe crop. Any seed you find grows too.</div></div>';
+      list.appendChild(hd);
+      [['Hoe', 60, 'Turns grass, dirt or sand into Farmland. Never wears out.'], ['Mystery Seeds', 25, 'Grows a surprise crop. Pumpkins, corn, cotton candy, who knows.'], ['Pumpkin Seeds', 15, 'Grows pumpkins.'], ['Sunflower Seeds', 12, 'Grows sunflowers, and you can eat the seeds.']].forEach(([nm, price, ds])=>{
+        const pr = Math.round(price*(save.shopOwner ? .5 : 1)), have = (save.inv || {})[nm] || 0;
+        const div = document.createElement('div'); div.className = 'item';
+        const col = ITEM_COL[nm] || [120,120,120];
+        div.innerHTML = '<div class="sw" style="background:rgb('+col.join(',')+')"></div><div><div class="nm">'+nm+(have ? ' <span style="opacity:.6;font-size:12px">(you have '+have+')</span>' : '')+'</div><div class="ds">'+ds+'</div></div>';
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Buy $'+pr; b.disabled = save.coins < pr || (nm === 'Hoe' && have > 0);
+        if(nm === 'Hoe' && have > 0) b.textContent = 'Owned';
+        b.onclick = ()=>{ if(save.coins < pr) return; save.coins -= pr; addItem(nm, nm === 'Hoe' ? 1 : 3); hotAuto('i:'+nm); persist(); renderShop(); blip(660,.1,.08,'triangle'); toast(nm === 'Hoe' ? 'You bought a Hoe. Put it in a carry slot and right-click grass or dirt to make Farmland.' : 'You bought 3 '+nm+'. Right-click Farmland with them to plant.'); };
+        div.appendChild(b); list.appendChild(div);
+      });
+    }catch(e){ console.warn('LN-farm shop', e); }
+    return r;
+  };
+
+  // ---------------- crops in the world
+  const crops = ()=>{ save.crops = save.crops || []; return save.crops; };
+  const live = [];                                     // {c, g}
+  const RIPE = 90;
+  function cropModel(c){
+    const k = CROPS[c.crop] || CROPS.pumpkin, g = new THREE.Group(), st = c.g >= RIPE ? 2 : c.g >= RIPE*.4 ? 1 : 0;
+    const leaf = 0x3a9a30;
+    if(st === 0){ sbox(.08,.22,.08,leaf,0,.11,0,g); sbox(.2,.06,.06,leaf,0,.2,0,g); return g; }
+    const h = st === 1 ? .45 : .7;
+    if(k.shape === 'tree'){ sbox(.14,h*1.6,.14,0x6b4a2a,0,h*.8,0,g); sbox(.7,.6,.7,leaf,0,h*1.6+.2,0,g); if(st === 2) sbox(.9,.5,.9,0x2a8a30,0,h*1.6+.6,0,g); return g; }
+    for(let i=0;i<3;i++){ const a = i*2.1, x = Math.cos(a)*.22, z = Math.sin(a)*.22; sbox(.08,h,.08,leaf,x,h/2,z,g); sbox(.22,.05,.08,leaf,x,h*.6,z,g); }
+    if(st === 2){
+      const s = k.s;
+      if(k.shape === 'ball' || k.shape === 'low'){ sbox(s,s*.8,s,k.c,0,s*.4,0,g); }
+      else if(k.shape === 'tall'){ sbox(s,s*2,s,k.c,0,h+s,0,g); }
+      else if(k.shape === 'dots'){ [[-.2,.5,.1],[.15,.62,-.1],[0,.4,.2]].forEach(q=>sbox(s,s,s,k.c,q[0],q[1],q[2],g)); }
+      else if(k.shape === 'flower'){ sbox(.08,.5,.08,leaf,0,h+.25,0,g); sbox(s,s,.06,k.c,0,h+.5,0,g); sbox(s*.4,s*.4,.08,0x5a3a10,0,h+.5,0,g); }
+      const cv = document.createElement('canvas'); cv.width = 256; cv.height = 40; const x = cv.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = 'bold 22px system-ui,sans-serif'; x.lineWidth = 4; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText('RIPE: '+k.item+'  (F)', 128, 20); x.fillStyle = '#9dff8a'; x.fillText('RIPE: '+k.item+'  (F)', 128, 20);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false, fog:false})); sp.scale.set(1.9,.3,1); sp.position.y = h + .9; g.add(sp);
+    }
+    return g;
+  }
+  function show(c){ let l = live.find(q=>q.c === c); if(l){ scene.remove(l.g); l.g = cropModel(c); } else { l = {c, g:cropModel(c)}; live.push(l); } l.g.position.set(c.x + .5, -c.d, c.z + .5); l.st = c.g >= RIPE ? 2 : c.g >= RIPE*.4 ? 1 : 0; scene.add(l.g); }
+  function drop(c){ const i = crops().indexOf(c); if(i >= 0) crops().splice(i, 1); const l = live.find(q=>q.c === c); if(l){ scene.remove(l.g); live.splice(live.indexOf(l), 1); } }
+  setTimeout(()=>{ try{ crops().forEach(show); }catch(e){} }, 500);
+
+  const TILL_QUIPS = ['Tilled. The dirt looks ready for its new job.', 'Farmland! The worms have been informed.', 'You hoed the ground. The ground did not mind.', 'Fresh Farmland. Now plant something, anything, really.'];
+  const PLANT_QUIPS = ['Planted. Now the waiting part. Farmers love the waiting part.', 'In the ground it goes. Grow, little one.', 'You planted it. Be patient, or stare at it, staring also works.', 'Seed down. Nature will take it from here.'];
+  const HARVEST_QUIPS = ['Harvest time! Fresh from your own farm.', 'You picked it. It was ready. It said so on the sign.', 'Farming works! Who knew.', 'A fine harvest. The Shopkeeper is jealous.'];
+  function atFarm(){ const h = castRay(); if(!h) return null; const t = get(h.i, h.d, h.k); return t === FARM() && !get(h.i, h.d - 1, h.k) ? h : null; }
+  function till(){
+    const h = castRay(); if(!h){ toast('Aim at grass or dirt to make Farmland.'); return true; }
+    const t = get(h.i, h.d, h.k), B = BLOCKS[t - 1];
+    if(t === FARM()){ toast('That is already Farmland. Right-click it with a seed to plant.'); return true; }
+    if(!B || !TILL_RX.test(B.name)){ toast('The Hoe only works on grass, dirt, soil or sand. This is '+(B ? B.name : 'nothing')+'.'); blip(90,.1,.1,'sawtooth'); return true; }
+    if(get(h.i, h.d - 1, h.k)){ toast('Clear the block on top first.'); return true; }
+    setBlock(h.i, h.d, h.k, FARM()); burst(h.i + .5, -h.d + .3, h.k + .5, 0, 8); blip(260,.08,.1,'square');
+    save.tilled = (save.tilled || 0) + 1; persist(); toast(pick(TILL_QUIPS)); return true;
+  }
+  function plant(ref, name){
+    const h = atFarm(); if(!h){ toast('Right-click a Farmland block to plant '+name+'. (Buy a Hoe from the Shopkeeper to make Farmland.)'); return true; }
+    if(crops().some(c=>c.x === h.i && c.d === h.d && c.z === h.k)){ toast('Something is already growing there.'); return true; }
+    const k = cropFor(name); if(!k){ toast(name+' is not something you can plant.'); return true; }
+    if(!consumeRef(ref, 1)) return true;
+    const c = {x:h.i, d:h.d, z:h.k, crop:k, seed:name, g:0}; crops().push(c); if(crops().length > 60) drop(crops()[0]);
+    show(c); blip(520,.08,.08,'triangle'); persist(); updateHotbar();
+    toast(pick(PLANT_QUIPS)+'  ('+CROPS[k].item+(name.toLowerCase() === 'mystery seeds' ? ', surprise!' : '')+')'); return true;
+  }
+  function harvest(c){
+    const k = CROPS[c.crop], n = 2 + Math.floor(Math.random()*3);
+    addItem(k.item, n); if(/seed/i.test(c.seed) && Math.random() < .7) addItem(c.seed, 1);
+    const p = {x:c.x + .5, y:-c.d + .5, z:c.z + .5}; for(let i=0;i<2;i++) burst(p.x, p.y + i*.3, p.z, 0, 10);
+    drop(c); blip(660,.1,.1,'triangle'); setTimeout(()=>blip(990,.12,.1,'triangle'), 90);
+    save.harvested = (save.harvested || 0) + 1; persist(); updateHotbar();
+    toast(pick(HARVEST_QUIPS)+'  +'+n+' '+k.item+(save.harvested === 1 ? '  (Eat it with E, or sell it, or plant more.)' : ''));
+  }
+  function nearRipe(){ let best = null, bd = 2.6; for(const c of crops()){ if(c.g < RIPE) continue; const d = Math.hypot(c.x + .5 - P.x, c.z + .5 - P.z, (-c.d - P.y)*.6); if(d < bd){ bd = d; best = c; } } return best; }
+
+  // right-click: the Hoe tills, seeds plant
+  const _hp = hotPlace;
+  hotPlace = function(){
+    try{
+      const r = hotArr()[save.hotSel], hi = hotInfo(r);
+      if(hi && hi.kind === 'item'){
+        if(hi.name === 'Hoe') return till();
+        if(plantable(hi.name) && atFarm()) return plant(r, hi.name);
+      }
+    }catch(e){ console.warn('LN-farm place', e); }
+    return _hp.apply(this, arguments);
+  };
+  // F harvests a ripe crop (unless a weapon pickup is closer)
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code !== 'KeyF' || !locked || won || shopOpen) return;
+      const S = window.__swords; if(S && S.nearGround()) return;
+      const c = nearRipe(); if(c){ harvest(c); e.stopImmediatePropagation(); e.preventDefault(); }
+    }catch(err){ console.warn('LN-farm key', err); }
+  }, true);
+
+  // ---------------- the sword is for hitting, not digging
+  let digHintT = 0;
+  const _um = updateMining;
+  updateMining = function(dt){
+    const M = window.__melee;
+    if(M && M.held && !curGun && mouseDown && !mineAny){
+      hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
+      const now = performance.now()*.001; if(now - digHintT > 8){ digHintT = now; toast('Swords are for hitting, not digging. Press G for your pickaxe.'); }
+      return;
+    }
+    return _um.apply(this, arguments);
+  };
+
+  // ---------------- growing
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:178px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#9dff8a;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  let last = performance.now(), checkT = 0;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won || realm !== 0) return;
+      const rain = window.__disaster && window.__disaster.cur && /rain|storm/.test(window.__disaster.cur.kind || '') ? 2 : 1;
+      for(const c of crops().slice()){
+        const was = c.g; c.g = Math.min(RIPE + 1, c.g + dt*rain);
+        const st = c.g >= RIPE ? 2 : c.g >= RIPE*.4 ? 1 : 0, l = live.find(q=>q.c === c);
+        if(!l) show(c); else if(l.st !== st) show(c);
+        if(st === 2 && was < RIPE && Math.hypot(c.x - P.x, c.z - P.z) < 40) toast('Your '+CROPS[c.crop].item+' is ripe! Walk up and press F to harvest it.');
+      }
+      checkT += dt; if(checkT > 2){ checkT = 0; for(const c of crops().slice()) if(get(c.x, c.d, c.z) !== FARM()) drop(c); }
+      const c = locked ? nearRipe() : null;
+      if(c && !(window.__swords && window.__swords.nearGround())){ hint.textContent = 'F: harvest the '+CROPS[c.crop].item; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ console.warn('LN-farm', e); }
+  })(last);
+
+  window.__farm = {CROPS, cropFor, plantable, till, plant, harvest, nearRipe, get crops(){ return crops(); }, RIPE, T:{grow:()=>crops().forEach(c=>{ c.g = RIPE; })}};
+})();
+/* LN-farm end */
 
 
 
