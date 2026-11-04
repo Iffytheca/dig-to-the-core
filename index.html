@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 178 (Oct 31)';
+  window.__BUILD = 'Build 179 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33421,7 +33421,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // the first sword is free, and it is not a good one
   setTimeout(()=>{ try{ if(!save.swordGift){ save.swordGift = 1; const w = makeWeapon('sword', VBY.rusty); w.name = 'Rusty Slightly Disappointed Sword'; list().push(w); persist(); toast('You found a Rusty Slightly Disappointed Sword in your pocket. G switches to it, T throws it, F picks weapons up.'); } }catch(e){} }, 6000);
 
-  window.__swords = {VARS, makeWeapon, placeGround, pickUp, throwHeld, nearGround, cookedFor, get ground(){ return ground; }, get thrown(){ return thrown; }, get poisonT(){ return poisonT; }, spawnNear, T:{kill:a=>{ mouseDown = true; try{ killAnimal(a); } finally { mouseDown = false; } }, eat:name=>eatRef('i:'+name), hp:()=>hp}};
+  window.__swords = {VARS, makeWeapon, placeGround, pickUp, throwHeld, nearGround, cookedFor, get ground(){ return ground; }, get thrown(){ return thrown; }, get poisonT(){ return poisonT; }, curePoison(){ poisonT = 0; }, spawnNear, T:{kill:a=>{ mouseDown = true; try{ killAnimal(a); } finally { mouseDown = false; } }, eat:name=>eatRef('i:'+name), hp:()=>hp}};
 })();
 /* LN-swords end */
 
@@ -33729,6 +33729,98 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-herbdisc end */
+/* LN-herbs start: herbs grow wild on the surface, F picks them, each one does something when you eat it, and their seeds grow on Farmland (Irfan 2026-11-04 "YOU CAN INTRODUCE HERBS") */
+(function(){
+  const HERBS = {
+    'Mint':        {col:0x5ad08a, flower:0xffffff, eff:'cure',  say:'Minty fresh. Any poison is gone and your tummy says thank you.'},
+    'Basil':       {col:0x3a9a3a, flower:0x6ad06a, eff:'heal',  say:'Basil. Tastes like pizza without the pizza. +25 HP'},
+    'Lavender':    {col:0x8a9a6a, flower:0xb080e0, eff:'hp',    say:'Lavender. You feel calm and tough. +25 max HP for 90 seconds.'},
+    'Sage':        {col:0x9ab0a0, flower:0xc0d0c0, eff:'speed', say:'Sage. Wise and fast. +30% speed for 60 seconds.'},
+    'Clover':      {col:0x40c040, flower:0x40c040, eff:'dmg',   say:'A four leaf Clover! +25% damage for 60 seconds, and some coins fell out of your pocket. Into your pocket.'},
+    'Glowcap':     {col:0x6a8a9a, flower:0x80f0ff, eff:'light', say:'Glowcap mushroom. Your torch burns bright blue for 2 minutes.'},
+    'Fire Flower': {col:0x5a8a3a, flower:0xff6a20, eff:'dig',   say:'Fire Flower. Spicy! +30% dig speed for 60 seconds.'},
+    'Moonleaf':    {col:0x6a7a9a, flower:0xc0d0ff, eff:'jump',  say:'Moonleaf. You feel lighter. +30% jump for 60 seconds.'}
+  };
+  const NAMES = Object.keys(HERBS);
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  try{ save.foodPower = save.foodPower || {}; NAMES.forEach(n=>{ if(!save.foodPower[n]) save.foodPower[n] = 6; }); }catch(e){}
+  try{ NAMES.forEach(n=>{ const h = HERBS[n], c = new THREE.Color(h.flower); ITEM_COL[n] = [Math.round(c.r*255), Math.round(c.g*255), Math.round(c.b*255)]; ITEM_COL[n + ' Seeds'] = [120, 90, 60]; }); }catch(e){}
+  // the farm knows them: "<Herb> Seeds" grow the herb
+  try{ const F = window.__farm; if(F && F.CROPS) NAMES.forEach(n=>{ F.CROPS['herb_' + n.toLowerCase().replace(/ /g, '')] = {item:n, c:HERBS[n].flower, shape:'dots', s:.13}; }); }catch(e){}
+
+  // ---------------- wild herbs
+  const wild = [];                                                   // {name, x, y, z, g}
+  function herbModel(name){
+    const h = HERBS[name], g = new THREE.Group();
+    for(let i=0;i<4;i++){ const a = i*1.57 + .4, x = Math.cos(a)*.14, z = Math.sin(a)*.14; sbox(.06,.3,.06,h.col,x,.15,z,g); sbox(.16,.05,.08,h.col,x,.26,z,g).rotation.y = a; }
+    if(name === 'Glowcap'){ sbox(.08,.3,.08,0xd0d0c0,0,.15,0,g); const cap = sbox(.3,.12,.3,h.flower,0,.34,0,g); cap.material.emissive = new THREE.Color(h.flower).multiplyScalar(.5); }
+    else { const f = sbox(.12,.12,.12,h.flower,0,.4,0,g); if(name === 'Fire Flower' || name === 'Moonleaf') f.material.emissive = new THREE.Color(h.flower).multiplyScalar(.35); }
+    return g;
+  }
+  const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
+  function spawnWild(){
+    const a = Math.random()*6.283, r = 6 + Math.random()*12, x = Math.floor(P.x + Math.cos(a)*r) + .5, z = Math.floor(P.z + Math.sin(a)*r) + .5, y = gy(x, z);
+    if(get(Math.floor(x), Math.floor(-y) - 1, Math.floor(z))) return;                        // something stands there
+    const name = pick(NAMES), g = herbModel(name); g.position.set(x, y, z); g.rotation.y = Math.random()*6.283; scene.add(g);
+    wild.push({name, x, y, z, g, t:Math.random()*6});
+    if(wild.length > 12){ const o = wild.shift(); scene.remove(o.g); }
+  }
+  function nearWild(){ let best = null, bd = 2.3; for(const w of wild){ const d = Math.hypot(w.x - P.x, w.z - P.z, (w.y - P.y)*.5); if(d < bd){ bd = d; best = w; } } return best; }
+  const PICK_QUIPS = ['Picked. It smells great.', 'Fresh herbs! The Shopkeeper would charge a fortune for these.', 'You picked it gently. The plant appreciated that.', 'Herb acquired. Chef mode: on.'];
+  function pickWild(w){
+    wild.splice(wild.indexOf(w), 1); scene.remove(w.g);
+    const n = 1 + Math.floor(Math.random()*2); addItem(w.name, n); hotAuto('i:' + w.name);
+    let seeds = false; if(Math.random() < .4){ addItem(w.name + ' Seeds', 1); seeds = true; }
+    burst(w.x, w.y + .3, w.z, 0, 8); blip(720,.08,.08,'triangle');
+    save.herbsPicked = (save.herbsPicked || 0) + 1; persist();
+    toast(pick(PICK_QUIPS)+'  +'+n+' '+w.name+(seeds ? ' and '+w.name+' Seeds (plant them on Farmland)' : '')+'.  Eat it with E: '+HERBS[w.name].say.split('.')[0].toLowerCase()+'.');
+    if(save.herbsPicked === 1) setTimeout(()=>toast('Herbs: Mint cures poison, Basil heals, Lavender toughens, Sage speeds, Clover hits harder, Glowcap lights, Fire Flower digs faster, Moonleaf jumps higher.'), 4000);
+  }
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:206px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#b8ffb0;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  const busy = ()=>(window.__swords && window.__swords.nearGround()) || (window.__farm && window.__farm.nearRipe());
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code !== 'KeyF' || !locked || won || shopOpen || busy()) return;
+      const w = nearWild(); if(w){ pickWild(w); e.stopImmediatePropagation(); e.preventDefault(); }
+    }catch(err){ console.warn('LN-herbs key', err); }
+  }, true);
+
+  // ---------------- eating a herb does something
+  const _er = eatRef;
+  eatRef = function(ref){
+    let nm = null; try{ const i = refInfo(ref); nm = i && i.name; }catch(e){}
+    const r = _er.apply(this, arguments);
+    try{
+      const h = nm && HERBS[nm]; if(!h) return r;
+      if(h.eff === 'cure'){ if(window.__swords && window.__swords.curePoison) window.__swords.curePoison(); save.hunger = Math.min(100, (save.hunger || 0) + 10); }
+      else if(h.eff === 'heal'){ hp = Math.min(hpMax, hp + 25); }
+      else if(h.eff === 'light'){ const SH = window.__lnShops; if(SH){ SH.lampT = 120; SH.lampCol.setRGB(.5, .95, 1); } }
+      else if(h.eff === 'hp'){ buffs.push({k:'hp', v:25, t:90}); recalcGear(); hp = Math.min(hpMax, hp + 10); }
+      else { buffs.push({k:h.eff, v:h.eff === 'dmg' ? .25 : .3, t:60}); recalcGear(); if(h.eff === 'dmg'){ const c = 10 + Math.floor(Math.random()*30); save.coins += c; } }
+      setTimeout(()=>toast(h.say), 60); blip(880,.1,.1,'triangle'); persist();
+    }catch(e){ console.warn('LN-herbs eat', e); }
+    return r;
+  };
+
+  // ---------------- the loop
+  let spawnT = 6, last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won || realm !== 0) return;
+      for(const w of wild){ w.t += dt; w.g.rotation.z = Math.sin(w.t*1.7)*.06; }
+      if(P.y > -2){ spawnT -= dt; if(spawnT <= 0){ spawnT = 18 + Math.random()*16; if(wild.length < 10) spawnWild(); } }
+      for(const w of wild.slice()) if(Math.hypot(w.x - P.x, w.z - P.z) > 90){ wild.splice(wild.indexOf(w), 1); scene.remove(w.g); }
+      const w = locked && !busy() ? nearWild() : null;
+      if(w){ hint.textContent = 'F: pick the '+w.name; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ console.warn('LN-herbs', e); }
+  })(last);
+  setTimeout(()=>{ try{ for(let i=0;i<3;i++) spawnWild(); }catch(e){} }, 3000);
+
+  window.__herbs = {HERBS, spawnWild, pickWild, nearWild, get wild(){ return wild; }, T:{give:(n, c)=>addItem(n, c || 1, true), buffs:()=>buffs, hp:()=>hp, poison:()=>{ if(window.__swords){ addItem('Raw Meat', 1, true); eatRef('i:Raw Meat'); } }}};
+})();
+/* LN-herbs end */
 
 
 
