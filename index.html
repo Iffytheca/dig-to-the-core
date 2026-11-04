@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 172 (Oct 31)';
+  window.__BUILD = 'Build 173 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -21057,6 +21057,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.renderOrder = 999; par.add(m); return m;
   }
   function buildWeapon(k, col){
+    if(window.__swordModel){ const q = window.__swordModel(k, col); if(q) return q; } /* LN-swords */
     const g = new THREE.Group(), wood = 0x6b4a2a, c2 = new THREE.Color(col).multiplyScalar(.7).getHex(), gold = 0xd8b040;
     if(k === 'sword' || k === 'katana'){
       const L = k === 'katana' ? .78 : .62, W = k === 'katana' ? .06 : .09;
@@ -30788,7 +30789,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   // ---- the key help: a tidy two column list, with the equipped pickaxe on top
   const help = document.getElementById('help');
   if(help){
-    const K = [['WASD','move'],['Space','jump'],['Shift','run'],['V','sprint on/off'],['Hold Click','dig / shoot'],['Right-click','place'],['1-9','carry slot'],['C + 1-9','click a top button (MAP, HOMEWORK, LAYERS, LOG, KEYS, MINE ANY, PLANETS, LORE, NEWS)'],['Wheel','carry slot'],['G','guns'],['T','reload'],['F','talk / use'],['I','items / craft'],['B','blueprint'],['E','eat'],['R','surface'],['Q','main menu'],['O','planets'],['Y','lore'],['J','biome tracker'],['P','pause']];
+    const K = [['WASD','move'],['Space','jump'],['Shift','run'],['V','sprint on/off'],['Hold Click','dig / shoot'],['Right-click','place'],['1-9','carry slot'],['T','throw the melee weapon in your hand (with a gun: reload)'],['F','pick up a weapon lying on the ground (also talk)'],['C + 1-9','click a top button (MAP, HOMEWORK, LAYERS, LOG, KEYS, MINE ANY, PLANETS, LORE, NEWS)'],['Wheel','carry slot'],['G','guns'],['T','reload'],['F','talk / use'],['I','items / craft'],['B','blueprint'],['E','eat'],['R','surface'],['Q','main menu'],['O','planets'],['Y','lore'],['J','biome tracker'],['P','pause']];
     help.innerHTML = '<div class="uiHdr">EQUIPPED</div><div class="uiHdr" style="margin-top:4px">KEYS</div><div class="uiKeys">' + K.map(k=>'<div><kbd>' + k[0] + '</kbd>' + k[1] + '</div>').join('') + '</div>';
     const pi = document.getElementById('pickinfo');
     if(pi) help.insertBefore(pi, help.children[1]);
@@ -33200,6 +33201,227 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__perfcull = {hid};
 })();
 /* LN-perfcull end */
+/* LN-swords start: melee weapons lie around the world (F picks them up), T throws the one in your hand, every weapon rolls a good or bad variant, Fire weapons cook food animals and burn the rest, raw meat poisons you (Irfan 2026-11-04 "add sword and other melee weapon ... T to throw ... F to pick it up ... variants ... firesword cooks the animal ... EATING RAW MEAT DOES FILL HUNGER BUT POISON YOU") */
+(function(){
+  const M = window.__melee; if(!M) return;
+  const KINDS = M.KINDS;
+  // ---------------- silly extra kinds
+  Object.assign(KINDS, {spoon:{nm:'Giant Spoon', m:.9}, fish:{nm:'Slap Fish', m:.8}, baguette:{nm:'Stale Baguette', m:1}, noodle:{nm:'Wet Noodle', m:.45}});
+  function part(par, w, h, d, col, x, y, z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({color:col})); m.material.depthTest = false; m.renderOrder = 999; m.position.set(x, y, z); par.add(m); return m; }
+  window.__swordModel = function(k, col){
+    const g = new THREE.Group();
+    if(k === 'spoon'){ part(g,.06,.9,.05,0xc8c8d0,0,0,0); part(g,.26,.3,.08,0xd8d8e0,0,.55,0); part(g,.18,.2,.05,0x9a9aa4,0,.55,.04); return g; }
+    if(k === 'fish'){ part(g,.12,.5,.08,0x5aa0d0,0,.1,0); part(g,.2,.2,.05,0x4a88b8,0,.42,0); part(g,.08,.08,.09,0xffffff,.03,.0,0); part(g,.03,.03,.1,0x000000,.03,.0,0); return g; }
+    if(k === 'baguette'){ const b = part(g,.12,.95,.12,0xd9a860,0,.1,0); [-.25,0,.25].forEach(y=>part(g,.14,.05,.14,0xb8843c,0,.1+y,0)); return g; }
+    if(k === 'noodle'){ const n = part(g,.05,.9,.05,0xf4dc8a,0,.1,0); n.rotation.z = .25; part(g,.05,.3,.05,0xf4dc8a,.12,.62,0).rotation.z = -.6; return g; }
+    return null;
+  };
+  // ---------------- variants: good, bad or plain
+  const VARS = [
+    {id:'plain',   nm:'',        good:0,  m:1,    w:26, d:'Just a weapon. It does weapon things.'},
+    {id:'sharp',   nm:'Sharp',   good:1,  m:1.3,  w:12, d:'Freshly sharpened. Mind your fingers.'},
+    {id:'blessed', nm:'Blessed', good:1,  m:1.4,  w:5,  d:'Heals you a little while you fight.'},
+    {id:'lucky',   nm:'Lucky',   good:1,  m:1.1,  w:7,  d:'Coins fall out of whatever you hit.'},
+    {id:'giant',   nm:'Giant',   good:1,  m:1.7,  w:5,  d:'Twice the whack. Too heavy to throw far.'},
+    {id:'fire',    nm:'Fire',    good:1,  m:1.25, w:8,  d:'Cooks animals that are food. Burns the ones that are not.'},
+    {id:'rusty',   nm:'Rusty',   good:-1, m:.65,  w:12, d:'It was left out in the rain. For years.'},
+    {id:'cursed',  nm:'Cursed',  good:-1, m:.8,   w:7,  d:'Now and then it hits YOU too.'},
+    {id:'wobbly',  nm:'Wobbly',  good:-1, m:.85,  w:8,  d:'Sometimes jumps out of your hand mid-swing.'},
+    {id:'soggy',   nm:'Soggy',   good:-1, m:.55,  w:6,  d:'Squelch. Why is it wet.'},
+    {id:'haunted', nm:'Haunted', good:-1, m:.9,   w:5,  d:'It whispers. Mostly complaints.'},
+    {id:'sticky',  nm:'Sticky',  good:-1, m:.95,  w:5,  d:'Covered in jam. It will not leave your hand, so no throwing.'}
+  ];
+  const VBY = {}; VARS.forEach(v=>{ VBY[v.id] = v; });
+  const ADJ = ['Slightly Disappointed', "Grandma's", 'Budget', 'Legendary-ish', 'Suspiciously Clean', 'Lightly Used', 'Premium Plastic', 'Emotionally Unstable', 'Very Average', 'Award Winning', 'Discount', 'Birthday', 'Mysterious', 'Secondhand', 'Fancy', 'Loud'];
+  const COLS = [0xc0c8d0, 0xd8b040, 0x5aa0d0, 0xc84848, 0x60c060, 0xb070ff, 0xff8a30, 0x40e0e0, 0xf0f0f0, 0x8a6a40];
+  const FINDABLE = ['sword','sword','sword','katana','dagger','axe','hammer','mace','club','spear','trident','scythe','spoon','fish','baguette','noodle'];
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  function rollVariant(){ const tot = VARS.reduce((s,v)=>s + v.w, 0); let r = Math.random()*tot; for(const v of VARS){ r -= v.w; if(r <= 0) return v; } return VARS[0]; }
+  function makeWeapon(k, v){
+    k = k || pick(FINDABLE); v = v || rollVariant();
+    const pw = 1 + Math.random()*4 + Math.min(6, (save.depthMax || 0)/40);
+    const dps = Math.max(6, Math.round((pw*6 + 20)*KINDS[k].m*v.m));
+    save.meleeId = (save.meleeId || 0) + 1;
+    const name = (v.nm ? v.nm + ' ' : '') + pick(ADJ) + ' ' + KINDS[k].nm;
+    return {id:save.meleeId, name, k, dps, col:pick(COLS), v:v.id};
+  }
+  const list = ()=>{ save.melee = save.melee || []; return save.melee; };
+  const vOf = w=>VBY[(w && w.v) || 'plain'] || VBY.plain;
+
+  // ---------------- weapons lying on the ground
+  const GW = ()=>{ save.gw = save.gw || []; return save.gw; };
+  const ground = [];                                  // {e, m, t} live models for save.gw entries
+  function nameTex(t){ const cv = document.createElement('canvas'); cv.width = 320; cv.height = 48; const x = cv.getContext('2d'); x.textAlign = 'center'; x.textBaseline = 'middle'; let fs = 24; x.font = 'bold '+fs+'px system-ui,sans-serif'; while(fs > 11 && x.measureText(t).width > 310){ fs--; x.font = 'bold '+fs+'px system-ui,sans-serif'; } x.lineWidth = 5; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText(t, 160, 24); x.fillStyle = '#ffd54a'; x.fillText(t, 160, 24); return new THREE.CanvasTexture(cv); }
+  function groundModel(w){
+    const grp = new THREE.Group(), inner = M.buildWeapon(w.k, w.col); inner.scale.setScalar(1.5); inner.rotation.z = .5;
+    inner.traverse(o=>{ if(o.isMesh){ o.material.depthTest = true; o.renderOrder = 0; } });
+    grp.add(inner);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(.6, .045, 6, 24), new THREE.MeshBasicMaterial({color:vOf(w).good > 0 ? 0x7cff7c : vOf(w).good < 0 ? 0xff7c7c : 0xffd54a})); ring.rotation.x = Math.PI/2; ring.position.y = -.5; grp.add(ring);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:nameTex(w.name), transparent:true, depthWrite:false, fog:false})); sp.scale.set(2.8, .42, 1); sp.position.y = 1; grp.add(sp);
+    grp.userData.inner = inner; return grp;
+  }
+  function placeGround(w, x, y, z, quiet){
+    const e = {x, y, z, w}; GW().push(e); if(GW().length > 20){ const o = GW().shift(); const g = ground.find(q=>q.e === o); if(g){ scene.remove(g.m); ground.splice(ground.indexOf(g), 1); } }
+    const m = groundModel(w); m.position.set(x, y + .9, z); scene.add(m); ground.push({e, m, t:Math.random()*6});
+    if(!quiet) toast('A '+w.name+' is lying over there. Walk up and press F to pick it up.');
+    persist(); return e;
+  }
+  function removeGround(e){ const i = GW().indexOf(e); if(i >= 0) GW().splice(i, 1); const g = ground.find(q=>q.e === e); if(g){ scene.remove(g.m); ground.splice(ground.indexOf(g), 1); } }
+  function nearGround(){ let best = null, bd = 2.8; for(const g of ground){ const d = Math.hypot(g.e.x - P.x, g.e.z - P.z, (g.e.y - P.y)*.5); if(d < bd){ bd = d; best = g; } } return best; }
+  const gy = (x, z)=>{ try{ return groundTop(Math.floor(x), Math.max(P.y, 0) + 6, Math.floor(z)); }catch(e){ return P.y; } };
+  function pickUp(g){
+    const w = g.e.w; removeGround(g.e);
+    list().push(w); if(list().length > 30) list().shift();
+    const v = vOf(w);
+    M.hold(w.id);
+    toast('You picked up the '+w.name+'!  '+v.d+(v.good > 0 ? '  (good one)' : v.good < 0 ? '  (hmm, a bad one)' : '')+'  T throws it.');
+    burst(g.e.x, g.e.y + .8, g.e.z, 0, 10); blip(660, .1, .12, 'triangle'); setTimeout(()=>blip(990, .12, .12, 'triangle'), 90);
+    save.swordsFound = (save.swordsFound || 0) + 1; persist();
+  }
+  // the hint under the crosshair
+  const hint = document.createElement('div'); hint.id = 'swHint'; hint.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#ffd54a;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  // F picks up (before the talk key sees it)
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code === 'KeyF' && locked && !won && !shopOpen){ const g = nearGround(); if(g){ pickUp(g); e.stopImmediatePropagation(); e.preventDefault(); } }
+      if(e.code === 'KeyT' && locked && !won && !curGun && M.held){ throwHeld(); e.stopImmediatePropagation(); e.preventDefault(); }
+    }catch(err){ console.warn('LN-swords key', err); }
+  }, true);
+  // restore saved ground weapons, spawn new ones now and then
+  setTimeout(()=>{ try{ GW().slice().forEach(e=>{ if(e && e.w){ const m = groundModel(e.w); m.position.set(e.x, e.y + .9, e.z); scene.add(m); ground.push({e, m, t:Math.random()*6}); } }); }catch(e){} }, 400);
+  let spawnT = 25 + Math.random()*20;
+  function spawnNear(){ const a = Math.random()*6.283, r = 8 + Math.random()*10, x = P.x + Math.cos(a)*r, z = P.z + Math.sin(a)*r; const w = makeWeapon(); placeGround(w, x, gy(x, z), z); }
+
+  // ---------------- T throws the weapon in your hand
+  const thrown = [];
+  const THROW_QUIPS = ['Yeet of the ancients.', 'It spins. It flies. It is gone.', 'Bye bye, pointy friend.', 'That is one way to use a sword.', 'Spinning is a good trick.', 'Fetch!'];
+  function throwHeld(){
+    const w = M.held; if(!w) return;
+    const v = vOf(w);
+    if(v.id === 'sticky'){ toast('The '+w.name+' will not leave your hand. The jam is too strong.'); blip(90,.1,.1,'sawtooth'); return; }
+    const i = list().indexOf(w); if(i >= 0) list().splice(i, 1);
+    M.hold(null);
+    const m = M.buildWeapon(w.k, w.col); m.traverse(o=>{ if(o.isMesh){ o.material.depthTest = true; o.renderOrder = 0; } }); m.scale.setScalar(1.3);
+    camera.getWorldDirection(_dir);
+    const sp = v.id === 'giant' ? 9 : v.id === 'soggy' ? 11 : 17;
+    const t = {w, m, p:new THREE.Vector3(P.x + _dir.x*.8, P.y + EYE - .2 + _dir.y*.8, P.z + _dir.z*.8), v:new THREE.Vector3(_dir.x*sp, _dir.y*sp + 2.5, _dir.z*sp), t:0, hit:false};
+    m.position.copy(t.p); scene.add(m); thrown.push(t);
+    toast(pick(THROW_QUIPS)+'  Walk over to it and press F to get the '+w.name+' back.'); blip(400,.1,.1,'triangle');
+    save.swordsThrown = (save.swordsThrown || 0) + 1; persist();
+  }
+  function landThrown(t){ scene.remove(t.m); thrown.splice(thrown.indexOf(t), 1); const y = gy(t.p.x, t.p.z); placeGround(t.w, t.p.x, Math.max(y, t.p.y), t.p.z, true); }
+  function thrownHit(t){
+    const dmg = t.w.dps*1.6;
+    for(const q of fightTargets()){
+      if(q.c.distanceTo(t.p) > (q.r || 1) + .5) continue;
+      try{
+        if(q.custom || q.k === 'zomb' || q.k === 'baba') gunTargetHit(q, dmg);
+        else if(q.k === 'a') damageAnimal(q.a, dmg);
+        else if(q.k === 'e') damageEnemy(q.e, dmg);
+        else if(q.k === 'bob'){ window.__bobs && window.__bobs.hit(q.bob, dmg); }
+        else continue;
+      }catch(e){ continue; }
+      burst(t.p.x, t.p.y, t.p.z, 9, 8); blip(220,.08,.1,'square');
+      toast('BONK. The thrown '+t.w.name+' hit for '+Math.round(dmg)+'.');
+      return true;
+    }
+    return false;
+  }
+
+  // ---------------- cooking and burning with Fire weapons
+  const COOK = {sausagepig:'Sausage', baconpig:'Bacon', burgercow:'Burger', uddercow:'Burger', tutucow:'Burger', sunchicken:'Fried Chicken', duckling:'Roast Duck', frog:'Grilled Frog Legs', banana:'Banana Bread', meatball:'Meatball Sub', ghost:'Spaghetti', cheesegolem:'Grilled Cheese', burgerbeast:'Burger', baconbandit:'Bacon', baldsheep:'Lamb Chop'};
+  const COOK_RX = [[/\bpigs?\b|\bhog\b|\bboar\b/, 'Sausage'], [/\bcows?\b|\bbull\b/, 'Burger'], [/\bchickens?\b|\bhen\b/, 'Fried Chicken'], [/\bducks?\b|\bducklings?\b/, 'Roast Duck'], [/\bsheep\b|\blamb\b/, 'Lamb Chop'], [/\bfish\b|\bsalmon\b|\btuna\b/, 'Fish and Chips'], [/\bfrogs?\b/, 'Grilled Frog Legs'], [/burger|meatball|sausage|bacon|steak|nugget/, 'Cooked Meat']];
+  const FOODP = {'Cooked Meat':22, 'Fried Chicken':26, 'Roast Duck':24, 'Grilled Frog Legs':14, 'Lamb Chop':24, 'Fish and Chips':26, 'Banana Bread':16, 'Meatball Sub':24, 'Spaghetti':20, 'Grilled Cheese':18};
+  try{ save.foodPower = save.foodPower || {}; for(const k in FOODP) if(!save.foodPower[k]) save.foodPower[k] = FOODP[k]; }catch(e){}
+  try{ Object.assign(ITEM_COL, {'Cooked Meat':[150,80,50], 'Fried Chicken':[220,160,70], 'Roast Duck':[170,100,50], 'Grilled Frog Legs':[120,160,70], 'Lamb Chop':[190,110,90], 'Fish and Chips':[230,190,110], 'Banana Bread':[210,170,90], 'Meatball Sub':[200,120,70], 'Spaghetti':[240,200,90], 'Grilled Cheese':[240,190,60]}); }catch(e){}
+  function cookedFor(a){ if(COOK[a.type]) return COOK[a.type]; const n = (a.d && a.d.name || '').toLowerCase(); if(/rubber|robot|metal|stone|ghost/.test(n) && !/spaghetti/.test(n)) return null; for(const r of COOK_RX) if(r[0].test(n)) return r[1]; return null; }
+  const BURN_QUIPS = ['That was NOT food. The {a} is now a {a} shaped pile of Charcoal.', 'The {a} went up like a birthday candle. You get Charcoal.', 'Not everything is a snack. The {a} is now Charcoal. Sorry, {a}.', 'The Fire weapon says: well done. The {a} says nothing, it is Charcoal now.'];
+  const COOK_QUIPS = ['The {w} cooked the {a} on the spot. {f}, chef style.', 'Sizzle. The {a} became {f}. Dinner is served.', 'No kitchen needed. {f}, fresh from the {a}.', 'The {a} is now {f}. Five star review.'];
+  const meleeKill = ()=>M.held && !curGun && mouseDown;
+  const _ka = killAnimal;
+  killAnimal = function(a){
+    let fire = null; try{ if(a && !a.__swfire && meleeKill() && vOf(M.held).id === 'fire'){ fire = cookedFor(a); a.__swfire = 1; } }catch(e){}
+    const r = _ka.apply(this, arguments);
+    try{
+      if(a && a.__swfire === 1){
+        a.__swfire = 2; const an = a.d ? a.d.name : 'animal';
+        for(let i=0;i<3;i++) burst(a.pos.x + (Math.random()-.5), a.pos.y + 1 + Math.random(), a.pos.z + (Math.random()-.5), 9, 6);
+        if(fire){ addItem(fire, 1 + Math.floor(Math.random()*2)); setTimeout(()=>toast(pick(COOK_QUIPS).split('{w}').join(M.held ? M.held.name : 'Fire weapon').split('{a}').join(an).split('{f}').join(fire)), 60); }
+        else { addItem('Charcoal', 2); setTimeout(()=>toast(pick(BURN_QUIPS).split('{a}').join(an)), 60); }
+        save.cooked = (save.cooked || 0) + 1; persist();
+      }
+      // some animals drop a weapon they were apparently carrying
+      else if(a && !a.__swdrop && Math.random() < .08 && realm === 0){ a.__swdrop = 1; const w = makeWeapon(); placeGround(w, a.pos.x, a.pos.y, a.pos.z, true); toast('The '+(a.d ? a.d.name : 'animal')+' was carrying a '+w.name+'?  Press F near it to take it.'); }
+    }catch(e){ console.warn('LN-swords kill', e); }
+    return r;
+  };
+
+  // ---------------- what the variants do while you fight
+  let fxT = 0, whisperT = 20, wobbleT = 0;
+  const WHISPERS = ['you missed a spot', 'my last owner was taller', 'is it lunch yet', 'why are we hitting that', 'i used to be a spoon', 'turn around. no reason', 'this is fine', 'swing with your knees', 'boo. did it work', 'i want a nap'];
+  const _da = damageAnimal;
+  damageAnimal = function(a, dmg){
+    try{ if(meleeKill() && vOf(M.held).id === 'fire' && a && Math.random() < .25) burst(a.pos.x, a.pos.y + (a.d.yo || .8), a.pos.z, 9, 2); }catch(e){}
+    return _da.apply(this, arguments);
+  };
+  function variantTick(dt){
+    const w = M.held; if(!w || curGun || !locked) return;
+    const v = vOf(w);
+    if(mouseDown){
+      fxT += dt;
+      if(fxT > .6){
+        fxT = 0;
+        if(v.id === 'blessed' && hp < hpMax){ hp = Math.min(hpMax, hp + 1); }
+        if(v.id === 'lucky' && Math.random() < .5){ const c = 1 + Math.floor(Math.random()*4); save.coins += c; if(Math.random() < .3) toast('Coins fell out of it. +$'+c+'  Lucky!'); }
+        if(v.id === 'cursed' && Math.random() < .25){ hurtPlayer(2); toast('The '+w.name+' hit you too. Rude. -2 HP'); }
+        if(v.id === 'wobbly' && Math.random() < .12){ const i = list().indexOf(w); if(i >= 0) list().splice(i, 1); M.hold(null); camera.getWorldDirection(_dir); const x = P.x + _dir.x*2.5, z = P.z + _dir.z*2.5; placeGround(w, x, gy(x, z), z, true); toast('The '+w.name+' wobbled right out of your hand!  Press F to grab it again.'); blip(150,.1,.1,'sawtooth'); }
+      }
+    }
+    if(v.id === 'haunted'){ whisperT -= dt; if(whisperT <= 0){ whisperT = 15 + Math.random()*25; toast('The '+w.name+' whispers: "'+pick(WHISPERS)+'"'); } }
+  }
+
+  // ---------------- raw meat poisons you
+  let poisonT = 0, poisonTick = 0;
+  const _er = eatRef;
+  eatRef = function(ref){
+    let nm = null; try{ const i = refInfo(ref); nm = i && i.name; }catch(e){}
+    const r = _er.apply(this, arguments);
+    try{ if(nm === 'Raw Meat'){ poisonT = 14; poisonTick = 0; setTimeout(()=>toast('Raw meat. Your tummy disagrees. POISONED for 14 seconds. Cook it next time, a Fire weapon works.'), 80); blip(120,.3,.1,'sawtooth'); } }catch(e){}
+    return r;
+  };
+  function poisonTickFn(dt){
+    if(poisonT <= 0) return; poisonT -= dt; poisonTick += dt;
+    if(poisonTick > 1.5){ poisonTick = 0; if(hp > 1){ hp = Math.max(1, hp - 2); hurtT = .15; } burst(P.x, P.y + 1.2, P.z, 3, 3); }
+    if(poisonT <= 0) toast('The poison wore off. You will live. Probably.');
+  }
+
+  // ---------------- the loop
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won) return;
+      for(const g of ground){ g.t += dt; g.m.userData.inner.rotation.y += dt*1.4; g.m.position.y = g.e.y + .9 + Math.sin(g.t*2)*.12; }
+      for(const t of thrown.slice()){
+        t.t += dt; t.v.y -= 14*dt; t.p.addScaledVector(t.v, dt); t.m.position.copy(t.p); t.m.rotation.x += dt*9; t.m.rotation.z += dt*5;
+        if(!t.hit && thrownHit(t)){ t.hit = true; t.v.multiplyScalar(.15); }
+        const g = gy(t.p.x, t.p.z);
+        if(t.p.y <= g + .3 || t.t > 5){ t.p.y = Math.max(t.p.y, g); landThrown(t); }
+      }
+      if(realm === 0 && P.y > -2){ spawnT -= dt; if(spawnT <= 0){ spawnT = 45 + Math.random()*40; if(ground.length < 6) spawnNear(); } }
+      const near = locked ? nearGround() : null;
+      if(near){ hint.textContent = 'F: pick up the '+near.e.w.name; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+      variantTick(dt); poisonTickFn(dt);
+    }catch(e){ console.warn('LN-swords', e); }
+  })(last);
+
+  // the first sword is free, and it is not a good one
+  setTimeout(()=>{ try{ if(!save.swordGift){ save.swordGift = 1; const w = makeWeapon('sword', VBY.rusty); w.name = 'Rusty Slightly Disappointed Sword'; list().push(w); persist(); toast('You found a Rusty Slightly Disappointed Sword in your pocket. G switches to it, T throws it, F picks weapons up.'); } }catch(e){} }, 6000);
+
+  window.__swords = {VARS, makeWeapon, placeGround, pickUp, throwHeld, nearGround, cookedFor, get ground(){ return ground; }, get thrown(){ return thrown; }, get poisonT(){ return poisonT; }, spawnNear, T:{kill:a=>{ mouseDown = true; try{ killAnimal(a); } finally { mouseDown = false; } }, eat:name=>eatRef('i:'+name), hp:()=>hp}};
+})();
+/* LN-swords end */
 
 
 
