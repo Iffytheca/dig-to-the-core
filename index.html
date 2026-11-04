@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 186 (Oct 31)';
+  window.__BUILD = 'Build 187 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34440,10 +34440,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(!locked || !mouseDown || curGun){ hitT = 0; return; }
     hitT -= dt; if(hitT > 0) return;
     if(Math.hypot(P.x - d.position.x, P.z - d.position.z) > 5.5 || Math.abs(P.y - CH_TOP) > 4) return;
-    camera.getWorldDirection(_v); ray.set(camera.position, _v); ray.far = 6.5;
-    const hits = ray.intersectObjects(d.children, true); if(!hits.length) return;
-    hitT = .35; save.doorHp--; persist(); const h = hits[0].point; burst(h.x, h.y, h.z, 0, 6); blip(140,.08,.12,'square'); shake = Math.max(shake, .04);
-    if(save.doorHp === 10) toast('You hit the door. A voice inside: "Please do not."');
+    camera.getWorldDirection(_v); ray.set(camera.position, _v); ray.far = 6.5; ray.camera = camera;
+    const meshes = []; d.traverse(o=>{ if(o.isMesh) meshes.push(o); });
+    let hits = []; try{ hits = ray.intersectObjects(meshes, false); }catch(e){ hits = []; }
+    let h = hits.length ? hits[0].point : null;
+    if(!h){ const dx = d.position.x - P.x, dz = d.position.z - P.z, dd = Math.hypot(dx, dz) || 1; if(dd > 3.6 || (dx/dd*_v.x + dz/dd*_v.z) < .55) return; h = {x:d.position.x, y:CH_TOP + 2, z:d.position.z}; }   // close and facing it counts too
+    hitT = .35; save.doorHp--; persist(); burst(h.x, h.y, h.z, 0, 6); blip(140,.08,.12,'square'); shake = Math.max(shake, .04);
+    if(save.doorHp === 11) toast('You hit the door (' + save.doorHp + ' hits to go). A voice inside: "Please do not."');
+    if(save.doorHp === 8) toast('Another hit. ' + save.doorHp + ' to go.');
     if(save.doorHp === 6) toast('The door cracks. "I am warning you. I have a mop."');
     if(save.doorHp === 2) toast('"If that door comes down I am coming UP."');
     if(save.doorHp <= 0) breakDoor();
