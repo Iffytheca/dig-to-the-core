@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 177 (Oct 31)';
+  window.__BUILD = 'Build 178 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33707,6 +33707,28 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__lavasword = {LAVA, PAGES, get mG(){ return mG; }};
 })();
 /* LN-lava end */
+
+/* LN-herbdisc start: picking plants and herbs, and harvesting crops, can also drop a discovery (Irfan 2026-11-04 "when you collect plant herb can also drop discovery") */
+(function(){
+  const PLANT_RX = /fern|flower|herb|mushroom|sapling|leaf|leaves|grass clump|berry|berries|root|moss|cactus|seaweed|kelp|vine|clover|mint|lavender|sage|basil|petal|bloom|blossom|lily|rose|tulip|daisy|dandelion|reed|lotus|shroom|truffle|pumpkin|watermelon|corn|tomato|potato|cabbage|carrot|chili|wheat|giant pea|cotton candy|sunflower|banana|seed/i;
+  let lastT = 0, n = 0;
+  const _ai = addItem;
+  addItem = function(name, cnt, silent){
+    const r = _ai.apply(this, arguments);
+    try{
+      if(name && PLANT_RX.test(name) && !shopOpen && realm === 0 && startEl.style.display !== 'flex'){
+        const now = performance.now()*.001; if(now - lastT < .4) return r; lastT = now;
+        n++;
+        if(Math.random() < .22){
+          rollMaterial(name, Math.floor(P.x*7) + n, Math.floor(P.y*7) + n*3, Math.floor(P.z*7), 1);
+          if(Math.random() < .5) setTimeout(()=>toast('Something was hiding in the '+name+'. A discovery!'), 50);
+        }
+      }
+    }catch(e){ console.warn('LN-herbdisc', e); }
+    return r;
+  };
+})();
+/* LN-herbdisc end */
 
 
 
