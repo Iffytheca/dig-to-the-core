@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 187 (Oct 31)';
+  window.__BUILD = 'Build 188 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34421,8 +34421,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
 
   // ---------------- 3. breaking the door (hit it with the pickaxe or a melee weapon)
-  const ray = new THREE.Raycaster(); let hitT = 0, brokenShown = false, waitT = 0, brokeLbl = null;
-  if(save.doorHp == null) save.doorHp = 12;
+  const ray = new THREE.Raycaster(); let brokenShown = false, waitT = 0, brokeLbl = null;
   function showBroken(){
     const d = DR.door; if(!d) return; brokenShown = true;
     d.children.forEach(c=>{ if(c.isGroup){ c.rotation.z = -.55; c.rotation.y = -2.2; c.position.y = -.1; } if(c.isSprite && c.scale.x === 5) c.visible = false; });
@@ -34434,23 +34433,37 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     toast('YOU BROKE THE DOOR. The sign falls off. From inside: silence. Then footsteps. Angry footsteps.');
     setTimeout(callJan, 2500);
   }
-  function doorTick(dt){
-    const d = DR.door; if(!d || !d.visible) return;
-    if(save.doorBroken){ if(!brokenShown) showBroken(); return; }
-    if(!locked || !mouseDown || curGun){ hitT = 0; return; }
-    hitT -= dt; if(hitT > 0) return;
-    if(Math.hypot(P.x - d.position.x, P.z - d.position.z) > 5.5 || Math.abs(P.y - CH_TOP) > 4) return;
-    camera.getWorldDirection(_v); ray.set(camera.position, _v); ray.far = 6.5; ray.camera = camera;
+  const bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:50%;bottom:258px;transform:translateX(-50%);width:260px;background:rgba(0,0,0,.65);border:2px solid #ffd890;border-radius:9px;padding:5px 8px;display:none;pointer-events:none;z-index:40;color:#ffd890;font:800 13px system-ui,sans-serif;text-align:center';
+  bar.innerHTML = '<div id="doorMineTxt">MINING THE DOOR</div><div style="height:8px;background:rgba(255,255,255,.2);border-radius:4px;margin-top:4px;overflow:hidden"><div id="doorMineBar" style="height:100%;width:0%;background:#ffd890"></div></div>'; document.body.appendChild(bar);
+  let prog = 0, idle = 0, crackT = 0, said = 0;
+  function aimingDoor(d){
+    camera.getWorldDirection(_v);
+    const dx = d.position.x - P.x, dz = d.position.z - P.z, dd = Math.hypot(dx, dz) || 1;
+    if(dd > 5.5 || Math.abs(P.y - CH_TOP) > 4) return false;
+    ray.set(camera.position, _v); ray.far = 6.5; ray.camera = camera;
     const meshes = []; d.traverse(o=>{ if(o.isMesh) meshes.push(o); });
-    let hits = []; try{ hits = ray.intersectObjects(meshes, false); }catch(e){ hits = []; }
-    let h = hits.length ? hits[0].point : null;
-    if(!h){ const dx = d.position.x - P.x, dz = d.position.z - P.z, dd = Math.hypot(dx, dz) || 1; if(dd > 3.6 || (dx/dd*_v.x + dz/dd*_v.z) < .55) return; h = {x:d.position.x, y:CH_TOP + 2, z:d.position.z}; }   // close and facing it counts too
-    hitT = .35; save.doorHp--; persist(); burst(h.x, h.y, h.z, 0, 6); blip(140,.08,.12,'square'); shake = Math.max(shake, .04);
-    if(save.doorHp === 11) toast('You hit the door (' + save.doorHp + ' hits to go). A voice inside: "Please do not."');
-    if(save.doorHp === 8) toast('Another hit. ' + save.doorHp + ' to go.');
-    if(save.doorHp === 6) toast('The door cracks. "I am warning you. I have a mop."');
-    if(save.doorHp === 2) toast('"If that door comes down I am coming UP."');
-    if(save.doorHp <= 0) breakDoor();
+    try{ if(ray.intersectObjects(meshes, false).length) return true; }catch(e){}
+    return dd < 3.6 && (dx/dd*_v.x + dz/dd*_v.z) > .55;
+  }
+  function doorTick(dt){
+    const d = DR.door; if(!d || !d.visible){ bar.style.display = 'none'; return; }
+    if(save.doorBroken){ if(!brokenShown) showBroken(); bar.style.display = 'none'; return; }
+    const M = window.__melee, pick = locked && mouseDown && !curGun && !(M && M.held);          // the pickaxe mines; swords and guns do nothing to it
+    if(pick && aimingDoor(d)){
+      idle = 0; const pw = (PICKS[save.equipped] || {}).power || 1, need = Math.max(2.5, 7 - Math.min(10, pw)*.4);
+      prog = Math.min(1, prog + dt/need);
+      crackT -= dt; if(crackT <= 0){ crackT = .3; burst(d.position.x + (Math.random()-.5)*2, CH_TOP + 1 + Math.random()*3, d.position.z + .3, 0, 5); blip(140,.06,.1,'square'); shake = Math.max(shake, .03); }
+      d.position.x += (Math.random()-.5)*.03;
+      if(!said && prog > .05){ said = 1; toast('You start mining the door. A voice inside: "Please do not."'); }
+      if(said === 1 && prog > .45){ said = 2; toast('The door cracks. "I am warning you. I have a mop."'); }
+      if(said === 2 && prog > .8){ said = 3; toast('"If that door comes down I am coming UP."'); }
+      bar.style.display = 'block'; document.getElementById('doorMineBar').style.width = Math.round(prog*100) + '%'; document.getElementById('doorMineTxt').textContent = 'MINING THE DOOR  ' + Math.round(prog*100) + '%';
+      if(prog >= 1){ bar.style.display = 'none'; breakDoor(); }
+    } else {
+      idle += dt; if(idle > 2 && prog > 0){ prog = Math.max(0, prog - dt*.25); if(prog === 0) said = 0; }
+      if(bar.style.display !== 'none' && idle > .5) bar.style.display = 'none';
+      if(locked && mouseDown && M && M.held && !curGun && aimingDoor(d) && !doorTick.sw){ doorTick.sw = 1; setTimeout(()=>{ doorTick.sw = 0; }, 8000); toast('Swords just bounce off the door. MINE it: hold left click with your pickaxe (G).'); }
+    }
   }
 
   // ---------------- 4. beating him: the truth, the fake Heart, the True Heart
@@ -34624,9 +34637,52 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   ];
   try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
     if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); setTimeout(()=>toast(added + ' new lore pages in your book (Y): The Truth and The Eras.'), 12000); } } }catch(e){ console.warn('LN-truth lore', e); }
-  window.__truth = {ERAS, callJan, breakDoor, reveal, mineTH, openP, closeP, goEra, leaveEra, nearTH, nearPT, get TH(){ return TH; }, get PT(){ return PT; }, T:{hits:()=>save.doorHp}};
+  window.__truth = {ERAS, callJan, breakDoor, reveal, mineTH, openP, closeP, goEra, leaveEra, nearTH, nearPT, get TH(){ return TH; }, get PT(){ return PT; }, T:{prog:()=>prog}};
 })();
 /* LN-truth end */
+/* LN-farm2 start: your farmland works like regular farmland: left-click harvests a ripe crop or uproots a young one (seed back), water within 4 blocks grows crops twice as fast, a hard landing turns farmland back to dirt, crops are never lost (Irfan 2026-11-04 "my farmland should work like regular farmland") */
+(function(){
+  const FM = window.__farm; if(!FM) return;
+  const FARM = ()=>blockIdOf('Farmland');
+  const DIRT = ()=>blockIdOf('Dirt') || blockIdOf('Tough Dirt') || 1;
+  const _d = new THREE.Vector3();
+  const S = window.__lnSonnet, pond = (x, z)=>{ try{ return !!(S && S.POND && S.POND.has(S.PK(x, z))); }catch(e){ return false; } };
+  const isWater = t=>{ const B = t ? BLOCKS[t - 1] : null; return !!(B && /water|ocean|lake|puddle|pool/i.test(B.name)); };
+  function wetAt(x, d, z){ for(let i=-4;i<=4;i++) for(let k=-4;k<=4;k++){ if(isWater(get(x + i, d, z + k)) || isWater(get(x + i, d - 1, z + k)) || isWater(get(x + i, d + 1, z + k)) || (d <= 1 && pond(x + i, z + k))) return true; } return false; }
+  // the crop you are looking at, within reach
+  function aimCrop(){
+    camera.getWorldDirection(_d); let best = null, bd = 4.4;
+    for(const c of FM.crops){ const dx = c.x + .5 - camera.position.x, dy = -c.d + .4 - camera.position.y, dz = c.z + .5 - camera.position.z, L = Math.hypot(dx, dy, dz); if(L > bd) continue;
+      const dot = (dx*_d.x + dy*_d.y + dz*_d.z)/L; if(dot > .86){ bd = L; best = c; } }
+    return best;
+  }
+  function uproot(c){
+    const i = FM.crops.indexOf(c); if(i >= 0) FM.crops.splice(i, 1);
+    try{ addItem(c.seed, 1); }catch(e){}
+    burst(c.x + .5, -c.d + .4, c.z + .5, 0, 8); blip(300,.08,.08,'triangle'); persist();
+    toast('You pulled up the young ' + (FM.CROPS[c.crop] || {}).item + '. You get the ' + c.seed + ' back.');
+  }
+  // water check every few seconds, double growth when wet
+  let wetT = 0, mineT = 0, lastVy = 0, last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won || realm !== 0) return;
+      wetT += dt;
+      if(wetT > 4){ wetT = 0; for(const c of FM.crops){ if(Math.abs(c.x - P.x) < 48 && Math.abs(c.z - P.z) < 48){ const w = wetAt(c.x, c.d, c.z); if(w && !c.wet && Math.hypot(c.x - P.x, c.z - P.z) < 30) toast('Water nearby: your ' + (FM.CROPS[c.crop] || {}).item + ' grows twice as fast.'); c.wet = w; } } }
+      for(const c of FM.crops) if(c.wet && c.g < FM.RIPE) c.g = Math.min(FM.RIPE, c.g + dt);      // the farm loop adds dt once, this adds it again
+      // left-click a crop: harvest or uproot (like breaking it)
+      if(locked && mouseDown && !curGun){ const c = aimCrop(); if(c){ mineT += dt; if(mineT > .35){ mineT = 0; if(c.g >= FM.RIPE) FM.harvest(c); else uproot(c); } } else mineT = 0; } else mineT = 0;
+      // a hard landing on farmland turns it back to dirt (and the crop is lost)
+      if(P.ground && lastVy < -9){ const x = Math.floor(P.x), z = Math.floor(P.z), d = Math.floor(-P.y + .5);
+        if(get(x, d, z) === FARM()){ setBlock(x, d, z, DIRT()); burst(x + .5, -d + .3, z + .5, 0, 10); blip(120,.1,.1,'triangle'); toast('You landed hard on your Farmland and it turned back to dirt. Hoe it again.'); } }
+      lastVy = P.vy;
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-farm2', e); } }
+  })(last);
+  window.__farm2 = {aimCrop, uproot, wetAt};
+})();
+/* LN-farm2 end */
 
 
 
