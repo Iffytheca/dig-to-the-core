@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 181 (Oct 31)';
+  window.__BUILD = 'Build 182 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29250,7 +29250,22 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       animals:{lunarhare:{name:'Lunar Hare', hp:40, r:.6, yo:.7, speed:2.6, hop:true, reward:800, col:0xe8e8f4, quips:['It hopped ten blocks in one go.', 'The Lunar Hare bounced off into the dust.']},
                cheesemite:{name:'Cheese Mite', hp:60, r:.5, yo:.4, speed:1.8, reward:700, col:0xffe066, quips:['It is nibbling the ground. The ground is cheese.', 'The Cheese Mite squeaked and scurried off.']},
                astrocow:{name:'Astro Cow', hp:150, r:.9, yo:.9, speed:1.2, reward:1500, col:0xffffff, quips:['Moo. In space.', 'The Astro Cow floated gently away. It did not jump over anything.']}},
-      core:'YOU REACHED THE MOON CORE! It is cheese all the way down. The Shopkeeper will never believe you.'}
+      core:'YOU REACHED THE MOON CORE! It is cheese all the way down. The Shopkeeper will never believe you.'},
+    {k:'lost', name:'The Lost World', x0:46250, x1:52500, z0:-62000, z1:-49000, fl:'canopy', grav:1, caves:1, sky:[[.05, .14, .1], [.55, .5, .2]], cloud:[.6, .7, .4], fog:0,
+      blurb:'The world under the world: fern valleys, giant mushrooms, amber, tar pits, caves full of glow beetles, dinosaurs, and sky islands far above.',
+      layers:[L('Fern Soil',2000,900,[70,110,50],[[110,170,70],[40,70,30]]), L('Root Rock',3200,1500,[110,80,50],[[160,120,80],[70,50,30]]), L('Mushroom Loam',4500,2400,[120,90,110],[[180,140,170],[80,50,70]],.1),
+        L('Fossil Stone',7000,3600,[170,160,140],[[220,210,190],[110,100,90]]), L('Amber Rock',10000,5500,[230,160,40],[[255,210,90],[160,100,20]],.25), L('Bone Rock',15000,8000,[225,220,200],[[255,255,245],[170,165,150]]),
+        L('Tar Stone',24000,13000,[30,28,30],[[60,55,60],[10,10,12]]), L('Dino Egg Layer',36000,21000,[200,190,140],[[240,230,180],[120,160,80]],.1), L('Glowing Fungus Rock',55000,34000,[80,200,160],[[160,255,220],[30,110,90]],.5),
+        L('Lost Core',85000,65000,[120,255,120],[[255,255,255],[40,200,80]],1)],
+      ores:[['Amber Gem',45000,[255,200,60],[0,1,2,3,4],.05,.4], ['Fossil Diamond',260000,[220,255,240],[5,6],.035,.5], ['Dino Tooth Crystal',1600000,[255,250,220],[7,8],.025,.7], ['Lost Emerald',9000000,[60,255,120],[9],.012,1]],
+      surf:{top:L('Fern Grass',1800,800,[60,130,60],[[120,200,90],[30,80,40]]), trunk:L('Mushroom Stalk',2600,1600,[230,220,200],[[255,250,240],[180,170,150]]), canopy:L('Mushroom Cap',2400,2000,[220,60,60],[[255,255,255],[160,30,30]],.1),
+        dome:L('Amber Dome',4000,2500,[240,170,50],[[255,220,110],[180,110,20]],.3), pit:L('Tar',2500,1200,[20,18,20],[[50,45,50],[5,5,6]]), spike:L('Bone Spike',5000,3000,[235,230,210],[[255,255,250],[180,175,160]])},
+      biomes:[{k:'hills', name:'Fern Valley'}, {k:'pillars', name:'Giant Mushroom Forest'}, {k:'domes', name:'Amber Domes'}, {k:'pits', name:'Tar Pits'}, {k:'floats', name:'Sky Islands'}, {k:'spikes', name:'Bone Spikes'}],
+      animals:{raptor:{name:'Raptor', hp:120, r:.7, yo:.8, speed:3.2, reward:1500, col:0x6a9a40, quips:['It screeches and sprints off.', 'The Raptor tilts its head at you. Clever girl.']},
+               trike:{name:'Triceratops', hp:400, r:1.3, yo:1.2, speed:1.1, reward:3000, col:0x8a7a5a, quips:['It snorts. The ground shakes a bit.', 'The Triceratops goes back to eating ferns.']},
+               ptero:{name:'Pterodactyl', hp:90, r:.8, yo:1.4, speed:2.8, hop:true, reward:1800, col:0xb08060, quips:['SKREEE! It flaps off to the sky islands.', 'The Pterodactyl stole your hat. You were not wearing a hat.']},
+               glowbeetle:{name:'Glow Beetle', hp:30, r:.4, yo:.3, speed:1.6, reward:600, col:0x60ffc0, quips:['It glows brighter when scared.', 'The Glow Beetle scurries into a cave.']}},
+      core:'YOU REACHED THE LOST CORE! The Janitor lost it twice. You found it once. That makes you the winner.'}
   ];
   PL.forEach(p=>{ p.z0 = p.z0 || Z0; p.z1 = p.z1 || Z1; p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((p.z0 + p.z1)/2); });
   const inAny = (x, z)=>z >= ZMIN && z < Z1 && x >= UPPER_EDGE && x < 65000;
@@ -29350,6 +29365,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(c.h < 0 && d < -c.h) return 0;
     if(d === Math.max(0, -c.h)) return topOf(p, c);
     const li = p.at[d];
+    if(p.caves && d > 3 && d < p.D - 4){ const n = hash3(x>>2, d>>2, z>>2, 4493)*.6 + hash3((x+2)>>2, (d+2)>>2, (z+2)>>2, 4494)*.4; if(n < .22) return 0; }   /* LN-lost: caves */
     if(hash3(x>>1, d>>1, z>>1, 4490) < .3){
       for(let i=p.ores.length-1;i>=0;i--){ const o = p.ores[i]; if(p.oIds[i] && o[3].indexOf(li) >= 0 && hash3(x, d, z, 4491 + i) < o[4]*3) return p.oIds[i]; }
     }
@@ -29430,7 +29446,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   /* ------------------------------------------------ a landing pad with a sign on every planet */
   function pad(p){
     const g = new THREE.Group(); g.position.set(p.cx + .5, 0, p.cz + .5); g.visible = false; sAdd(g);
-    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff, moon:0xffe066}[p.k];
+    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff, moon:0xffe066, lost:0x60ff90}[p.k];
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, .12, 32), new THREE.MeshLambertMaterial({color:0x303040})); ring.position.y = .06; g.add(ring);
     const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.4, .12, 8, 40), new THREE.MeshBasicMaterial({color:pc})); ring2.rotation.x = Math.PI/2; ring2.position.y = .14; g.add(ring2);
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const x = cv.getContext('2d');
@@ -29447,7 +29463,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   /* ------------------------------------------------ creatures */
   PL.forEach(p=>{ for(const k in p.animals){ const a = p.animals[k]; AD[k] = {name:a.name, hp:a.hp, r:a.r, yo:a.yo, speed:a.speed, hop:a.hop, reward:a.reward, planet:p.k, quips:a.quips}; } });
-  try{ Object.assign(ANIMAL_DROP, {lunarhare:'Moon Carrot', cheesemite:'Cheese Crumb', astrocow:'Moon Milk', gummybear:'Gummy Fluff', cupcake:'Sprinkles', blob:'Bouncy Goo', springfrog:'Spring Coil', robodog:'Robot Bone', toaster:'Golden Toast', yeti:'Yeti Fur', frostfox:'Frost Tail'}); }catch(e){}
+  try{ Object.assign(ANIMAL_DROP, {raptor:'Raptor Claw', trike:'Trike Horn', ptero:'Ptero Feather', glowbeetle:'Glow Shell', lunarhare:'Moon Carrot', cheesemite:'Cheese Crumb', astrocow:'Moon Milk', gummybear:'Gummy Fluff', cupcake:'Sprinkles', blob:'Bouncy Goo', springfrog:'Spring Coil', robodog:'Robot Bone', toaster:'Golden Toast', yeti:'Yeti Fur', frostfox:'Frost Tail'}); }catch(e){}
   const _bA = buildAnimal;
   buildAnimal = function(type){
     const d = AD[type]; if(!d || !d.planet) return _bA(type);
@@ -29470,6 +29486,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     else if(type === 'yeti'){ const C = 0xf0f4ff; [-.3, .3].forEach(x=>leg(x, 0, .7, C)); b(1, 1.1, .7, C, 0, 1.25, 0); b(.6, .55, .55, C, 0, 2.05, .05); b(.4, .25, .1, 0x7090c0, 0, 2.0, .33); eyes(2.15, .34, .13, .09); [-.62, .62].forEach(x=>b(.25, .9, .25, C, x, 1.25, .05)); }
     else if(type === 'frostfox'){ const C = 0xb0e0ff; [-.15, .15].forEach(x=>{ leg(x, .3, .35, C); leg(x, -.3, .35, C); }); b(.4, .35, .9, C, 0, .55, 0); b(.35, .32, .35, C, 0, .78, .5); b(.15, .12, .2, 0xffffff, 0, .72, .72); eyes(.85, .68, .09, .07);
       [-.11, .11].forEach(x=>b(.08, .18, .06, C, x, 1.02, .45)); glow(b(.18, .18, .6, 0xe0f4ff, 0, .7, -.65), 0x406080); }
+    else if(type === 'raptor'){ const C = 0x6a9a40; [-.18, .18].forEach(x=>leg(x, -.1, .7, C)); b(.45, .4, 1.1, C, 0, .95, .1); b(.3, .3, .7, C, 0, 1.0, -.8); b(.2, .2, .5, C, 0, 1.0, -1.35);
+      b(.35, .35, .45, C, 0, 1.4, .6); b(.25, .18, .4, C, 0, 1.3, .95); eyes(1.5, .82, .12, .08); [-.12, .12].forEach(x=>b(.08, .3, .08, C, x, 1.0, .35)); [[.2,.55],[-.1,.3],[.3,.1]].forEach(q=>b(.08, .12, .1, 0xd0e080, q[0]*.6, 1.2, q[1])); }
+    else if(type === 'trike'){ const C = 0x8a7a5a; [-.4, .4].forEach(x=>{ leg(x, .5, .7, C); leg(x, -.5, .7, C); }); b(1.2, 1, 1.8, C, 0, 1.2, 0); b(.9, .8, .8, C, 0, 1.4, 1.2); b(1.3, .9, .15, 0x6a5a40, 0, 1.75, .85);
+      b(.08, .5, .08, 0xf0ead0, 0, 1.6, 1.65); [-.3, .3].forEach(x=>{ const h = b(.08, .6, .08, 0xf0ead0, x, 1.9, 1.5); h.rotation.x = -.6; }); eyes(1.55, 1.6, .25, .1); b(.5, .4, .7, C, 0, 1.1, -1.1); }
+    else if(type === 'ptero'){ const C = 0xb08060; b(.4, .35, 1, C, 0, 1.4, 0); b(.3, .25, .6, C, 0, 1.5, .7); b(.1, .1, .5, 0xe0d0a0, 0, 1.45, 1.2); b(.15, .35, .2, C, 0, 1.75, .55); eyes(1.6, .95, .1, .07);
+      [-1, 1].forEach(sd=>{ const w = b(1.6, .06, .7, 0xc09070, sd*1.0, 1.5, -.1); w.rotation.z = sd*.25; g.userData.wings.push({w, sd}); }); [-.1, .1].forEach(x=>leg(x, -.2, .4, C)); }
+    else if(type === 'glowbeetle'){ const C = 0x208060; b(.5, .3, .7, C, 0, .35, 0); const sh = b(.46, .2, .5, 0x60ffc0, 0, .5, -.05); glow(sh, 0x30c090); b(.3, .22, .3, C, 0, .32, .45); eyes(.42, .6, .1, .06);
+      [-.25, .25].forEach(x=>[-.2, 0, .2].forEach(z=>leg(x, z, .15, 0x104030))); [-.08, .08].forEach(x=>b(.04, .25, .04, 0x104030, x, .55, .6)); }
     else if(type === 'lunarhare'){ const C = 0xe8e8f4; [-.18, .18].forEach(x=>{ leg(x, .22, .3, C); leg(x, -.25, .3, C); }); b(.5, .45, .8, C, 0, .55, 0); b(.42, .4, .42, C, 0, .85, .45); b(.1, .08, .1, 0xff9ab0, 0, .8, .68); eyes(.92, .62, .13, .08);
       [-.12, .12].forEach(x=>{ b(.12, .55, .08, C, x, 1.3, .4); b(.06, .4, .04, 0xffb0c0, x, 1.3, .44); }); b(.2, .2, .2, 0xffffff, 0, .62, -.45); }
     else if(type === 'cheesemite'){ const C = 0xffe066; b(.7, .45, .8, C, 0, .35, 0); b(.5, .3, .4, 0xffd040, 0, .5, .45); eyes(.6, .62, .14, .09); [-.3, .3].forEach(x=>[-.25, 0, .25].forEach(z=>leg(x, z, .18, 0xc09020)));
@@ -29497,16 +29521,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   { const _t = toast; toast = function(msg){
-      if(typeof msg === 'string' && cur() && cur().k !== 'moon') msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost') msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
-    if(p.k !== 'moon' && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
+    if(p.k !== 'moon' && p.k !== 'lost' && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
     blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
-    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
   }
   const _pr = window.__planetR;
   window.__planetR = function(){
@@ -29525,17 +29549,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const panel = anchor && (anchor.closest('div[style*="inset:0"]') || anchor.parentNode.parentNode);
     if(anchor){
       const box = anchor.parentNode; box.style.maxHeight = '92vh'; box.style.overflowY = 'auto';
-      const COL = {sugar:'#d0408a', bounce:'#2a9a3a', gear:'#a0581a', ice:'#2a6ab0', moon:'#6a6a8a'};
+      const COL = {sugar:'#d0408a', bounce:'#2a9a3a', gear:'#a0581a', ice:'#2a6ab0', moon:'#6a6a8a', lost:'#2a7a4a'};
       let after = anchor;
       PL.forEach((p, i)=>{
         const bt = document.createElement('button'); bt.className = 'btn'; bt.id = 'mrsP' + i;
         bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + COL[p.k];
-        bt.textContent = (5 + i) + (p.k === 'moon' ? '   ' : '   NEXT UNIVERSE: ') + p.name.toUpperCase();
+        bt.textContent = (p.k === 'lost' ? 0 : 5 + i) + (p.k === 'moon' ? '   ' : p.k === 'lost' ? '   SECRET: ' : '   NEXT UNIVERSE: ') + p.name.toUpperCase();
+        if(p.k === 'lost' && !save.lostOpen) bt.style.display = 'none';
         bt.title = p.blurb;
         bt.onclick = e=>{ e.stopPropagation(); if(panel) panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} };
         after.parentNode.insertBefore(bt, after.nextSibling); after = bt;
       });
-      addEventListener('keydown', e=>{ if(!panel || panel.style.display !== 'flex') return; const m = /^Digit([5-9])$/.exec(e.code); if(m){ const p = PL[+m[1] - 5]; panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} } });
+      addEventListener('keydown', e=>{ if(!panel || panel.style.display !== 'flex') return; const m = /^Digit([5-9]|0)$/.exec(e.code); if(m){ const p = m[1] === '0' ? (save.lostOpen ? PL.find(q=>q.k === 'lost') : null) : PL[+m[1] - 5]; if(!p) return; panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} } });
     }
   }catch(e){ console.warn('LN-moreplanets buttons', e); }
 
@@ -34091,6 +34116,103 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__door = {PAGES, get door(){ return door; }, get room(){ return room; }, useDoor, openDoor, enterBasement, leaveBasement, talkJan, nearDoor, nearJan, nearUp, inBase, T:{chTop:CH_TOP, heart:()=>heart.position, seen:()=>chamberSeen}};
 })();
 /* LN-door end */
+/* LN-lost start: the Janitor comes up to announce what is deeper and higher, and the LOST WORLD opens: layers, caves, dinosaurs, sky islands (Irfan 2026-11-04 "janitor might come and announce whats deeper... secret world with biome caves animals layer... dinosaur... all of them") */
+(function(){
+  const MP = window.__morePlanets, DR = window.__door; if(!MP) return;
+  const LOST = MP.PL.find(p=>p.k === 'lost'); if(!LOST) return;
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); par.add(m); return m; };
+  const label = (txt, w, big)=>{ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt, 512, 64, null, '#ffffff', (big ? 'bold 34px' : 'bold 28px') + ' Arial'), fog:false, depthWrite:false, transparent:true})); s.scale.set(w, w/8, 1); return s; };
+  function janitor(){
+    const J = new THREE.Group();
+    bx(J, .22, .8, .22, 0x3a3a4a, -.18, .4, 0); bx(J, .22, .8, .22, 0x3a3a4a, .18, .4, 0); bx(J, .7, .8, .4, 0x4a5a6a, 0, 1.2, 0); bx(J, .5, .5, .5, 0xe0b890, 0, 1.85, 0);
+    bx(J, .56, .16, .56, 0x8a3a2a, 0, 2.15, 0); bx(J, .3, .06, .3, 0x8a3a2a, 0, 2.1, .36); bx(J, .12, .08, .04, 0xffffff, -.12, 1.9, .26); bx(J, .12, .08, .04, 0xffffff, .12, 1.9, .26); bx(J, .2, .2, .06, 0x8a8a8a, 0, 1.7, .26);
+    bx(J, .2, .7, .2, 0x4a5a6a, -.5, 1.1, .1); bx(J, .2, .7, .2, 0x4a5a6a, .5, 1.1, .1);
+    bx(J, .06, 2, .06, 0xc0a060, -.7, 1, .3); for(let i=0;i<6;i++) bx(J, .05, .35, .05, 0xd8d8d0, -.78 + i*.035, .2, .25 + (i%3)*.04);
+    const mg = bx(J, .22, .22, .4, 0xff8a20, .6, 1.5, .4); mg.rotation.x = -.3; bx(J, .32, .32, .12, 0xffb060, .6, 1.55, .62);     // megaphone
+    const nm = label('THE JANITOR', 2.4, true); nm.position.set(0, 2.9, 0); J.add(nm);
+    return J;
+  }
+
+  // ---------------- the announcement
+  const LINES = [
+    'THE JANITOR climbs out of a hole with a megaphone. "ATTENTION ALL ANIMALS, NPCs, BOBS AND WHOEVER BUILT THAT DISCO THING. I have an announcement."',
+    '"I have mopped under every core in every world. And under the basement... there is MORE. A whole LOST WORLD. I never told anyone because nobody ever asked."',
+    '"Down there: Fern Valleys, Giant Mushroom Forests, Amber Domes, Tar Pits and Bone Spikes. Caves everywhere. I did not mop the caves. Sorry."',
+    '"Higher up, above its sky: SKY ISLANDS. Floating ones. Do not ask how. I painted the sky myself, it was grey before."',
+    '"And yes. DINOSAURS. Raptors, Triceratops, Pterodactyls, Glow Beetles. The Dino Nuggets had to come from somewhere."',
+    '"The painted door in my basement is a real door now. I unpainted it. Or press O, PLANETS, and pick 0: THE LOST WORLD. Wipe your feet." He drops the megaphone and leaves.'
+  ];
+  let J = null, ann = null, done = !!save.lostOpen, t0 = 0;
+  function startAnn(){
+    J = janitor(); const gy = (()=>{ try{ return groundTop(Math.floor(P.x + Math.sin(P.yaw)*-4), Math.max(P.y, 0) + 6, Math.floor(P.z + Math.cos(P.yaw)*-4)); }catch(e){ return P.y; } })();
+    J.position.set(P.x + Math.sin(P.yaw)*-4, gy, P.z + Math.cos(P.yaw)*-4); J.lookAt(P.x, gy, P.z); scene.add(J);
+    ann = {i:0, t:0}; burst(J.position.x, J.position.y + 1, J.position.z, 0, 14); blip(330,.2,.15,'square'); setTimeout(()=>blip(440,.2,.15,'square'), 150);
+    save.lostAnn = 1; persist();
+  }
+  function finishAnn(){
+    done = true; save.lostOpen = 1; persist();
+    news('BREAKING: The Janitor announced a LOST WORLD under the basement, with dinosaurs and sky islands. Every animal clapped. The Pigeon says it knew. The Pigeon did not know.');
+    try{ ['l1','l2','l3'].forEach(k=>window.__lore && window.__lore.unlock && window.__lore.unlock(k)); }catch(e){}
+    for(let i=0;i<5;i++) setTimeout(()=>burst(P.x + (Math.random()-.5)*10, P.y + 4 + Math.random()*4, P.z + (Math.random()-.5)*10, 0, 16), i*300);
+    blip(523,.3,.15,'triangle'); setTimeout(()=>blip(659,.3,.15,'triangle'), 200); setTimeout(()=>blip(784,.5,.15,'triangle'), 400);
+    refreshBtn();
+  }
+  function tickAnn(dt){
+    if(!ann){
+      if(done || !save.doorPrize || save.lostAnn) return;
+      if(realm !== 0 || P.x >= UPPER_EDGE || P.y < -1 || !locked || startEl.style.display === 'flex' || shopOpen) return;
+      t0 += dt; if(t0 > 6) startAnn(); return;
+    }
+    ann.t += dt;
+    if(J){ J.lookAt(P.x, J.position.y, P.z); J.position.y += Math.sin(ann.t*6)*.004; }
+    if(ann.i < LINES.length && ann.t >= ann.i*7){ toast(LINES[ann.i]); blip(260 + ann.i*40, .08, .1, 'square'); ann.i++; }
+    if(ann.i >= LINES.length && ann.t >= LINES.length*7 + 2){ ann = null; if(J){ scene.remove(J); J = null; } finishAnn(); }
+  }
+
+  // ---------------- ways in: the painted door, and the PLANETS button
+  let btn = null;
+  function refreshBtn(){ try{ if(!btn) btn = document.getElementById('mrsP' + MP.PL.indexOf(LOST)); if(btn) btn.style.display = save.lostOpen ? 'block' : 'none'; }catch(e){} }
+  refreshBtn(); setTimeout(refreshBtn, 2000);
+  const nearPainted = ()=>DR && DR.inBase() && DR.room && Math.hypot(P.x - (DR.room.x + .5 + 2.6), P.z - (DR.room.z + .5 + 3.9)) < 2.4;
+  addEventListener('keydown', e=>{
+    try{ if(e.code !== 'KeyF' || !locked || won || shopOpen || realm !== 0) return;
+      if(nearPainted()){ e.stopImmediatePropagation(); e.preventDefault(); if(!save.lostOpen){ toast('It is painted on. The Janitor says there is nothing behind it. He looks away when he says it.'); return; } if(DR.leaveBasement) try{ DR.leaveBasement(); }catch(er){} MP.goPlanet(LOST); } }catch(err){ console.warn('LN-lost key', err); }
+  }, true);
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:232px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#b0ffd0;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+
+  // ---------------- the sky of the Lost World: a rock ceiling far above, so it feels like a world under the world
+  const ceil = new THREE.Group(); ceil.visible = false; scene.add(ceil);
+  for(let i=0;i<14;i++){ const s = bx(ceil, 20 + Math.random()*30, 6 + Math.random()*10, 20 + Math.random()*30, [0x3a3028, 0x4a3a30, 0x2e2620][i%3], (Math.random()-.5)*220, 0, (Math.random()-.5)*220); s.material.fog = false; }
+  function tickCeil(){ let p = null; try{ p = MP.cur(); }catch(e){} const on = !!(p && p.k === 'lost'); ceil.visible = on; if(on) ceil.position.set(camera.position.x, camera.position.y + 150, camera.position.z); }
+
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ tickAnn(dt); tickCeil();
+      const h = locked && realm === 0 && nearPainted() ? (save.lostOpen ? 'F: through the (no longer painted) door to THE LOST WORLD' : 'F: a painted door') : null;
+      if(h){ hint.textContent = h; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-lost', e); } }
+  })(last);
+
+  // ---------------- lore
+  const PAGES = [
+    ['l1','The Lost World','The World Under the World','Under the Even Deeper Core is the Core Chamber. Under the chamber is the basement. Under the basement is the Lost World. Under the Lost World the Janitor has not looked yet. He is a little scared to.','scroll'],
+    ['l2','The Lost World','Why Nobody Knew','The Lost World was lost because the Janitor is the only one with a key, and the only one who ever asked him anything was you. Four billion years of secrets, gone in one knock.','scroll'],
+    ['l3','The Lost World','The Painted Sky','The Lost World had a grey stone sky. The Janitor painted it green and gold in year 1,000,000,000 and added floating islands so it would look less boring. The dinosaurs did not notice. Dinosaurs do not look up.','scroll'],
+    ['l4','The Lost World','Dinosaurs','The dinosaurs never went extinct. They went down. Raptors, Triceratops, Pterodactyls and the Glow Beetles that light the caves. They have never seen a pickaxe. They are about to.','scroll'],
+    ['l5','The Lost World','Giant Mushrooms','The Giant Mushroom Forest grows on old lore scrolls, like every herb does. The mushrooms are 8 blocks tall because the scrolls down there are very, very long.','scroll'],
+    ['l6','The Lost World','Amber','Amber is tree sap that fell asleep. Inside the Amber Domes there are bugs, leaves, one sock and, in exactly one dome, a tiny Bob waving. Nobody has found that dome yet.','scroll'],
+    ['l7','The Lost World','The Tar Pits','The Tar Pits are sticky, black and full of things that tried to cross them. Most of them are hats. The animals always wanted bigger hats, and the pits always wanted hats at all.','scroll'],
+    ['l8','The Lost World','The Lost Core','At the bottom of the Lost World is the Lost Core. It is called the Lost Core because the Janitor lost it twice. It is big, it glows, and it is exactly where he left it the third time.','scroll']
+  ];
+  try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+    if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); } } }catch(e){ console.warn('LN-lost lore', e); }
+  window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ ann.t = 1e6; ann.i = LINES.length; } }, go:()=>{ if(!ann && !done) startAnn(); }}};
+})();
+/* LN-lost end */
 
 
 
