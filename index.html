@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 189 (Oct 31)';
+  window.__BUILD = 'Build 190 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34363,7 +34363,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   // ---------------- 2. the Janitor as a boss
-  ED.janitorboss = {name:'The Janitor (FURIOUS)', hp:1500, speed:3.6, dmg:12, r:1.6, reward:250000, boss:true, key:'janitorboss', yo:2.2, jan:true, color:0xc0a060, quips:['Mopped.']};
+  ED.janitorboss = {name:'The Janitor (FURIOUS)', hp:1500, speed:2.0, dmg:12, r:1.6, reward:250000, boss:true, key:'janitorboss', yo:2.2, jan:true, color:0xc0a060, quips:['Mopped.']};
   try{ ENEMY_DROP.janitorboss = "The Janitor's Cap"; RARE["The Janitor's Cap"] = 'CS'; ITEM_COL["The Janitor's Cap"] = [138, 58, 42]; ITEM_COL['True Heart of Earth'] = [255, 240, 180]; RARE['True Heart of Earth'] = 'CS'; }catch(e){}
   function janModel(){
     const J = new THREE.Group();
@@ -34391,12 +34391,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
   const SAY = ['"Do you know how long it takes to mop a core? Four billion years. FOUR."', '"I had ONE door. One."', '"Wipe your feet. WIPE THEM."', '"The Moon still owes me five coins and YOU break my door?"', '"This floor was clean. WAS."', '"I am not angry. I am FURIOUS. There is a difference."'];
   function janTick(e, dt){
-    if(!e.ji){ e.ji = 1; e.sw = 1.4; e.bk = 3; e.tp = 10; e.say = 3; e.pos.y = CH_TOP; }
+    if(!e.ji){ e.ji = 1; e.sw = 1.6; e.bk = 4; e.tp = 16; e.say = 3; e.pos.y = CH_TOP; }
     const dx = P.x - e.pos.x, dz = P.z - e.pos.z, dh = Math.hypot(dx, dz) || 1;
     e.g.rotation.y = Math.atan2(dx, dz);
     const u = e.g.userData; if(u.arm) u.arm.rotation.x = e.sw < .35 ? -1.6 : -.3 + Math.sin(performance.now()*.006)*.25;
     if(!locked){ e.g.position.copy(e.pos); return; }
-    const rage = e.hp <= e.max*.5 ? 1.45 : 1;
+    const rage = e.hp <= e.max*.5 ? 1.2 : 1;
     if(rage > 1 && !e.enr){ e.enr = 1; toast('THE JANITOR: "FIVE. MINUTES. I SAID FIVE MINUTES!" He mops faster.'); shake = Math.max(shake, .15); blip(80,.6,.2,'sawtooth'); }
     if(dh > 2.2){ const s = e.d.speed*rage*dt; e.pos.x += dx/dh*s; e.pos.z += dz/dh*s; }
     e.pos.y = CH_TOP; e.g.position.set(e.pos.x, e.pos.y, e.pos.z);
@@ -34405,7 +34405,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(e.bk <= 0){ e.bk = 2.6;                                                                            // throws dirty bucket water
       for(let k=-1;k<=1;k++){ const a = k*.22, c = Math.cos(a), s = Math.sin(a); _v.set(dx*c - dz*s, P.y + 1 - (e.pos.y + 2.4), dx*s + dz*c).normalize(); fireFoe(e.pos.x + _v.x*1.5, e.pos.y + 2.4, e.pos.z + _v.z*1.5, _v, 9, 8, 0x8ab0c0); }
       blip(500,.08,.06,'triangle'); }
-    if(e.tp <= 0){ e.tp = 9; const a = Math.random()*6.283; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); e.pos.x = P.x + Math.cos(a)*6; e.pos.z = P.z + Math.sin(a)*6; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); toast('He mops straight through the floor and comes up behind you.'); }
+    if(e.tp <= 0){ e.tp = 16; const a = Math.random()*6.283; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); e.pos.x = P.x + Math.cos(a)*7; e.pos.z = P.z + Math.sin(a)*6; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); toast('He mops straight through the floor and comes up behind you.'); }
     if(e.say <= 0){ e.say = 7; toast('THE JANITOR: ' + pk(SAY)); }
     if(P.y > CH_TOP + 8 || dh > 60){ removeEnemy(e); bossActive = false; waitT = 0; toast('The Janitor grumbles and drops back into his hole. He is still mad. He will be waiting when you come back down.'); }
   }
