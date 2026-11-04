@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 179 (Oct 31)';
+  window.__BUILD = 'Build 180 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -23164,7 +23164,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     homePortal.visible = realm === 0 && MAIN(P.x); edgePortal.visible = homePortal.visible;
     if(realm !== 0){ glitchG.visible = false; tint.style.opacity = 0; sign.style.display = 'none'; return; }
     // anyone who goes billions of blocks away (or breaks the numbers) lands at World Edge
-    const lost = !isFinite(P.x) || !isFinite(P.z) || (MAIN(P.x) ? ((Math.abs(P.x) > EDGE + 2000 || Math.abs(P.z) > EDGE + 2000) && !(window.__farBox && window.__farBox(P.x, P.z))) : (Math.abs(P.x - UPPER.x) > 1e5 || Math.abs(P.z - UPPER.z) > 1e5));
+    const lost = !isFinite(P.x) || !isFinite(P.z) || (MAIN(P.x) ? ((Math.abs(P.x) > EDGE + 2000 || Math.abs(P.z) > EDGE + 2000) && !(window.__farBox && window.__farBox(P.x, P.z))) : (Math.abs(P.x - UPPER.x) > 1e5 || Math.abs(P.z - UPPER.z) > 1e5) && !(window.__uniP && window.__uniP.inAny(P.x, P.z)));
     if(lost && !(typeof launch !== 'undefined' && launch)){ goEdge('You went SO far that the world ran out of numbers! You landed at WORLD EDGE.'); return; }
     // walking into a portal
     if(portCD <= 0){
@@ -29181,7 +29181,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const rnd = a=>a[Math.floor(Math.random()*a.length)];
   const money = v=>'$' + Math.round(v).toLocaleString('en-US');
   const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
-  const Z0 = -49000, Z1 = -36000;           // they sit south of Novaria, still inside the Next Universe
+  const Z0 = -49000, Z1 = -36000, ZMIN = -62000;   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
   // [name, hardness, value, base colour, speck colours, glow]
   const L = (n, h, v, base, sp, glow)=>({name:n, th:4, h, v, base, amp:20, sp, p:.35, glow:glow || 0});
   const PL = [
@@ -29236,11 +29236,25 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       biomes:[{k:'hills', name:'Snow Plains'}, {k:'pillars', name:'Frozen Pine Forest'}, {k:'spikes', name:'Ice Spikes'}, {k:'floats', name:'Floating Icebergs'}, {k:'pits', name:'Frozen Lakes'}],
       animals:{yeti:{name:'Snow Yeti', hp:300, r:1.1, yo:1.3, speed:1.6, reward:5000, col:0xf0f4ff, quips:['It does a big friendly roar.', 'The Snow Yeti stomps off to build a snowman.']},
                frostfox:{name:'Frost Fox', hp:160, r:.6, yo:.6, speed:3, reward:4000, col:0xb0e0ff, quips:['Its tail leaves sparkles in the air.', 'The Frost Fox vanishes into the snow.']}},
-      core:'YOU REACHED THE GLACIO CORE! Your hands are frozen but you are a LEGEND of TWO universes.'}
+      core:'YOU REACHED THE GLACIO CORE! Your hands are frozen but you are a LEGEND of TWO universes.'},
+    {k:'moon', name:'The Moon', x0:40000, x1:46250, z0:-62000, z1:-49000, fl:'canopy', grav:.3, sky:[[.01, .01, .03], [.06, .06, .12]], cloud:[.3, .3, .35], fog:0,
+      blurb:'Earth\'s very own Moon: low gravity, craters, Moon Cheese under the dust and a great view of home.',
+      layers:[L('Moon Dust',1500,800,[190,190,200],[[230,230,240],[140,140,150]]), L('Regolith',2600,1300,[150,150,162],[[200,200,210],[100,100,112]]), L('Moon Cheese',4000,3000,[255,224,102],[[255,245,160],[220,180,60]],.1),
+        L('Anorthosite',6500,3300,[210,210,220],[[255,255,255],[160,160,175]]), L('Lunar Basalt',9500,5000,[70,70,80],[[110,110,125],[40,40,48]]), L('Mare Rock',14000,7500,[95,95,110],[[140,140,160],[55,55,65]]),
+        L('Cheese Crust',22000,12000,[240,200,80],[[255,240,140],[200,150,40]],.15), L('Lunar Mantle',34000,20000,[120,110,140],[[170,160,200],[70,60,90]],.2), L('Blue Cheese Mantle',52000,32000,[200,210,240],[[255,255,255],[90,120,220]],.3),
+        L('Moon Core',80000,60000,[255,240,180],[[255,255,255],[255,200,80]],1)],
+      ores:[['Cheese Crystal',40000,[255,240,120],[0,1,2,3],.05,.3], ['Lunar Opal',250000,[180,230,255],[4,5,6],.035,.5], ['Crater Diamond',1500000,[220,255,255],[7,8],.025,.7], ['Lost Astronaut Gold',8000000,[255,215,80],[9],.012,1]],
+      surf:{top:L('Moon Powder',1400,700,[205,205,215],[[240,240,250],[160,160,170]]), trunk:L('Moon Rock Pillar',3000,1800,[120,120,135],[[170,170,185],[80,80,90]]), canopy:L('Floating Cheese',2500,2200,[255,228,110],[[255,248,170],[225,185,70]],.15),
+        dome:L('Moon Boulder',3200,1800,[140,140,152],[[190,190,200],[90,90,100]]), pit:L('Crater Dust',1600,900,[120,120,130],[[160,160,170],[80,80,90]]), spike:L('Cheese Spire',4500,3200,[255,210,80],[[255,240,150],[210,160,40]],.2)},
+      biomes:[{k:'hills', name:'Sea of Tranquility'}, {k:'pits', name:'Crater Field'}, {k:'domes', name:'Boulder Field'}, {k:'floats', name:'Cheese Sky'}, {k:'spikes', name:'Cheese Spires'}],
+      animals:{lunarhare:{name:'Lunar Hare', hp:40, r:.6, yo:.7, speed:2.6, hop:true, reward:800, col:0xe8e8f4, quips:['It hopped ten blocks in one go.', 'The Lunar Hare bounced off into the dust.']},
+               cheesemite:{name:'Cheese Mite', hp:60, r:.5, yo:.4, speed:1.8, reward:700, col:0xffe066, quips:['It is nibbling the ground. The ground is cheese.', 'The Cheese Mite squeaked and scurried off.']},
+               astrocow:{name:'Astro Cow', hp:150, r:.9, yo:.9, speed:1.2, reward:1500, col:0xffffff, quips:['Moo. In space.', 'The Astro Cow floated gently away. It did not jump over anything.']}},
+      core:'YOU REACHED THE MOON CORE! It is cheese all the way down. The Shopkeeper will never believe you.'}
   ];
-  PL.forEach(p=>{ p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((Z0 + Z1)/2); });
-  const inAny = (x, z)=>z >= Z0 && z < Z1 && x >= UPPER_EDGE && x < 65000;
-  const planetAt = (x, z)=>{ if(!inAny(x, z)) return null; for(const p of PL) if(x >= p.x0 && x < p.x1) return p; return null; };
+  PL.forEach(p=>{ p.z0 = p.z0 || Z0; p.z1 = p.z1 || Z1; p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((p.z0 + p.z1)/2); });
+  const inAny = (x, z)=>z >= ZMIN && z < Z1 && x >= UPPER_EDGE && x < 65000;
+  const planetAt = (x, z)=>{ if(!inAny(x, z)) return null; for(const p of PL) if(x >= p.x0 && x < p.x1 && z >= p.z0 && z < p.z1) return p; return null; };
   const cur = ()=>realm === 0 ? planetAt(P.x, P.z) : null;
   window.__uniP = {inAny, planetAt};
   const sAdd = o=>{ o.traverse(m=>{ m.userData.gone = true; }); scene.add(o); return o; };
@@ -29345,7 +29359,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   upperBase = function(x, d, z){ const p = planetAt(x, z); return p ? pBase(p, x, d, z) : _ub(x, d, z); };
   const _g = get;
   get = function(x, d, z){
-    if(d < 0 && d > -40 && z < Z1 && z >= Z0){ const p = planetAt(x, z);
+    if(d < 0 && d > -40 && z < Z1 && z >= ZMIN){ const p = planetAt(x, z);
       if(p){ const t = sky(p, col(p, x, z), d); if(t){ if(edits.size){ const k = ek(x,d,z); if(edits.has(k)) return edits.get(k); } return t; } } }
     return _g(x, d, z);
   };
@@ -29359,7 +29373,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _rb = rebuild;
   rebuild = function(){
     _rb();
-    if(woz > Z1 || woz + WIN < Z0 || wox > 65000 || wox + WIN < UPPER_EDGE) return;
+    if(woz > Z1 || woz + WIN < ZMIN || wox > 65000 || wox + WIN < UPPER_EDGE) return;
     let any = false;
     for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
       const x = wox+lx, z = woz+lz, p = planetAt(x, z); if(!p) continue;
@@ -29407,7 +29421,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const t = performance.now()*.001, w = .5 + .5*Math.sin(t*.2);
     _sT.setRGB(p.sky[0][0], p.sky[0][1], p.sky[0][2]); _sB.setRGB(p.sky[1][0], p.sky[1][1], p.sky[1][2]);
     if(p.k === 'ice'){ _sB.setRGB(.15 + .2*w, .7 + .25*w, .55 + .3*(1 - w)); }                        // the aurora slowly changes colour
-    skyMat.uniforms.top.value.copy(dark).lerp(_sT, s); skyMat.uniforms.bot.value.copy(dark).lerp(_sB, s); skyMat.uniforms.night.value = .3;
+    skyMat.uniforms.top.value.copy(dark).lerp(_sT, s); skyMat.uniforms.bot.value.copy(dark).lerp(_sB, s); skyMat.uniforms.night.value = p.k === 'moon' ? 1 : .3;
     scene.background.copy(skyMat.uniforms.top.value);
     try{ clouds[0].children[0].material.color.setRGB(p.cloud[0], p.cloud[1], p.cloud[2]); }catch(e){}
     if(lightOn){ scene.fog.color.copy(skyMat.uniforms.bot.value); ambient.intensity = Math.max(ambient.intensity, .4 + .4*s); }
@@ -29416,7 +29430,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   /* ------------------------------------------------ a landing pad with a sign on every planet */
   function pad(p){
     const g = new THREE.Group(); g.position.set(p.cx + .5, 0, p.cz + .5); g.visible = false; sAdd(g);
-    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff}[p.k];
+    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff, moon:0xffe066}[p.k];
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, .12, 32), new THREE.MeshLambertMaterial({color:0x303040})); ring.position.y = .06; g.add(ring);
     const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.4, .12, 8, 40), new THREE.MeshBasicMaterial({color:pc})); ring2.rotation.x = Math.PI/2; ring2.position.y = .14; g.add(ring2);
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const x = cv.getContext('2d');
@@ -29433,7 +29447,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   /* ------------------------------------------------ creatures */
   PL.forEach(p=>{ for(const k in p.animals){ const a = p.animals[k]; AD[k] = {name:a.name, hp:a.hp, r:a.r, yo:a.yo, speed:a.speed, hop:a.hop, reward:a.reward, planet:p.k, quips:a.quips}; } });
-  try{ Object.assign(ANIMAL_DROP, {gummybear:'Gummy Fluff', cupcake:'Sprinkles', blob:'Bouncy Goo', springfrog:'Spring Coil', robodog:'Robot Bone', toaster:'Golden Toast', yeti:'Yeti Fur', frostfox:'Frost Tail'}); }catch(e){}
+  try{ Object.assign(ANIMAL_DROP, {lunarhare:'Moon Carrot', cheesemite:'Cheese Crumb', astrocow:'Moon Milk', gummybear:'Gummy Fluff', cupcake:'Sprinkles', blob:'Bouncy Goo', springfrog:'Spring Coil', robodog:'Robot Bone', toaster:'Golden Toast', yeti:'Yeti Fur', frostfox:'Frost Tail'}); }catch(e){}
   const _bA = buildAnimal;
   buildAnimal = function(type){
     const d = AD[type]; if(!d || !d.planet) return _bA(type);
@@ -29456,6 +29470,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     else if(type === 'yeti'){ const C = 0xf0f4ff; [-.3, .3].forEach(x=>leg(x, 0, .7, C)); b(1, 1.1, .7, C, 0, 1.25, 0); b(.6, .55, .55, C, 0, 2.05, .05); b(.4, .25, .1, 0x7090c0, 0, 2.0, .33); eyes(2.15, .34, .13, .09); [-.62, .62].forEach(x=>b(.25, .9, .25, C, x, 1.25, .05)); }
     else if(type === 'frostfox'){ const C = 0xb0e0ff; [-.15, .15].forEach(x=>{ leg(x, .3, .35, C); leg(x, -.3, .35, C); }); b(.4, .35, .9, C, 0, .55, 0); b(.35, .32, .35, C, 0, .78, .5); b(.15, .12, .2, 0xffffff, 0, .72, .72); eyes(.85, .68, .09, .07);
       [-.11, .11].forEach(x=>b(.08, .18, .06, C, x, 1.02, .45)); glow(b(.18, .18, .6, 0xe0f4ff, 0, .7, -.65), 0x406080); }
+    else if(type === 'lunarhare'){ const C = 0xe8e8f4; [-.18, .18].forEach(x=>{ leg(x, .22, .3, C); leg(x, -.25, .3, C); }); b(.5, .45, .8, C, 0, .55, 0); b(.42, .4, .42, C, 0, .85, .45); b(.1, .08, .1, 0xff9ab0, 0, .8, .68); eyes(.92, .62, .13, .08);
+      [-.12, .12].forEach(x=>{ b(.12, .55, .08, C, x, 1.3, .4); b(.06, .4, .04, 0xffb0c0, x, 1.3, .44); }); b(.2, .2, .2, 0xffffff, 0, .62, -.45); }
+    else if(type === 'cheesemite'){ const C = 0xffe066; b(.7, .45, .8, C, 0, .35, 0); b(.5, .3, .4, 0xffd040, 0, .5, .45); eyes(.6, .62, .14, .09); [-.3, .3].forEach(x=>[-.25, 0, .25].forEach(z=>leg(x, z, .18, 0xc09020)));
+      [[-.2,.5,.1],[.15,.48,-.2],[0,.55,.25]].forEach(q=>b(.1, .06, .1, 0xd0a030, q[0], q[1], q[2])); }
+    else if(type === 'astrocow'){ const C = 0xffffff; [-.3, .3].forEach(x=>{ leg(x, .45, .6, C); leg(x, -.45, .6, C); }); b(1, .8, 1.5, C, 0, 1, 0); [[.3,1.1,.3],[-.35,.95,-.4],[.1,1.3,-.1]].forEach(q=>b(.35, .3, .35, 0x222222, q[0], q[1], q[2]));
+      b(.55, .5, .55, C, 0, 1.45, .85); b(.3, .2, .2, 0xffb0c0, 0, 1.3, 1.12); eyes(1.55, 1.1, .15, .1); [-.2, .2].forEach(x=>b(.08, .22, .08, 0xdddddd, x, 1.8, .8));
+      const hm = b(.8, .75, .8, 0xa0e0ff, 0, 1.45, .85); hm.material.transparent = true; hm.material.opacity = .35; b(.45, .35, .25, 0x5a5a60, 0, 1.3, -.85); }
     g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
     return g;
   };
@@ -29476,16 +29497,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   { const _t = toast; toast = function(msg){
-      if(typeof msg === 'string' && cur()) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      if(typeof msg === 'string' && cur() && cur().k !== 'moon') msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
-    if(window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
+    if(p.k !== 'moon' && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
     blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
-    if(first) news('BREAKING: A miner landed on ' + p.name + ' in the Next Universe. ' + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
   }
   const _pr = window.__planetR;
   window.__planetR = function(){
@@ -29504,17 +29525,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const panel = anchor && (anchor.closest('div[style*="inset:0"]') || anchor.parentNode.parentNode);
     if(anchor){
       const box = anchor.parentNode; box.style.maxHeight = '92vh'; box.style.overflowY = 'auto';
-      const COL = {sugar:'#d0408a', bounce:'#2a9a3a', gear:'#a0581a', ice:'#2a6ab0'};
+      const COL = {sugar:'#d0408a', bounce:'#2a9a3a', gear:'#a0581a', ice:'#2a6ab0', moon:'#6a6a8a'};
       let after = anchor;
       PL.forEach((p, i)=>{
         const bt = document.createElement('button'); bt.className = 'btn'; bt.id = 'mrsP' + i;
         bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + COL[p.k];
-        bt.textContent = (5 + i) + '   NEXT UNIVERSE: ' + p.name.toUpperCase();
+        bt.textContent = (5 + i) + (p.k === 'moon' ? '   ' : '   NEXT UNIVERSE: ') + p.name.toUpperCase();
         bt.title = p.blurb;
         bt.onclick = e=>{ e.stopPropagation(); if(panel) panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} };
         after.parentNode.insertBefore(bt, after.nextSibling); after = bt;
       });
-      addEventListener('keydown', e=>{ if(!panel || panel.style.display !== 'flex') return; const m = /^Digit([5-8])$/.exec(e.code); if(m){ const p = PL[+m[1] - 5]; panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} } });
+      addEventListener('keydown', e=>{ if(!panel || panel.style.display !== 'flex') return; const m = /^Digit([5-9])$/.exec(e.code); if(m){ const p = PL[+m[1] - 5]; panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} } });
     }
   }catch(e){ console.warn('LN-moreplanets buttons', e); }
 
@@ -32803,7 +32824,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
 
   // ---- protests
-  const CAUSES = ['BRING DINOSAURS BACK','BAN MONDAYS','MORE NAPS NOW','FREE THE SOCKS','LOWER CHEESE PRICES','GIVE PIGS WINGS','WE WANT A MOON','NO MORE BOBS','MAKE DIRT TASTIER','TWO LUNCHES A DAY','RAIN SHOULD BE JUICE','LET DUCKS VOTE','BIGGER HATS FOR ALL','SAVE THE PUDDLES','MORE HOLES, LESS DIGGING','KING MUST DANCE','TURN THE SUN DOWN','FREE SNACKS ON TUESDAY'];
+  const CAUSES = ['BRING DINOSAURS BACK','BAN MONDAYS','MORE NAPS NOW','FREE THE SOCKS','LOWER CHEESE PRICES','GIVE PIGS WINGS','MOON NEEDS A HAT','NO MORE BOBS','MAKE DIRT TASTIER','TWO LUNCHES A DAY','RAIN SHOULD BE JUICE','LET DUCKS VOTE','BIGGER HATS FOR ALL','SAVE THE PUDDLES','MORE HOLES, LESS DIGGING','KING MUST DANCE','TURN THE SUN DOWN','FREE SNACKS ON TUESDAY'];
   const YES = ['The King gave in! "{c}" is now the law of {n}.','The King said yes before anyone finished the first chant. "{c}" is the law in {n} now.','{n} voted. "{c}" won by one vote. The vote was a duck.'];
   const NO = ['The King of {n} said no. The protesters went home for snacks.','The King of {n} listened carefully, then fell asleep. Protest over.','The protest in {n} ended when it started raining. Nobody brought a coat.'];
   let PR = null, CT = null, nextT = 70 + Math.random()*50;
@@ -33821,6 +33842,82 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__herbs = {HERBS, spawnWild, pickWild, nearWild, get wild(){ return wild; }, T:{give:(n, c)=>addItem(n, c || 1, true), buffs:()=>buffs, hp:()=>hp, poison:()=>{ if(window.__swords){ addItem('Raw Meat', 1, true); eatRef('i:Raw Meat'); } }}};
 })();
 /* LN-herbs end */
+/* LN-moon start: THE MOON. A big Moon with a face over Earth at night, Earth hanging in the Moon's sky, lore pages and a news flash (Irfan 2026-11-04 "SO WE SHOULD ADD MOOON") */
+(function(){
+  const MP = window.__morePlanets;
+  const mat = (c, glow)=>{ const m = new THREE.MeshBasicMaterial({color:c, fog:false, transparent:true}); return m; };
+  const sph = (par, r, c, x, y, z, seg)=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(r, seg || 18, seg ? Math.round(seg*.7) : 13), mat(c)); m.position.set(x, y, z); par.add(m); return m; };
+
+  // ---------------- the big Moon over Earth
+  const moon = new THREE.Group(); moon.visible = false; moon.renderOrder = -5; scene.add(moon);
+  const R = 22;
+  sph(moon, R, 0xfff0b8, 0, 0, 0, 28);
+  [[-9,10,.4],[11,-7,.5],[-6,-12,.35],[13,9,.3],[2,15,.25],[-15,-2,.3],[7,-15,.3]].forEach(q=>sph(moon, R*q[2]*.45, 0xe0cc88, q[0], q[1], Math.sqrt(Math.max(0, R*R - q[0]*q[0] - q[1]*q[1]))*.98, 10));
+  const eyes = [];
+  [[-7,5],[7,5]].forEach(q=>{ const z = Math.sqrt(R*R - q[0]*q[0] - q[1]*q[1]);
+    const w = sph(moon, 4.4, 0xffffff, q[0], q[1], z, 14); const pu = sph(moon, 2.1, 0x151515, q[0], q[1] - .6, z + 3.4, 10); pu.userData.b = {x:q[0], y:q[1] - .6}; eyes.push({w, pu}); });
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(7.5, 1.1, 8, 28, Math.PI), mat(0x8a5a2a)); smile.position.set(0, -4, Math.sqrt(R*R - 16) - 1); smile.rotation.z = Math.PI; moon.add(smile);
+  const blush = [[-12,-3],[12,-3]].map(q=>sph(moon, 2.4, 0xffb8a0, q[0], q[1], Math.sqrt(R*R - q[0]*q[0] - q[1]*q[1]) + .4, 10));
+  moon.traverse(m=>{ if(m.material) m.material.depthWrite = false; });
+  let wink = 0, winkT = 6 + Math.random()*8, told = !!save.moonBack, t = 0;
+  const tmp = new THREE.Vector3();
+  function tickMoon(dt){
+    let on = false;
+    try{
+      const night = skyMat.uniforms.night.value, cur = MP && MP.cur();
+      on = realm === 0 && P.x < UPPER_EDGE && !cur && night > .06 && !(moonGone > 0) && startEl.style.display !== 'flex';
+    }catch(e){}
+    moon.visible = on; if(!on) return;
+    t += dt;
+    const sd = skyMat.uniforms.sunDir.value, night = skyMat.uniforms.night.value;
+    tmp.copy(sd).multiplyScalar(-1); if(tmp.y < .2) tmp.y = .2; tmp.normalize().multiplyScalar(205);
+    moon.position.copy(camera.position).add(tmp);
+    moon.lookAt(camera.position); moon.rotation.z += Math.sin(t*.3)*.08;
+    const op = Math.min(1, night*1.4);
+    moon.traverse(m=>{ if(m.material) m.material.opacity = op; });
+    eyes.forEach((e, i)=>{ const b = e.pu.userData.b; e.pu.position.x = b.x + Math.sin(t*.9 + i)*1.1; e.pu.position.y = b.y + Math.cos(t*.7)*.7; });
+    winkT -= dt; if(winkT <= 0){ winkT = 7 + Math.random()*9; wink = .35; }
+    if(wink > 0){ wink -= dt; eyes[1].w.scale.y = eyes[1].pu.scale.y = wink > 0 ? .12 : 1; }
+    if(!told && night > .5 && locked){ told = true; save.moonBack = 1; persist();
+      toast('THE MOON IS BACK! It is huge, it has a face, and it just winked at you. Everyone who marched for it is very happy.');
+      try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift('BREAKING: THE MOON IS BACK and it has a face. The Shopkeeper, Baba Kaka, Newton and the Pigeon all claim credit. The Moon says it was there the whole time.'); }catch(e){}
+      blip(330,.3,.15,'sine'); setTimeout(()=>blip(660,.3,.12,'sine'), 250); }
+  }
+
+  // ---------------- Earth, hanging in the Moon's sky
+  const earth = new THREE.Group(); earth.visible = false; earth.renderOrder = -5; scene.add(earth);
+  sph(earth, 15, 0x2f78d0, 0, 0, 0, 24);
+  [[-6,4,.6],[7,-2,.5],[2,9,.4],[-3,-9,.45],[9,7,.35],[-11,-3,.4]].forEach(q=>sph(earth, 15*q[2]*.5, 0x4caf50, q[0], q[1], Math.sqrt(Math.max(0, 225 - q[0]*q[0] - q[1]*q[1]))*.96, 10));
+  [[4,3,.5],[-8,-6,.45],[0,-13,.4],[-2,12,.4],[12,-8,.35]].forEach(q=>sph(earth, 15*q[2]*.45, 0xffffff, q[0], q[1], Math.sqrt(Math.max(0, 225 - q[0]*q[0] - q[1]*q[1])) + .6, 10));
+  earth.traverse(m=>{ if(m.material) m.material.depthWrite = false; });
+  function tickEarth(dt){
+    let p = null; try{ p = MP && MP.cur(); }catch(e){}
+    const on = !!(p && p.k === 'moon') && startEl.style.display !== 'flex';
+    earth.visible = on; if(!on) return;
+    earth.position.set(camera.position.x + 80, camera.position.y + 150, camera.position.z - 180);
+    earth.rotation.y += dt*.05;
+  }
+
+  // ---------------- the loop
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{ tickMoon(dt); tickEarth(dt); }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-moon', e); } }
+  })(last);
+
+  // ---------------- lore
+  const PAGES = [
+    ['mo1','The Moon','Where the Moon Was','For a long time everyone asked for the Moon. The Shopkeeper wanted it, Baba Kaka wanted it, the animals marched for it with signs. It turned out the Moon was there all along, just very shy. Now it has a face, and it is not shy anymore.','scroll'],
+    ['mo2','The Moon','Moon Cheese','The Moon is made of cheese from about three blocks down. Scientists said that was impossible. The cows said "told you so" and went back to eating grass.','scroll'],
+    ['mo3','The Moon','Getting There','Press O for PLANETS and pick THE MOON. No rocket needed. The Moon pulls you up by itself, it is very friendly like that. Gravity up there is weak, so do not jump next to a crater.','scroll'],
+    ['mo4','The Moon','The Face','The Moon winks about once every ten seconds. Nobody knows why. The Pigeon says it is a secret code. The Pigeon also says the Moon is cheese, so take that as you like.','scroll']
+  ];
+  try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+    if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); } } }catch(e){ console.warn('LN-moon lore', e); }
+  window.__moon = {moon, earth, PAGES, T:{tick:tickMoon}};
+})();
+/* LN-moon end */
 
 
 
