@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 190 (Oct 31)';
+  window.__BUILD = 'Build 191 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34683,6 +34683,268 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__farm2 = {aimCrop, uproot, wetAt};
 })();
 /* LN-farm2 end */
+/* LN-mining start: dynamite, rails and minecarts, an ore scanner and a mining drill, all sold at the shop under MINING GEAR (Irfan 2026-11-04 "EXPAND THE GAME MINING STUFF LETS ADD DYNAMITE,MINERAILS,MINECART,AND MORE") */
+(function(){
+  const pk = a=>a[Math.floor(Math.random()*a.length)];
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); m.castShadow = true; par.add(m); return m; };
+  const label = (txt, w, col)=>{ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt, 512, 64, null, col || '#ffffff', 'bold 30px Arial'), fog:false, depthWrite:false, depthTest:false, transparent:true})); s.scale.set(w, w/8, 1); return s; };
+  const _d = new THREE.Vector3();
+  const GEAR = [
+    ['Dynamite', 150, 3, 'Right-click a block to plant it. 3 second fuse, blows a hole 3 blocks wide. Stand back.'],
+    ['Mega Dynamite', 600, 1, 'Like Dynamite, but the hole is 6 blocks wide. Really stand back.'],
+    ['Rail', 20, 10, 'Right-click the top of a block to lay a rail. Rails join up in a line and go up and down one block. Left-click a rail to pick it up.'],
+    ['Minecart', 400, 1, 'Right-click a rail to put the cart on it. F to get in, W to go, S to brake, F to get out.'],
+    ['Ore Scanner', 2000, 1, 'Right-click to see the 8 nearest ores through the rock for 20 seconds.'],
+    ['Mining Drill', 25000, 1, 'Keep it in the selected carry slot: every block you mine also breaks the 8 blocks around it.']
+  ];
+  try{ Object.assign(ITEM_COL, {'Dynamite':[200,40,30], 'Mega Dynamite':[255,80,20], 'Rail':[140,140,150], 'Minecart':[90,90,100], 'Ore Scanner':[60,200,220], 'Mining Drill':[240,180,40]}); }catch(e){}
+  const selName = ()=>{ try{ const hi = hotInfo(hotArr()[save.hotSel]); return hi && hi.kind === 'item' ? hi.name : null; }catch(e){ return null; } };
+
+  // ---------------- the shop sells mining gear
+  const _rs = renderShop;
+  renderShop = function(){
+    const r = _rs.apply(this, arguments);
+    try{
+      const list = $('shoplist'); if(!list) return r;
+      const hd = document.createElement('div'); hd.className = 'item'; hd.style.cssText = 'background:rgba(200,120,40,.18);font-weight:800'; hd.innerHTML = '<div><div class="nm">MINING GEAR</div><div class="ds">Dynamite blows holes, rails and a minecart carry you through your mine, the scanner finds ores, the drill mines 3x3.</div></div>';
+      list.appendChild(hd);
+      GEAR.forEach(([nm, price, n, ds])=>{
+        const pr = Math.round(price*(save.shopOwner ? .5 : 1)), have = (save.inv || {})[nm] || 0;
+        const div = document.createElement('div'); div.className = 'item';
+        const col = ITEM_COL[nm] || [120,120,120];
+        div.innerHTML = '<div class="sw" style="background:rgb('+col.join(',')+')"></div><div><div class="nm">'+nm+(n > 1 ? ' x'+n : '')+(have ? ' <span style="opacity:.6;font-size:12px">(you have '+have+')</span>' : '')+'</div><div class="ds">'+ds+'</div></div>';
+        const one = nm === 'Ore Scanner' || nm === 'Mining Drill';
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = (one && have) ? 'Owned' : 'Buy $'+pr.toLocaleString(); b.disabled = save.coins < pr || (one && have > 0);
+        b.onclick = ()=>{ if(save.coins < pr) return; save.coins -= pr; addItem(nm, n); hotAuto('i:'+nm); persist(); renderShop(); blip(660,.1,.08,'triangle'); toast('You bought ' + (n > 1 ? n + ' ' : '') + nm + '. ' + ds); };
+        div.appendChild(b); list.appendChild(div);
+      });
+    }catch(e){ console.warn('LN-mining shop', e); }
+    return r;
+  };
+
+  // ---------------- dynamite
+  const sticks = [];
+  function stickModel(mega){
+    const g = new THREE.Group(), c = mega ? 0xff5010 : 0xc02820, n = mega ? 5 : 3;
+    for(let i=0;i<n;i++){ const m = new THREE.Mesh(new THREE.CylinderGeometry(.11, .11, .5, 10), mat(c)); m.position.set((i - (n-1)/2)*.24, .25, 0); g.add(m); }
+    bx(g, n*.24 + .04, .08, .3, 0x6a4a20, 0, .25, 0);
+    const f = bx(g, .03, .25, .03, 0x303030, 0, .6, 0); g.userData.fuse = f;
+    const l = label(mega ? 'MEGA DYNAMITE' : 'DYNAMITE', 2.2, '#ffd0a0'); l.position.y = 1; g.add(l);
+    scene.add(g); return g;
+  }
+  const NOBOOM = /core|barrier|bedrock|portal/i;
+  function plant(ref, mega){
+    const h = castRay(); if(!h || h.pi == null){ toast('Aim at a block to plant the ' + (mega ? 'Mega Dynamite' : 'Dynamite') + '.'); return true; }
+    if(!consumeRef(ref, 1)) return true;
+    const g = stickModel(mega); g.position.set(h.pi + .5, -h.pd - 1, h.pk + .5);
+    sticks.push({x:h.pi, d:h.pd, z:h.pk, t:3, g, mega, beep:0}); updateHotbar(); persist();
+    toast((mega ? 'MEGA DYNAMITE' : 'Dynamite') + ' planted! Three seconds. RUN.'); blip(880,.1,.1,'square');
+    return true;
+  }
+  let noDrill = false;
+  function boom(s){
+    scene.remove(s.g); const i = sticks.indexOf(s); if(i >= 0) sticks.splice(i, 1);
+    const R = s.mega ? 3 : 1.5, cx = s.x + .5, cy = -s.d - .5, cz = s.z + .5; let n = 0;
+    noDrill = true;
+    try{
+      for(let dy=-Math.ceil(R); dy<=Math.ceil(R); dy++) for(let dx=-Math.ceil(R); dx<=Math.ceil(R); dx++) for(let dz=-Math.ceil(R); dz<=Math.ceil(R); dz++){
+        if(dx*dx + dy*dy + dz*dz > R*R + .6) continue;
+        const x = s.x + dx, d = s.d + dy, z = s.z + dz; if(d < -48 || d >= D) continue;
+        const t = get(x, d, z); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || NOBOOM.test(B.name)) continue;
+        try{ breakBlock({i:x, d, k:z}); n++; }catch(e){}
+      }
+    } finally { noDrill = false; }
+    for(let k=0;k<(s.mega ? 8 : 4);k++) burst(cx + (Math.random()-.5)*R, cy + (Math.random()-.5)*R, cz + (Math.random()-.5)*R, 9, 24);
+    burst(cx, cy, cz, 0, 40); shake = Math.max(shake, s.mega ? .5 : .3); blip(40,.8,.3,'sawtooth'); blip(90,.5,.2,'square'); setTimeout(()=>blip(60,.4,.15,'sawtooth'), 120);
+    const pd = Math.hypot(P.x - cx, P.y + 1 - cy, P.z - cz), reach = R + 2.5;
+    if(pd < reach){ hurtPlayer(Math.round(4 + (s.mega ? 30 : 15)*(1 - pd/reach))); P.vy = Math.max(P.vy, 9); P.ground = false; setTimeout(()=>toast('BOOM! You were standing too close to the dynamite.'), 50); }
+    else toast('BOOM! ' + n + ' blocks blown to bits.');
+    try{ for(const a of animals.slice()) if(Math.hypot(a.pos.x - cx, a.pos.y - cy, a.pos.z - cz) < R + 2) damageAnimal(a, s.mega ? 200 : 80); }catch(e){}
+    try{ for(const e of enemies.slice()) if(Math.hypot(e.pos.x - cx, e.pos.y - cy, e.pos.z - cz) < R + 2) damageEnemy(e, s.mega ? 300 : 120); }catch(e){}
+    save.booms = (save.booms || 0) + 1; persist();
+    if(save.booms === 1) setTimeout(()=>toast('Tip: dynamite does not break cores, barriers or portals, but it breaks almost everything else, and pays you for every block.'), 2600);
+  }
+  function dynTick(dt){
+    for(const s of sticks.slice()){
+      s.t -= dt; s.beep += dt;
+      if(s.beep > .5){ s.beep = 0; blip(1200,.05,.08,'square'); burst(s.g.position.x, s.g.position.y + .75, s.g.position.z, 9, 3); }
+      s.g.userData.fuse.scale.y = Math.max(.1, s.t/3);
+      if(s.t <= 0) boom(s);
+    }
+  }
+
+  // ---------------- rails
+  save.rails = save.rails || []; const rails = save.rails; const rm = new Map(); const rk = (x, d, z)=>x + '|' + d + '|' + z;
+  const railAt = (x, d, z)=>rails.find(r=>r[0] === x && r[1] === d && r[2] === z);
+  const railNear = (x, d, z)=>railAt(x, d, z) || railAt(x, d - 1, z) || railAt(x, d + 1, z);
+  function railModel(){
+    const g = new THREE.Group();
+    [-.3, .3].forEach(x=>bx(g, .08, .07, 1, 0x9a9aa4, x, .06, 0));
+    [-.35, 0, .35].forEach(z=>bx(g, .92, .05, .16, 0x6a4a28, 0, .03, z));
+    return g;
+  }
+  function orient(r){ const m = rm.get(rk(r[0], r[1], r[2])); if(!m) return; const ax = railNear(r[0] + 1, r[1], r[2]) || railNear(r[0] - 1, r[1], r[2]), az = railNear(r[0], r[1], r[2] + 1) || railNear(r[0], r[1], r[2] - 1); m.rotation.y = (ax && !az) ? Math.PI/2 : 0; }
+  function showRail(r){ const k = rk(r[0], r[1], r[2]); if(rm.has(k)) return; const m = railModel(); m.position.set(r[0] + .5, -r[1] + .02, r[2] + .5); scene.add(m); rm.set(k, m); orient(r); [[1,0],[-1,0],[0,1],[0,-1]].forEach(q=>{ const o = railNear(r[0] + q[0], r[1], r[2] + q[1]); if(o) orient(o); }); }
+  function hideRail(r){ const k = rk(r[0], r[1], r[2]); const m = rm.get(k); if(m){ scene.remove(m); rm.delete(k); } const i = rails.indexOf(r); if(i >= 0) rails.splice(i, 1); [[1,0],[-1,0],[0,1],[0,-1]].forEach(q=>{ const o = railNear(r[0] + q[0], r[1], r[2] + q[1]); if(o) orient(o); }); }
+  function lay(ref){
+    const h = castRay(); if(!h || h.pi == null){ toast('Aim at the top of a block to lay a rail.'); return true; }
+    let cell = null;
+    if(h.pi === h.i && h.pk === h.k && h.pd === h.d - 1) cell = [h.i, h.d, h.k]; else if(get(h.pi, h.pd + 1, h.pk)) cell = [h.pi, h.pd + 1, h.pk];
+    if(!cell){ toast('Aim at the top of a block to lay a rail.'); return true; }
+    if(railAt(cell[0], cell[1], cell[2])){ toast('There is already a rail there.'); return true; }
+    if(rails.length >= 800){ toast('That is enough rails for one world (800). Pick some up first.'); return true; }
+    if(!consumeRef(ref, 1)) return true;
+    rails.push(cell); showRail(cell); persist(); updateHotbar(); blip(500,.06,.08,'square');
+    if(rails.length === 1) toast('First rail laid! Lay more in a line, then right-click a rail with a Minecart.');
+    return true;
+  }
+  function aimRail(){ camera.getWorldDirection(_d); let best = null, bd = 4.6; for(const r of rails){ const dx = r[0] + .5 - camera.position.x, dy = -r[1] + .1 - camera.position.y, dz = r[2] + .5 - camera.position.z, L = Math.hypot(dx, dy, dz); if(L > bd) continue; if((dx*_d.x + dy*_d.y + dz*_d.z)/L > .9){ bd = L; best = r; } } return best; }
+  function pickUp(r){ const c = carts.find(q=>q.cell === r || (q.cx === r[0] && q.cz === r[2] && q.cd === r[1])); if(c){ if(ride === c) leave(); dropCart(c); addItem('Minecart', 1); } hideRail(r); addItem('Rail', 1); persist(); blip(400,.06,.08,'triangle'); toast('Rail picked up.'); }
+
+  // ---------------- minecarts
+  save.carts = save.carts || []; const carts = []; let ride = null, pickT = 0, endT = 0;
+  function cartModel(){
+    const g = new THREE.Group();
+    bx(g, .8, .45, 1.05, 0x55555f, 0, .42, 0); bx(g, .64, .3, .9, 0x2a2a30, 0, .5, 0).position.y = .52;
+    [[-.36, .35], [.36, .35], [-.36, -.35], [.36, -.35]].forEach(q=>{ const w = new THREE.Mesh(new THREE.CylinderGeometry(.14, .14, .08, 10), mat(0x202024)); w.rotation.z = Math.PI/2; w.position.set(q[0], .14, q[1]); g.add(w); });
+    const l = label('MINECART  (F to ride)', 2.6, '#ffe0a0'); l.position.y = 1.1; g.add(l); g.userData.lbl = l;
+    scene.add(g); return g;
+  }
+  function mkCart(cx, cd, cz){ const c = {cx, cd, cz, x:cx + .5, z:cz + .5, dir:[0, 1], v:0, g:cartModel()}; c.g.position.set(c.x, -cd + .02, c.z); carts.push(c); return c; }
+  function dropCart(c){ scene.remove(c.g); const i = carts.indexOf(c); if(i >= 0) carts.splice(i, 1); saveCarts(); }
+  function saveCarts(){ save.carts = carts.map(c=>[c.cx, c.cd, c.cz]); persist(); }
+  function putCart(ref){
+    const r = aimRail(); if(!r){ toast('Right-click a rail to put the Minecart on it.'); return true; }
+    if(carts.some(c=>c.cx === r[0] && c.cz === r[2])){ toast('There is already a cart on that rail.'); return true; }
+    if(!consumeRef(ref, 1)) return true;
+    mkCart(r[0], r[1], r[2]); saveCarts(); updateHotbar(); blip(300,.1,.1,'triangle'); toast('Minecart on the rails. Walk up and press F to get in.');
+    return true;
+  }
+  const nearCart = ()=>{ let best = null, bd = 2.4; for(const c of carts){ const d = Math.hypot(c.x - P.x, c.z - P.z, (-c.cd - P.y)*.5); if(d < bd){ bd = d; best = c; } } return best; };
+  function board(c){
+    ride = c; c.v = 0; endT = 0;
+    // start off along the rail in the direction you are facing
+    const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
+    const ax = railNear(c.cx + 1, c.cd, c.cz) || railNear(c.cx - 1, c.cd, c.cz), az = railNear(c.cx, c.cd, c.cz + 1) || railNear(c.cx, c.cd, c.cz - 1);
+    if(ax && (!az || Math.abs(fx) > Math.abs(fz))) c.dir = [fx >= 0 ? 1 : -1, 0]; else c.dir = [0, fz >= 0 ? 1 : -1];
+    c.g.userData.lbl.visible = false;
+    toast('You hop in the Minecart. Hold W to go, S to brake, F to get out. It follows the rails and goes faster downhill.'); blip(440,.1,.1,'triangle');
+  }
+  function leave(){ if(!ride) return; const c = ride; ride = null; c.v = 0; c.g.userData.lbl.visible = true; P.x = c.x + c.dir[1]*1.1 + (c.dir[0] ? 0 : .9); P.z = c.z - c.dir[0]*1.1; P.y = -c.cd + .05; P.vx = P.vz = 0; P.ground = true; saveCarts(); toast('You climb out of the Minecart.'); }
+  function cartTick(dt){
+    if(!ride) return;
+    const c = ride; if(!locked){ return; }
+    // speed
+    if(keys.KeyW) c.v = Math.min(10, c.v + 7*dt); else if(keys.KeyS) c.v = Math.max(0, c.v - 14*dt); else c.v = Math.max(0, c.v - 1.2*dt);
+    const nx = c.cx + c.dir[0], nz = c.cz + c.dir[1], nr = railAt(nx, c.cd, nz) || railAt(nx, c.cd + 1, nz) || railAt(nx, c.cd - 1, nz);
+    if(nr){ if(nr[1] > c.cd) c.v = Math.min(12, c.v + 5*dt); if(nr[1] < c.cd) c.v = Math.max(0, c.v - 6*dt); }
+    // move along the direction
+    let left = c.v*dt;
+    while(left > 0){
+      const tx = c.cx + .5 + c.dir[0]*.5, tz = c.cz + .5 + c.dir[1]*.5;          // the edge of this cell
+      const toEdge = Math.abs(tx - c.x) + Math.abs(tz - c.z);
+      if(left < toEdge){ c.x += c.dir[0]*left; c.z += c.dir[1]*left; left = 0; break; }
+      // crossing into the next cell
+      const next = railAt(c.cx + c.dir[0], c.cd, c.cz + c.dir[1]) || railAt(c.cx + c.dir[0], c.cd + 1, c.cz + c.dir[1]) || railAt(c.cx + c.dir[0], c.cd - 1, c.cz + c.dir[1]);
+      if(next){ c.x = tx; c.z = tz; left -= toEdge; c.cx = next[0]; c.cd = next[1]; c.cz = next[2]; continue; }
+      // a turn?
+      const L = [-c.dir[1], c.dir[0]], R = [c.dir[1], -c.dir[0]];
+      const tl = railNear(c.cx + L[0], c.cd, c.cz + L[1]), tr = railNear(c.cx + R[0], c.cd, c.cz + R[1]);
+      const t = tl || tr; if(t && Math.abs(c.x - (c.cx + .5)) + Math.abs(c.z - (c.cz + .5)) < .02){ c.dir = tl ? L : R; continue; }
+      if(t){ const d2 = Math.abs(c.x - (c.cx + .5)) + Math.abs(c.z - (c.cz + .5)); if(left < d2){ c.x += (c.cx + .5 - c.x)*Math.min(1, left/d2); c.z += (c.cz + .5 - c.z)*Math.min(1, left/d2); left = 0; break; } c.x = c.cx + .5; c.z = c.cz + .5; left -= d2; c.dir = tl ? L : R; continue; }
+      // end of the line: stop at the cell centre
+      c.x = c.cx + .5; c.z = c.cz + .5; left = 0; if(c.v > 0){ c.v = 0; endT += 1; if(endT === 1) toast('End of the line. Lay more rails, or turn around (A or D then W).'); }
+      break;
+    }
+    if(keys.KeyA && c.v < .5){ c.dir = [-c.dir[1], c.dir[0]]; const t = railNear(c.cx + c.dir[0], c.cd, c.cz + c.dir[1]); if(!t) c.dir = [c.dir[1], -c.dir[0]]; keys.KeyA = false; endT = 0; }
+    if(keys.KeyD && c.v < .5){ c.dir = [c.dir[1], -c.dir[0]]; const t = railNear(c.cx + c.dir[0], c.cd, c.cz + c.dir[1]); if(!t) c.dir = [-c.dir[1], c.dir[0]]; keys.KeyD = false; endT = 0; }
+    c.g.position.set(c.x, -c.cd + .02, c.z); c.g.rotation.y = Math.atan2(c.dir[0], c.dir[1]);
+    P.x = c.x; P.z = c.z; P.y = -c.cd + .25; P.vx = P.vz = P.vy = 0; P.ground = true;
+    if(c.v > 1 && Math.random() < dt*6) blip(120 + c.v*20, .03, .03, 'square');
+  }
+
+  // ---------------- the ore scanner
+  const marks = []; let scanCD = 0;
+  function scan(){
+    if(scanCD > 0){ toast('The Ore Scanner is recharging (' + Math.ceil(scanCD) + ' s).'); return true; }
+    const found = [], R = 22, x0 = Math.floor(P.x), d0 = Math.floor(-P.y), z0 = Math.floor(P.z);
+    for(let dy=-R; dy<=R; dy++){ const d = d0 + dy; if(d < -48 || d >= D) continue; for(let dx=-R; dx<=R; dx++) for(let dz=-R; dz<=R; dz++){
+      const t = get(x0 + dx, d, z0 + dz); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || !B.ore) continue;
+      found.push({x:x0 + dx, d, z:z0 + dz, n:B.oreName || B.name, L:Math.hypot(dx, dy, dz)}); } }
+    found.sort((a, b)=>a.L - b.L);
+    marks.forEach(m=>scene.remove(m.s)); marks.length = 0;
+    found.slice(0, 8).forEach(f=>{ const s = label(f.n + '  ' + Math.round(f.L) + ' m', 3.2, '#80f0ff'); s.position.set(f.x + .5, -f.d - .5, f.z + .5); scene.add(s); marks.push({s, t:20}); });
+    scanCD = 8; blip(1500,.08,.08,'sine'); setTimeout(()=>blip(1900,.08,.08,'sine'), 100);
+    toast(found.length ? 'Ore Scanner: ' + found.length + ' ores within 22 blocks. The nearest 8 are marked for 20 seconds. Nearest: ' + found[0].n + ', ' + Math.round(found[0].L) + ' blocks away.' : 'Ore Scanner: no ores within 22 blocks. Dig deeper.');
+    return true;
+  }
+
+  // ---------------- the mining drill: 3x3
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    const r = _bb.apply(this, arguments);
+    try{
+      if(!noDrill && selName() === 'Mining Drill' && h && h.i != null){
+        noDrill = true;
+        try{
+          camera.getWorldDirection(_d); const ax = Math.abs(_d.x), ay = Math.abs(_d.y), az = Math.abs(_d.z);
+          for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ if(!a && !b) continue;
+            let x = h.i, d = h.d, z = h.k;
+            if(ay >= ax && ay >= az){ x += a; z += b; } else if(ax >= az){ d += a; z += b; } else { x += a; d += b; }
+            if(d < -48 || d >= D) continue; const t = get(x, d, z); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || NOBOOM.test(B.name)) continue;
+            _bb({i:x, d, k:z}); }
+        } finally { noDrill = false; }
+      }
+    }catch(e){ console.warn('LN-mining drill', e); }
+    return r;
+  };
+
+  // ---------------- right-click uses, F, hint, loop
+  const _hp = hotPlace;
+  hotPlace = function(){
+    try{
+      const r = hotArr()[save.hotSel], hi = hotInfo(r);
+      if(hi && hi.kind === 'item'){
+        if(hi.name === 'Dynamite') return plant(r, false);
+        if(hi.name === 'Mega Dynamite') return plant(r, true);
+        if(hi.name === 'Rail') return lay(r);
+        if(hi.name === 'Minecart') return putCart(r);
+        if(hi.name === 'Ore Scanner') return scan();
+        if(hi.name === 'Mining Drill'){ toast('The Mining Drill works on its own: keep it in this slot and mine. Every block you mine also breaks the 8 around it.'); return true; }
+      }
+    }catch(e){ console.warn('LN-mining place', e); }
+    return _hp.apply(this, arguments);
+  };
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code !== 'KeyF' || e.repeat || !locked || won || shopOpen || realm !== 0) return;
+      if(ride){ leave(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+      const c = nearCart(); if(c){ board(c); e.stopImmediatePropagation(); e.preventDefault(); }
+    }catch(err){ console.warn('LN-mining key', err); }
+  }, true);
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:284px;transform:translateX(-50%);background:rgba(40,30,10,.7);color:#ffd890;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  setTimeout(()=>{ try{ rails.forEach(showRail); (save.carts || []).forEach(c=>mkCart(c[0], c[1], c[2])); }catch(e){ console.warn('LN-mining load', e); } }, 800);
+  let last = performance.now(), chk = 0;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || won) return;
+      dynTick(dt); cartTick(dt);
+      if(scanCD > 0) scanCD -= dt;
+      for(const m of marks.slice()){ m.t -= dt; if(m.t <= 0){ scene.remove(m.s); marks.splice(marks.indexOf(m), 1); } }
+      // pick up a rail by holding left click on it
+      if(locked && mouseDown && !curGun && !ride){ const r = aimRail(); if(r){ pickT += dt; if(pickT > .3){ pickT = 0; pickUp(r); } } else pickT = 0; } else pickT = 0;
+      // rails whose block is gone fall into your pocket
+      chk += dt; if(chk > 3){ chk = 0; for(const r of rails.slice()) if(!get(r[0], r[1], r[2]) && Math.abs(r[0] - P.x) < 60 && Math.abs(r[2] - P.z) < 60){ pickUp(r); } }
+      let h = null; if(locked && realm === 0){ if(ride) h = 'W: go   S: brake   A/D: turn at a stop   F: get out'; else { const c = nearCart(); if(c) h = 'F: get in the Minecart'; } }
+      if(h){ hint.textContent = h; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-mining', e); } }
+  })(last);
+  window.__mining = {GEAR, sticks, rails, carts, get ride(){ return ride; }, plant, boom, lay, putCart, board, leave, scan, mkCart, showRail, railAt, T:{tick:()=>cartTick(.1)}};
+})();
+/* LN-mining end */
 
 
 
