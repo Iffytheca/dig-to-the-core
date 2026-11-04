@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 184 (Oct 31)';
+  window.__BUILD = 'Build 185 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28267,6 +28267,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return n;
   }
   function roofed(x, d, z){ for(let h=1; h<=4; h++) if(solid(x, d - h, z)) return true; return false; }
+  /* LN-homesfix: only a closed room counts as a house (Irfan 2026-11-04 "things that arent home ... have home stuff"): walk each way under the roof until a wall; open air or no wall within 5 means it is not a home */
+  function walled(x, d, z){
+    for(const [dx, dz] of DIRS){
+      let ok = false;
+      for(let s=1; s<=5; s++){ const xx = x + dx*s, zz = z + dz*s;
+        if(solid(xx, d, zz) || (solid(xx, d - 1, zz) && solid(xx, d + 1, zz))){ ok = true; break; }
+        if(!roofed(xx, d, zz) || !solid(xx, d + 1, zz)) break; }
+      if(!ok) return false;
+    }
+    return true;
+  }
   // find houses and pens made of blocks you (or the animals) placed
   function scan(){
     const near = [];
@@ -28279,7 +28290,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         if(solid(v.x, d, v.z)) break;
         if(!solid(v.x, d + 1, v.z)) continue;          // needs a floor
         const k = v.x + ',' + d + ',' + v.z; if(seen.has(k)) break; seen.add(k);
-        if(wallDirs(v.x, d, v.z, 5) >= 3) found.set(k, [v.x, d, v.z, 'house']);
+        if(walled(v.x, d, v.z)) found.set(k, [v.x, d, v.z, 'house']);
         break;
       }
     }
@@ -28310,6 +28321,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       while(q.length){ const [x, d, z, kind] = q.pop(); cells.push([x, d, z]);
         for(const [dx, dz] of DIRS) for(const dd of [0, 1, -1]){ const kk = (x + dx) + ',' + (d + dd) + ',' + (z + dz); const n = found.get(kk); if(n && n[3] === kind && !used.has(kk)){ used.add(kk); q.push(n); } } }
       if(c[3] === 'pen' && cells.length < 4) continue;
+      if(c[3] === 'house' && cells.length < 2) continue;
       cells.sort((a, b)=>a[0] - b[0] || a[2] - b[2]);
       const cx = cells.reduce((s, q)=>s + q[0], 0)/cells.length + .5, cz = cells.reduce((s, q)=>s + q[2], 0)/cells.length + .5;
       const cap = c[3] === 'house' ? Math.max(1, Math.min(cells.length >= 25 ? 10 : cells.length >= 9 ? 6 : 4, Math.floor(cells.length/2) || 1)) : Math.max(2, Math.min(6, Math.floor(cells.length/4)));
