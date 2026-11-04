@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 182 (Oct 31)';
+  window.__BUILD = 'Build 183 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34069,6 +34069,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       news('BREAKING: A miner met the Janitor below the Even Deeper Core and came back with a Golden Mop. The Janitor asked for his mop back. The miner said no.');
       try{ ['j3','j4','j5','o1','o2','o3'].forEach(k=>window.__lore && window.__lore.unlock && window.__lore.unlock(k)); }catch(e){}
       return; }
+    if(!save.lostOpen){ save.lostCall = 1; persist(); toast('THE JANITOR: "Right. I have an ANNOUNCEMENT for everyone. Go up to the surface, I will be right behind you. Mind the mop."'); blip(300,.1,.1,'triangle'); return; }
     toast('THE JANITOR: ' + JAN[janI++ % JAN.length]); blip(240,.08,.1,'triangle');
   }
 
@@ -34148,7 +34149,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function startAnn(){
     J = janitor(); const gy = (()=>{ try{ return groundTop(Math.floor(P.x + Math.sin(P.yaw)*-4), Math.max(P.y, 0) + 6, Math.floor(P.z + Math.cos(P.yaw)*-4)); }catch(e){ return P.y; } })();
     J.position.set(P.x + Math.sin(P.yaw)*-4, gy, P.z + Math.cos(P.yaw)*-4); J.lookAt(P.x, gy, P.z); scene.add(J);
-    ann = {i:0, t:0}; burst(J.position.x, J.position.y + 1, J.position.z, 0, 14); blip(330,.2,.15,'square'); setTimeout(()=>blip(440,.2,.15,'square'), 150);
+    ann = {i:0, t:0}; save.lostCall = 0; burst(J.position.x, J.position.y + 1, J.position.z, 0, 14); blip(330,.2,.15,'square'); setTimeout(()=>blip(440,.2,.15,'square'), 150);
     save.lostAnn = 1; persist();
   }
   function finishAnn(){
@@ -34161,9 +34162,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   function tickAnn(dt){
     if(!ann){
-      if(done || !save.doorPrize || save.lostAnn) return;
-      if(realm !== 0 || P.x >= UPPER_EDGE || P.y < -1 || !locked || startEl.style.display === 'flex' || shopOpen) return;
-      t0 += dt; if(t0 > 6) startAnn(); return;
+      if(done || save.lostOpen) return;
+      const met = save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop') || save.lostCall; if(!met) return;
+      if(realm !== 0 || P.x >= UPPER_EDGE || P.y < -3 || startEl.style.display === 'flex' || shopOpen || (window.__morePlanets && window.__morePlanets.cur())){ t0 = 0; return; }
+      if(!t0) t0 = performance.now(); if(performance.now() - t0 > (save.lostCall ? 1000 : 6000)) startAnn(); return;
     }
     ann.t += dt;
     if(J){ J.lookAt(P.x, J.position.y, P.z); J.position.y += Math.sin(ann.t*6)*.004; }
@@ -34210,7 +34212,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   ];
   try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
     if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); } } }catch(e){ console.warn('LN-lost lore', e); }
-  window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ ann.t = 1e6; ann.i = LINES.length; } }, go:()=>{ if(!ann && !done) startAnn(); }}};
+  window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ ann.t = 1e6; ann.i = LINES.length; } }, go:()=>{ if(!ann && !done) startAnn(); }, why:()=>({done, lostOpen:save.lostOpen, met:!!(save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop') || save.lostCall), realm, x:P.x, y:P.y, start:startEl.style.display, shopOpen, cur:!!(window.__morePlanets && window.__morePlanets.cur()), t0, ann:!!ann})}};
 })();
 /* LN-lost end */
 
