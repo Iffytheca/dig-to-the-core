@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 180 (Oct 31)';
+  window.__BUILD = 'Build 181 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33918,6 +33918,179 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__moon = {moon, earth, PAGES, T:{tick:tickMoon}};
 })();
 /* LN-moon end */
+/* LN-door start: the door below the Even Deeper Core. It stands in the Core Chamber, the sign says BACK IN 5 MINUTES, and behind it is the Janitor's Basement (Irfan 2026-11-04 "addd the door below deeper core and expand lore") */
+(function(){
+  const WAIT = 300000, M = window.__melee;
+  const KEY = "The Janitor's Key", KEY_D = 'It opens the door below the Even Deeper Core. The door is already open, but the key still feels very important. The Janitor said to keep it. He has nine more.';
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  try{ ITEM_COL['Golden Mop'] = [255, 200, 60]; }catch(e){}
+  try{
+    window.__EXOTIC_NAMES = window.__EXOTIC_NAMES || []; if(window.__EXOTIC_NAMES.indexOf(KEY) < 0) window.__EXOTIC_NAMES.push(KEY);
+    const clean = n=>String(n || '').replace(/\s*\(Sector.*\)$/, '').trim();
+    const _ed = window.__exoDesc; window.__exoDesc = n=>(_ed && _ed(n)) || (clean(n) === KEY ? KEY_D : null);
+  }catch(e){}
+  // the mop is a weapon kind of its own
+  try{ if(M && M.KINDS) M.KINDS.mop = {nm:'Mop', m:1.25};
+    const old = window.__swordModel;
+    window.__swordModel = function(k, col){
+      if(k !== 'mop') return old ? old(k, col) : null;
+      const g = new THREE.Group(), mk = (w,h,d,c,x,y,z,glow)=>{ const mat = new THREE.MeshLambertMaterial({color:c}); if(glow) mat.emissive = new THREE.Color(c).multiplyScalar(glow); mat.depthTest = false; const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.renderOrder = 999; m.position.set(x,y,z); g.add(m); return m; };
+      mk(.06, 1.1, .06, col || 0xe0b040, 0, .1, 0, .3); mk(.3, .08, .12, 0x8a6a30, 0, .62, 0);
+      for(let i=0;i<7;i++) mk(.05, .3, .05, 0xd8d8d0, -.12 + i*.04, .78 + (i%2)*.03, (i%3 - 1)*.04);
+      return g;
+    };
+  }catch(e){ console.warn('LN-door mop', e); }
+
+  // ---------------- the door in the Core Chamber
+  let door = null, sign = null, panel = null, signTxt = '', lastSec = -1, room = null, base = null, hint = null;
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); par.add(m); return m; };
+  const label = (txt, w, big)=>{ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt, 512, 64, null, '#ffffff', (big ? 'bold 34px' : 'bold 28px') + ' Arial'), fog:false, depthWrite:false, transparent:true})); s.scale.set(w, w/8, 1); return s; };
+  function setSign(t){ if(t === signTxt || !sign) return; signTxt = t; const old = sign.material.map; sign.material.map = textTex(t, 512, 64, 'rgba(60,30,10,.9)', '#ffe0a0', 'bold 30px Arial'); sign.material.needsUpdate = true; try{ if(old) old.dispose(); }catch(e){} }
+  function buildDoor(){
+    const g = new THREE.Group();
+    bx(g, .4, 4.2, .5, 0x3a2a1a, -1.2, 2.1, 0); bx(g, .4, 4.2, .5, 0x3a2a1a, 1.2, 2.1, 0); bx(g, 2.8, .4, .5, 0x3a2a1a, 0, 4.2, 0);   // frame
+    panel = new THREE.Group(); panel.position.set(-1, 0, 0); g.add(panel);
+    bx(panel, 2, 4, .2, 0x6a4a2a, 1, 2, 0); bx(panel, 1.4, 1.2, .05, 0x5a3a1a, 1, 2.9, .12); bx(panel, 1.4, 1.2, .05, 0x5a3a1a, 1, 1.1, .12);
+    const knob = bx(panel, .18, .18, .18, 0xe0b040, 1.75, 1.9, .2); knob.material.emissive = new THREE.Color(0x604010);
+    bx(g, 3, .08, 1.6, 0x8a3a2a, 0, .04, 1.1);                                                                   // doormat
+    const mt = label('WELCOME', 2.2); mt.position.set(0, .3, 1.1); g.add(mt);
+    sign = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex('BACK IN 5 MINUTES', 512, 64, 'rgba(60,30,10,.9)', '#ffe0a0', 'bold 30px Arial'), fog:false, depthWrite:false, transparent:true}));
+    sign.scale.set(5, .62, 1); sign.position.set(0, 5.1, .3); g.add(sign); signTxt = 'BACK IN 5 MINUTES';
+    const sub = label('the door below the Even Deeper Core', 6); sub.position.set(0, 5.9, .3); g.add(sub);
+    const l = new THREE.PointLight(0xffc070, 1.2, 14); l.position.set(0, 3, 2); g.add(l);
+    g.visible = false; scene.add(g); return g;
+  }
+  const st = ()=>save.door || 0;
+  const nearDoor = ()=>door && door.visible && Math.hypot(P.x - door.position.x, P.z - door.position.z - 1) < 3.2 && Math.abs(P.y - CH_TOP) < 4;
+  const KNOCKS = ['A voice: "I SAID FIVE MINUTES."', 'A voice: "Do you know how long I have been down here? Five. More. Minutes."', 'Knock knock. "Who is there?" You. "Not yet."', 'Something inside knocks back. Twice. Then a sigh.', 'A voice: "Wipe your feet while you wait."', '"Fine. Four minutes. Stop knocking."'];
+  function useDoor(){
+    const s = st();
+    if(s === 0){ save.door = 1; save.doorT = Date.now(); save.knocks = 0; persist(); blip(180,.15,.2,'square'); setTimeout(()=>blip(160,.15,.2,'square'), 180);
+      toast('You knock. A tired voice behind the door: "BACK IN 5 MINUTES." The sign has said that for 4 billion years. This time there is a clock. Every knock takes 20 seconds off.');
+      try{ window.__lore && window.__lore.unlock && window.__lore.unlock('j1'); }catch(e){} return; }
+    if(s === 1){ save.knocks = (save.knocks || 0) + 1; save.doorT -= 20000; persist(); blip(180,.12,.18,'square'); toast(KNOCKS[Math.min(KNOCKS.length - 1, save.knocks - 1)] || KNOCKS[0]); return; }
+    enterBasement();
+  }
+  function openDoor(){
+    save.door = 2; persist(); setSign('OPEN. WIPE YOUR FEET.');
+    toast('The door below the Even Deeper Core OPENS. A tired voice: "Finally. Come in. Mind the mop." Press F at the door to go in.');
+    news('BREAKING: The door below the Even Deeper Core has opened after 4 billion years. Early reports say it is a basement. The Pigeon says it is a portal. The Pigeon has not been inside.');
+    blip(220,.3,.15,'triangle'); setTimeout(()=>blip(330,.3,.15,'triangle'), 200); setTimeout(()=>blip(440,.4,.15,'triangle'), 400);
+    try{ ['j1','j2'].forEach(k=>window.__lore && window.__lore.unlock && window.__lore.unlock(k)); }catch(e){}
+  }
+
+  // ---------------- the Janitor's Basement (a room under the chamber floor, walls for walking into, meshes for looking at)
+  const _get = get;
+  get = function(x, d, z){
+    if(room && d >= D + 14 && d <= D + 19){ const dx = x - room.x, dz = z - room.z;
+      if(dx >= -5 && dx <= 5 && dz >= -5 && dz <= 5){ if(d === D + 19 || d === D + 14 || dx === -5 || dx === 5 || dz === -5 || dz === 5) return 1; return 0; } }
+    return _get(x, d, z);
+  };
+  const FY = -(D + 19);                                                      // floor top
+  function buildBase(){
+    const g = new THREE.Group();
+    bx(g, 9, .2, 9, 0x2a2018, 0, -.1, 0); bx(g, 9, .2, 9, 0x1a1612, 0, 4.1, 0);                        // floor, ceiling
+    [[0,-4.5,9,.3],[0,4.5,9,.3],[-4.5,0,.3,9],[4.5,0,.3,9]].forEach(q=>bx(g, q[2], 4, q[3], 0x3a2e24, q[0], 2, q[1]));
+    for(let i=0;i<3;i++){ const p = bx(g, 9, .25, .25, 0x6a7078, 0, 3.8, -3 + i*2.2); if(i === 1) p.material.color.setHex(0x8a6a40); }   // pipes
+    // shelves with jars
+    [[-3.2, 1.2],[-3.2, 2.4]].forEach(q=>{ bx(g, 2.6, .08, .9, 0x7a5a3a, q[0], q[1], -3.9); });
+    [['Spare Cores', 0xffb070, -4],['Lost Socks', 0xd0d0d0, -3.2],['Monday', 0x8080a0, -2.4],['Moon Dust', 0xe0e0ff, -4],['Old Lava', 0xff6a20, -3.2],['Bob (asleep)', 0xffe0a0, -2.4]].forEach((j, i)=>{
+      const y = i < 3 ? 1.45 : 2.65, jar = bx(g, .4, .45, .4, j[1], j[2], y, -3.9); jar.material.transparent = true; jar.material.opacity = .85; const l = label(j[0], 1.4); l.position.set(j[2], y + .4, -3.6); g.add(l); });
+    // the Janitor
+    const J = new THREE.Group(); J.position.set(2.2, 0, -2.4); g.add(J);
+    bx(J, .22, .8, .22, 0x3a3a4a, -.18, .4, 0); bx(J, .22, .8, .22, 0x3a3a4a, .18, .4, 0); bx(J, .7, .8, .4, 0x4a5a6a, 0, 1.2, 0); bx(J, .5, .5, .5, 0xe0b890, 0, 1.85, 0);
+    bx(J, .56, .16, .56, 0x8a3a2a, 0, 2.15, 0); bx(J, .3, .06, .3, 0x8a3a2a, 0, 2.1, .36); bx(J, .12, .08, .04, 0xffffff, -.12, 1.9, .26); bx(J, .12, .08, .04, 0xffffff, .12, 1.9, .26);
+    bx(J, .2, .2, .06, 0x8a8a8a, 0, 1.7, .26);                                                           // very tired moustache
+    bx(J, .2, .7, .2, 0x4a5a6a, -.5, 1.1, .1); bx(J, .2, .7, .2, 0x4a5a6a, .5, 1.1, .1);
+    const mop = bx(J, .06, 2, .06, 0xc0a060, .7, 1, .3); for(let i=0;i<6;i++) bx(J, .05, .35, .05, 0xd8d8d0, .62 + i*.035, .2, .25 + (i%3)*.04);
+    const nm = label('THE JANITOR', 2.4, true); nm.position.set(0, 2.9, 0); J.add(nm);
+    const bucket = bx(g, .5, .45, .5, 0x8a8a90, 3.4, .22, -1.6); bucket.material.color.setHex(0x7a7a84); const wet = label('CAUTION: WET FLOOR (since forever)', 3.2); wet.position.set(3.2, 1.2, -1.2); g.add(wet);
+    const cal = label('MONDAY, 4,000,000,000 BC', 3.4); cal.position.set(-2.8, 3.2, 4.2); g.add(cal);
+    bx(g, 1.4, 2.6, .06, 0x3a2a1a, 2.6, 1.3, 4.4); const fake = label('EVEN MORE BASEMENT (painted on)', 3.4); fake.position.set(2.6, 3, 4.1); g.add(fake);
+    const up = label('F: climb back up to the Core Chamber', 4.2); up.position.set(0, 2.6, 3.4); g.add(up);
+    bx(g, .12, 3.6, .12, 0xb0a080, -.5, 1.8, 3.9); bx(g, .12, 3.6, .12, 0xb0a080, .5, 1.8, 3.9); for(let i=0;i<6;i++) bx(g, 1.1, .08, .08, 0xb0a080, 0, .4 + i*.6, 3.9);   // ladder
+    const l = new THREE.PointLight(0xffd090, .45, 14); l.position.set(0, 3.4, 0); g.add(l);
+    const l2 = new THREE.PointLight(0xffb060, .25, 8); l2.position.set(2.2, 2.5, -2.4); g.add(l2);
+    g.visible = false; scene.add(g); return g;
+  }
+  const inBase = ()=>room && P.y < FY + 6 && P.y > FY - 3 && Math.abs(P.x - room.x) < 7 && Math.abs(P.z - room.z) < 7;
+  const nearJan = ()=>inBase() && Math.hypot(P.x - (room.x + .5 + 2.2), P.z - (room.z + .5 - 2.4)) < 2.6;
+  const nearUp = ()=>inBase() && Math.hypot(P.x - (room.x + .5), P.z - (room.z + .5 + 3.9)) < 2.2;
+  function enterBasement(){
+    room = {x:Math.floor(door.position.x), z:Math.floor(door.position.z)};
+    if(!base) base = buildBase(); base.position.set(room.x + .5, FY, room.z + .5); base.visible = true;
+    P.x = room.x + .5; P.z = room.z + .5 + 2.5; P.y = FY + .05; P.vx = P.vy = P.vz = 0; P.yaw = Math.PI; P.pitch = .05; dirty = true;
+    save.basementVisits = (save.basementVisits || 0) + 1; persist();
+    toast(save.basementVisits === 1 ? 'THE JANITOR\'S BASEMENT. It smells like 4 billion years of mopping. Press F near the Janitor to talk.' : 'Back in the basement. The Janitor nods. He does not stop mopping.');
+    blip(140,.2,.15,'sine');
+  }
+  function leaveBasement(){
+    if(door){ P.x = door.position.x; P.z = door.position.z + 2; P.y = CH_TOP + .05; P.vx = P.vy = P.vz = 0; dirty = true; }
+    if(base) base.visible = false; room = null; toast('You climb back up into the Core Chamber. The door stays open. The mop stays wet.');
+  }
+  const JAN = ['"I have been mopping this floor for 4 billion years. It is still wet. I think the floor is doing it on purpose."', '"The Core? Warm fellow. Hums at night. Never says thank you."',
+    '"Every mode has a door like this one. I have to mop ALL of them. Nobody asks how I get between them. Please do not ask."', '"The Next Universe is through that painted door. No it is not. I painted it. I was bored."',
+    '"The Moon came back, I hear. Good. The Moon owes me five coins."', '"If you find a sock down there, it is mine. All of them are mine."', '"Lore pages? I wrote half of them. The other half were written by the Pigeon, which explains a lot."',
+    '"Keep the key. I have nine more. The door does not even lock. It just likes to be knocked on."'];
+  let janI = 0;
+  function talkJan(){
+    if(!save.doorPrize){ save.doorPrize = 1;
+      try{ save.mats = save.mats || {}; const k = '7|' + KEY; if(!(k in save.mats)) save.matKinds = (save.matKinds || 0) + 1; save.mats[k] = (save.mats[k] || 0) + 1; save.exotics = (save.exotics || 0) + 1; pushFeed(KEY + '  [Exotic]', 1, '#ff3cf0'); }catch(e){}
+      try{ if(M){ save.melee = save.melee || []; save.meleeId = (save.meleeId || 0) + 1; const w = {id:save.meleeId, name:'Golden Mop', k:'mop', dps:Math.round(60 + Math.min(60, (save.depthMax || 0)/8)), col:0xffd040, v:'sharp'}; save.melee.push(w); M.hold(w.id); } }catch(e){}
+      save.coins = (save.coins || 0) + 500000; persist(); shake = Math.max(shake || 0, .1);
+      toast('THE JANITOR: "You are the first visitor in 4 billion years. Here. The Janitor\'s Key (Exotic), my spare GOLDEN MOP, and $500,000 I found under the Core." Press I to see them.');
+      blip(1760,.5,.15,'triangle'); setTimeout(()=>blip(2349,.5,.12,'sine'), 180); setTimeout(()=>blip(3136,.6,.1,'sine'), 360);
+      news('BREAKING: A miner met the Janitor below the Even Deeper Core and came back with a Golden Mop. The Janitor asked for his mop back. The miner said no.');
+      try{ ['j3','j4','j5','o1','o2','o3'].forEach(k=>window.__lore && window.__lore.unlock && window.__lore.unlock(k)); }catch(e){}
+      return; }
+    toast('THE JANITOR: ' + JAN[janI++ % JAN.length]); blip(240,.08,.1,'triangle');
+  }
+
+  // ---------------- keys, hint, loop
+  hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:206px;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#ffd890;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  function what(){ if(nearJan()) return ['talk to the Janitor', talkJan]; if(nearUp()) return ['climb back up', leaveBasement]; if(nearDoor()) return [st() === 0 ? 'knock on the door' : st() === 1 ? 'knock again (takes 20 s off)' : 'go through the door', useDoor]; return null; }
+  addEventListener('keydown', e=>{
+    try{ if(e.code !== 'KeyF' || !locked || won || shopOpen || realm !== 0) return; const w = what(); if(w){ w[1](); e.stopImmediatePropagation(); e.preventDefault(); } }catch(err){ console.warn('LN-door key', err); }
+  }, true);
+  let wasSeen = false, last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(chamberSeen && !wasSeen){ wasSeen = true; if(!door) door = buildDoor(); door.visible = true; door.position.set(heart.position.x + 13, CH_TOP, heart.position.z); if(st() === 2) setSign('OPEN. WIPE YOUR FEET.'); }
+      if(!chamberSeen && wasSeen && !inBase()){ wasSeen = false; if(door) door.visible = false; }
+      if(door && door.visible){
+        if(st() === 1){ const left = Math.max(0, WAIT - (Date.now() - (save.doorT || 0))); const sec = Math.ceil(left/1000); if(sec !== lastSec){ lastSec = sec; setSign(left <= 0 ? 'OPENING...' : 'BACK IN ' + Math.floor(sec/60) + ':' + (sec%60 < 10 ? '0' : '') + sec%60); } if(left <= 0) openDoor(); }
+        if(panel){ const want = st() === 2 ? -1.9 : 0; panel.rotation.y += (want - panel.rotation.y)*Math.min(1, dt*3); }
+      }
+      if(room && !inBase() && P.y > FY + 8){ if(base) base.visible = false; room = null; }      // climbed out some other way
+      const w = locked && realm === 0 ? what() : null;
+      if(w){ hint.textContent = 'F: ' + w[0]; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-door', e); } }
+  })(last);
+
+  // ---------------- lore: the Janitor, the Door, Herbs
+  const PAGES = [
+    ['j1','The Janitor','Who Knocked First','The first knock on the door below the Even Deeper Core was by a worm called Gerald. The voice said BACK IN 5 MINUTES. Gerald waited 400 years, which is a long time for a worm, then went up for lunch.','scroll'],
+    ['j2','The Janitor','The Five Minutes','The Janitor\'s five minutes are not normal minutes. They are Janitor minutes. A Janitor minute is as long as it takes to mop one floor, and the floor is 4 billion years big.','scroll'],
+    ['j3','The Janitor','The Janitor','The Janitor is not a boss, not an alien and not a Bob. He is a man with a mop, a cap and a very tired moustache. He has mopped under every core in every world. He has never once been thanked. Until you.','scroll'],
+    ['j4','The Janitor','The Golden Mop','The Golden Mop is the Janitor\'s spare. It is gold because he polished it every day for a billion years out of boredom. It hits like a hammer and leaves the floor cleaner than it found it.','scroll'],
+    ['j5','The Janitor','The Jars','On the basement shelves there are jars: Spare Cores, Lost Socks, Monday, Moon Dust, Old Lava, and one Bob who fell asleep in 1066. Do not open the Monday jar. Nobody wants two.','scroll'],
+    ['o1','The Door','What the Door Is Made Of','The door below the Even Deeper Core is made of wood from a tree that grew upside down. The knob is real gold. The doormat says WELCOME, which is the only honest sign in the whole chamber.','scroll'],
+    ['o2','The Door','It Does Not Lock','The door has no lock. It never had one. It just likes to be knocked on. Every knock takes twenty seconds off the wait, because the Janitor cannot stand the noise.','scroll'],
+    ['o3','The Door','The Painted Door','In the basement there is a second door marked EVEN MORE BASEMENT. It is painted on the wall. The Janitor painted it in year 3,000,000,000 because he wanted a view.','scroll'],
+    ['h1','Herbs','Where Herbs Come From','Herbs grow wherever a Lore Scroll was dropped and never picked up. The words sink into the ground, and Mint comes up. Scrolls about speed make Sage. Scrolls about jumping make Moonleaf.','scroll'],
+    ['h2','Herbs','Mint and Poison','Mint cures poison because poison is embarrassed to be seen with something that fresh. Raw Meat knows this and stays out of Mint\'s way.','scroll'],
+    ['h3','Herbs','The Four Leaf Clover','Every Clover in the world has four leaves. Three leaf clovers exist, but they are shy and hide under the four leaf ones. Eat one and coins fall out of your pocket, into your pocket.','scroll'],
+    ['h4','Herbs','Glowcap','Glowcap mushrooms grow where a torch was dropped in the dark. Eat one and your torch burns blue for two minutes, which is the mushroom saying hello to its family.','scroll'],
+    ['mo5','The Moon','The Moon Owes the Janitor','The Moon borrowed five coins from the Janitor in year 2,000,000,000 to buy a hat. The Moon never bought the hat. The animals still march about it.','scroll']
+  ];
+  try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+    if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); setTimeout(()=>toast(added + ' new lore pages in your book (Y): The Janitor, The Door and Herbs.'), 9000); } } }catch(e){ console.warn('LN-door lore', e); }
+  window.__door = {PAGES, get door(){ return door; }, get room(){ return room; }, useDoor, openDoor, enterBasement, leaveBasement, talkJan, nearDoor, nearJan, nearUp, inBase, T:{chTop:CH_TOP, heart:()=>heart.position, seen:()=>chamberSeen}};
+})();
+/* LN-door end */
 
 
 
