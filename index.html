@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 183 (Oct 31)';
+  window.__BUILD = 'Build 184 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34136,30 +34136,60 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return J;
   }
 
-  // ---------------- the announcement
+  // ---------------- the announcement: the Janitor builds his own stage first, block by block, then speaks from it
   const LINES = [
-    'THE JANITOR climbs out of a hole with a megaphone. "ATTENTION ALL ANIMALS, NPCs, BOBS AND WHOEVER BUILT THAT DISCO THING. I have an announcement."',
+    '"ATTENTION ALL ANIMALS, NPCs, BOBS AND WHOEVER BUILT THAT DISCO THING. Stage is done. I built it. Not you. Me. I have an announcement."',
     '"I have mopped under every core in every world. And under the basement... there is MORE. A whole LOST WORLD. I never told anyone because nobody ever asked."',
     '"Down there: Fern Valleys, Giant Mushroom Forests, Amber Domes, Tar Pits and Bone Spikes. Caves everywhere. I did not mop the caves. Sorry."',
     '"Higher up, above its sky: SKY ISLANDS. Floating ones. Do not ask how. I painted the sky myself, it was grey before."',
     '"And yes. DINOSAURS. Raptors, Triceratops, Pterodactyls, Glow Beetles. The Dino Nuggets had to come from somewhere."',
-    '"The painted door in my basement is a real door now. I unpainted it. Or press O, PLANETS, and pick 0: THE LOST WORLD. Wipe your feet." He drops the megaphone and leaves.'
+    '"The painted door in my basement is a real door now. I unpainted it. Or press O, PLANETS, and pick 0: THE LOST WORLD. Keep the stage. Wipe your feet." He drops the megaphone and leaves.'
   ];
-  let J = null, ann = null, done = !!save.lostOpen, t0 = 0;
+  let J = null, ann = null, done = !!save.lostOpen, t0 = 0, stageG = null;
+  const idOf = n=>{ try{ return blockIdOf(n) || 0; }catch(e){ return 0; } };
   function startAnn(){
-    J = janitor(); const gy = (()=>{ try{ return groundTop(Math.floor(P.x + Math.sin(P.yaw)*-4), Math.max(P.y, 0) + 6, Math.floor(P.z + Math.cos(P.yaw)*-4)); }catch(e){ return P.y; } })();
-    J.position.set(P.x + Math.sin(P.yaw)*-4, gy, P.z + Math.cos(P.yaw)*-4); J.lookAt(P.x, gy, P.z); scene.add(J);
-    ann = {i:0, t:0}; save.lostCall = 0; burst(J.position.x, J.position.y + 1, J.position.z, 0, 14); blip(330,.2,.15,'square'); setTimeout(()=>blip(440,.2,.15,'square'), 150);
+    const fx = Math.sin(P.yaw)*-1, fz = Math.cos(P.yaw)*-1;
+    const cx = Math.floor(P.x + fx*8), cz = Math.floor(P.z + fz*8);
+    let gy = 0; try{ gy = Math.round(groundTop(cx, Math.max(P.y, 0) + 6, cz)); }catch(e){ gy = Math.round(P.y); }
+    const d = -gy - 1, wood = ['Wood Floor','Wooden Plank','Plank','Wood','Oak Wood','Neon Wood','Clay'].map(idOf).find(v=>v) || 1, disco = idOf('Disco Block') || wood, glow = idOf('Glow Crystal') || disco;
+    // the stage plan: 7 by 5 floor, the row nearest you in Disco Block, two pillars with a glowing top at the back
+    const bl = []; const ax = Math.abs(fx) > Math.abs(fz);            // which way you are facing
+    for(let r=-2;r<=2;r++) for(let c=-3;c<=3;c++){ const x = ax ? cx + r : cx + c, z = ax ? cz + c : cz + r; const front = ax ? (fx > 0 ? r === -2 : r === 2) : (fz > 0 ? r === -2 : r === 2); bl.push({x, d, z, id:front ? disco : wood}); }
+    for(let s=-1;s<=1;s+=2){ const bx = ax ? cx + (fx > 0 ? 2 : -2) : cx + s*3, bz = ax ? cz + s*3 : cz + (fz > 0 ? 2 : -2); for(let k=1;k<=3;k++) bl.push({x:bx, d:d - k, z:bz, id:k === 3 ? glow : wood}); }
+    J = janitor(); J.position.set(cx + .5 + (ax ? 0 : 4), gy, cz + .5 + (ax ? 4 : 0)); J.lookAt(P.x, gy, P.z); scene.add(J);
+    ann = {i:0, t:0, phase:'build', bl, bi:0, bt:0, cx, cz, gy, ax, fx, fz}; save.lostCall = 0;
+    burst(J.position.x, J.position.y + 1, J.position.z, 0, 14); blip(330,.2,.15,'square'); setTimeout(()=>blip(440,.2,.15,'square'), 150);
+    toast('THE JANITOR climbs out of a hole with a toolbox. "Stand back. I am building a stage. Not you. Me." He starts laying blocks.');
     save.lostAnn = 1; persist();
+  }
+  function buildStageProps(a){
+    stageG = new THREE.Group(); stageG.position.set(a.cx + .5, a.gy + 1, a.cz + .5); scene.add(stageG);
+    bx(stageG, .9, 1.1, .6, 0x5a3a1a, 0, .55, 0); bx(stageG, 1.1, .1, .8, 0x7a5a2a, 0, 1.12, 0);                              // podium
+    const bn = label("THE JANITOR'S ANNOUNCEMENT", 7, true); bn.position.set(0, 4.2, 0); stageG.add(bn);
+    const l1 = new THREE.PointLight(0xfff0c0, 1.4, 16); l1.position.set(-3, 3.5, 0); stageG.add(l1); const l2 = new THREE.PointLight(0xffd0ff, 1.4, 16); l2.position.set(3, 3.5, 0); stageG.add(l2);
+    // the audience comes to listen
+    try{ const g = (window.__ansnd && window.__ansnd._g()) || {}; const types = (g.animals || []).map(q=>q.type).filter(Boolean); const pool = types.length ? types : ['duckling', 'diaperpig', 'fatclown'];
+      for(let i=0;i<6;i++){ const t = pool[Math.floor(Math.random()*pool.length)], ox = (Math.random()-.5)*7, oz = 4 + Math.random()*4; const x = a.cx + .5 + (a.ax ? oz*(a.fx > 0 ? -1 : 1) : ox), z = a.cz + .5 + (a.ax ? ox : oz*(a.fz > 0 ? -1 : 1)); try{ spawnAnimal(t, x, z); }catch(e){} } }catch(e){}
   }
   function finishAnn(){
     done = true; save.lostOpen = 1; persist();
-    news('BREAKING: The Janitor announced a LOST WORLD under the basement, with dinosaurs and sky islands. Every animal clapped. The Pigeon says it knew. The Pigeon did not know.');
+    news('BREAKING: The Janitor built a stage with his own hands and announced a LOST WORLD under the basement, with dinosaurs and sky islands. Every animal clapped. The Pigeon says it knew. The Pigeon did not know.');
     try{ ['l1','l2','l3'].forEach(k=>window.__lore && window.__lore.unlock && window.__lore.unlock(k)); }catch(e){}
     for(let i=0;i<5;i++) setTimeout(()=>burst(P.x + (Math.random()-.5)*10, P.y + 4 + Math.random()*4, P.z + (Math.random()-.5)*10, 0, 16), i*300);
     blip(523,.3,.15,'triangle'); setTimeout(()=>blip(659,.3,.15,'triangle'), 200); setTimeout(()=>blip(784,.5,.15,'triangle'), 400);
+    if(stageG){ const g = stageG; stageG = null; setTimeout(()=>{ try{ scene.remove(g); }catch(e){} }, 20000); }
     refreshBtn();
   }
+  // J always works: call the Janitor up right now, wherever the normal trigger got stuck
+  addEventListener('keydown', e=>{
+    try{ if(e.code !== 'KeyJ' || e.repeat || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '')) return;
+      const met = save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop'); if(!met || save.lostOpen) return;      // J stays the map key once he is done
+      e.stopImmediatePropagation(); e.preventDefault();
+      if(ann){ toast('The Janitor is already here. Let him finish.'); return; }
+      if(realm !== 0 || (window.__morePlanets && window.__morePlanets.cur()) || P.y < -3){ toast('The Janitor only comes up on the surface of Earth. Go up and press J there.'); return; }
+      startAnn(); }catch(err){ console.warn('LN-lost J', err); toast('The Janitor tripped on his mop. Try J again.'); }
+  }, true);
+  setTimeout(()=>{ try{ if(!save.lostOpen && (save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop'))) toast('The Janitor has an announcement. Stand on the surface, or press J to call him up right now.'); }catch(e){} }, 14000);
   function tickAnn(dt){
     if(!ann){
       if(done || save.lostOpen) return;
@@ -34167,10 +34197,19 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(realm !== 0 || P.x >= UPPER_EDGE || P.y < -3 || startEl.style.display === 'flex' || shopOpen || (window.__morePlanets && window.__morePlanets.cur())){ t0 = 0; return; }
       if(!t0) t0 = performance.now(); if(performance.now() - t0 > (save.lostCall ? 1000 : 6000)) startAnn(); return;
     }
-    ann.t += dt;
-    if(J){ J.lookAt(P.x, J.position.y, P.z); J.position.y += Math.sin(ann.t*6)*.004; }
-    if(ann.i < LINES.length && ann.t >= ann.i*7){ toast(LINES[ann.i]); blip(260 + ann.i*40, .08, .1, 'square'); ann.i++; }
-    if(ann.i >= LINES.length && ann.t >= LINES.length*7 + 2){ ann = null; if(J){ scene.remove(J); J = null; } finishAnn(); }
+    const a = ann; a.t += dt;
+    if(a.phase === 'build'){
+      a.bt += dt;
+      if(a.bt >= .28 && a.bi < a.bl.length){ a.bt = 0; const b = a.bl[a.bi++];
+        try{ if(!get(b.x, b.d, b.z)){ setBlock(b.x, b.d, b.z, b.id); burst(b.x + .5, -b.d + .5, b.z + .5, 0, 4); blip(500 + Math.random()*300, .04, .06, 'square'); } }catch(e){}
+        if(J){ J.position.x += (b.x + .5 - J.position.x)*.25; J.position.z += (b.z + .5 - J.position.z)*.25; J.position.y = Math.max(a.gy, -b.d - 1); J.lookAt(b.x + .5, J.position.y, b.z + .5); } }
+      if(a.bi >= a.bl.length){ a.phase = 'talk'; a.t = 0; if(J){ J.position.set(a.cx + .5, a.gy + 1, a.cz + .5); } buildStageProps(a); toast('The stage is up. The Janitor climbs on, taps the megaphone twice, and clears his throat.'); blip(220,.15,.12,'triangle'); }
+      return;
+    }
+    if(a.fast){ ann = null; if(J){ scene.remove(J); J = null; } finishAnn(); return; }
+    if(J){ J.lookAt(P.x, J.position.y, P.z); J.position.y = a.gy + 1 + Math.sin(a.t*6)*.03; }
+    if(a.i < LINES.length && a.t >= 2 + a.i*7){ toast('THE JANITOR: ' + LINES[a.i]); blip(260 + a.i*40, .08, .1, 'square'); a.i++; }
+    if(a.i >= LINES.length && a.t >= 2 + LINES.length*7 + 2){ ann = null; if(J){ scene.remove(J); J = null; } finishAnn(); }
   }
 
   // ---------------- ways in: the painted door, and the PLANETS button
@@ -34212,7 +34251,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   ];
   try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
     if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); } } }catch(e){ console.warn('LN-lost lore', e); }
-  window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ ann.t = 1e6; ann.i = LINES.length; } }, go:()=>{ if(!ann && !done) startAnn(); }, why:()=>({done, lostOpen:save.lostOpen, met:!!(save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop') || save.lostCall), realm, x:P.x, y:P.y, start:startEl.style.display, shopOpen, cur:!!(window.__morePlanets && window.__morePlanets.cur()), t0, ann:!!ann})}};
+  window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ if(ann.phase === 'build'){ while(ann.bi < ann.bl.length){ const b = ann.bl[ann.bi++]; try{ if(!get(b.x, b.d, b.z)) setBlock(b.x, b.d, b.z, b.id); }catch(e){} } } ann.fast = 1; } }, go:()=>{ if(!ann && !done) startAnn(); }, ids:()=>({wood:idOf('Wood Floor'), neon:idOf('Neon Wood'), disco:idOf('Disco Block'), glow:idOf('Glow Crystal'), n:BLOCKS.length, names:BLOCKS.slice(0,40).map(b=>b.name)}), why:()=>({done, lostOpen:save.lostOpen, met:!!(save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop') || save.lostCall), realm, x:P.x, y:P.y, start:startEl.style.display, shopOpen, cur:!!(window.__morePlanets && window.__morePlanets.cur()), t0, ann:!!ann})}};
 })();
 /* LN-lost end */
 
