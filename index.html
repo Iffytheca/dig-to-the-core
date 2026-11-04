@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 185 (Oct 31)';
+  window.__BUILD = 'Build 186 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28367,7 +28367,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     for(const h of homes){
       const s = save.bHomes[h.id], near = Math.hypot(P.x - h.cx, P.z - h.cz) < 90;
       // somebody new moves in
-      if(near && !movers.has(h.id) && s.res.length < h.cap){
+      if(near && !movers.has(h.id) && s.res.length < h.cap && !(s.cool > Date.now())){
         let best = null, bd = 30;
         for(const a of animals){ if(!a.g || a.popRef || a.homeOf || a.goingHome || a.d.boss || a.angry || a.isPet) continue; const dd = Math.hypot(a.pos.x - h.cx, a.pos.z - h.cz); if(dd < bd){ bd = dd; best = a; } }
         if(best){ movers.set(h.id, {a:best, h}); best.goingHome = h.id; }
@@ -29193,7 +29193,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const rnd = a=>a[Math.floor(Math.random()*a.length)];
   const money = v=>'$' + Math.round(v).toLocaleString('en-US');
   const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
-  const Z0 = -49000, Z1 = -36000, ZMIN = -62000;   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
+  const Z0 = -49000, Z1 = -36000, ZMIN = -75000;   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
   // [name, hardness, value, base colour, speck colours, glow]
   const L = (n, h, v, base, sp, glow)=>({name:n, th:4, h, v, base, amp:20, sp, p:.35, glow:glow || 0});
   const PL = [
@@ -29277,7 +29277,73 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
                trike:{name:'Triceratops', hp:400, r:1.3, yo:1.2, speed:1.1, reward:3000, col:0x8a7a5a, quips:['It snorts. The ground shakes a bit.', 'The Triceratops goes back to eating ferns.']},
                ptero:{name:'Pterodactyl', hp:90, r:.8, yo:1.4, speed:2.8, hop:true, reward:1800, col:0xb08060, quips:['SKREEE! It flaps off to the sky islands.', 'The Pterodactyl stole your hat. You were not wearing a hat.']},
                glowbeetle:{name:'Glow Beetle', hp:30, r:.4, yo:.3, speed:1.6, reward:600, col:0x60ffc0, quips:['It glows brighter when scared.', 'The Glow Beetle scurries into a cave.']}},
-      core:'YOU REACHED THE LOST CORE! The Janitor lost it twice. You found it once. That makes you the winner.'}
+      core:'YOU REACHED THE LOST CORE! The Janitor lost it twice. You found it once. That makes you the winner.'},
+    {k:'purple', era:1, fake:0, when:'3,900,000,000 BC', eraLore:'t5', name:'The Purple Era', x0:40000, x1:46250, z0:-75000, z1:-62000, fl:'canopy', grav:1, sky:[[.1, .02, .16], [.62, .42, .92]], cloud:[.8, .6, .95], fog:0,
+      blurb:'Before Earth was Earth: purple grass, soft clay, amethyst sand and NO stone anywhere.',
+      story:'THE PURPLE ERA. The grass is purple. There is no stone, only soft clay and amethyst sand. The old scrolls said so and everybody laughed. Dig: it is easy here.',
+      layers:[L('Violet Soil',1500,700,[110,70,150],[[160,120,200],[70,40,100]]), L('Lilac Clay',2600,1200,[170,130,210],[[220,190,250],[120,90,160]]), L('Grape Gravel',4200,2000,[90,40,120],[[140,80,170],[50,20,80]]),
+        L('Amethyst Sand',7000,3500,[190,140,240],[[240,210,255],[140,100,190]],.15), L('Plum Crystal',14000,8000,[150,60,200],[[230,160,255],[90,30,130]],.4), L('Purple Core',60000,40000,[220,120,255],[[255,255,255],[150,60,200]],1)],
+      ores:[['Amethyst',60000,[200,120,255],[0,1,2,3],.05,.5], ['Violet Pearl',900000,[240,200,255],[4,5],.03,.8]],
+      surf:{top:L('Purple Grass',1400,600,[140,70,200],[[190,120,250],[90,40,150]]), trunk:L('Lilac Trunk',2000,1000,[120,90,140],[[160,130,180],[80,60,100]]), canopy:L('Lavender Leaves',1800,900,[200,160,240],[[240,220,255],[150,110,200]]),
+        dome:L('Grape Dome',3000,1500,[110,50,160],[[170,100,220],[60,20,100]],.2), pit:L('Plum Jam',2000,900,[90,20,80],[[140,50,130],[50,10,40]]), spike:L('Amethyst Spike',4000,2000,[200,140,255],[[250,220,255],[140,90,200]],.4)},
+      biomes:[{k:'hills', name:'Purple Meadows'}, {k:'pillars', name:'Lilac Woods'}, {k:'domes', name:'Grape Hills'}, {k:'spikes', name:'Amethyst Fields'}],
+      animals:{vhopper:{name:'Violet Hopper', hp:60, r:.5, yo:.6, speed:2.8, hop:true, reward:900, quips:['It boings away over the purple grass.', 'The Violet Hopper sniffs you and hops off.']}},
+      core:'YOU REACHED THE PURPLE CORE! It is soft. Everything here is soft. The scrolls were right.'},
+    {k:'glass', era:1, fake:1, when:'never', eraLore:'t10', name:'The Glass Era', x0:46250, x1:52500, z0:-75000, z1:-62000, fl:'canopy', grav:1, sky:[[.08, .1, .18], [.85, .95, 1]], cloud:[1, 1, 1], fog:0,
+      blurb:'The Janitor says the whole world was glass once and you could see the core from the surface.',
+      story:'THE GLASS ERA. Everything is glass. It is very clean. Suspiciously clean. The Janitor says you could see the core from up here. Can you?',
+      layers:[L('Frosted Glass',1500,700,[200,225,240],[[240,250,255],[160,190,210]]), L('Clear Glass',2600,1200,[170,215,240],[[230,245,255],[130,180,210]],.1), L('Blue Glass',4500,2000,[90,160,230],[[160,210,255],[50,110,190]],.2),
+        L('Mirror Glass',9000,4500,[220,230,240],[[255,255,255],[170,185,200]],.3), L('Glass Core',50000,30000,[180,240,255],[[255,255,255],[120,200,230]],1)],
+      ores:[['Glass Marble',50000,[255,255,255],[0,1,2],.05,.5], ['Window Diamond',700000,[200,255,255],[3,4],.03,.9]],
+      surf:{top:L('Glass Grass',1200,500,[170,230,220],[[220,255,250],[120,190,180]]), trunk:L('Glass Stem',1800,900,[200,230,240],[[240,250,255],[160,190,210]]), canopy:L('Glass Leaves',1600,800,[160,240,230],[[220,255,250],[110,190,180]],.1),
+        dome:L('Glass Dome',2800,1400,[190,230,250],[[240,250,255],[140,190,220]],.2), pit:L('Glass Pit',1800,800,[120,170,200],[[180,220,240],[80,120,160]]), spike:L('Glass Needle',3500,1800,[230,245,255],[[255,255,255],[180,210,230]],.3)},
+      biomes:[{k:'domes', name:'Glass Domes'}, {k:'spikes', name:'Needle Plains'}, {k:'floats', name:'Glass Islands'}, {k:'hills', name:'Frosted Hills'}],
+      animals:{gsnail:{name:'Glass Snail', hp:40, r:.5, yo:.4, speed:.8, reward:700, quips:['It slides away. You can see its lunch.', 'The Glass Snail is see-through. So is this era, honestly.']}},
+      core:'YOU REACHED THE GLASS CORE! It is a jar. There is a note inside: "told you. - J"'},
+    {k:'fire', era:1, fake:0, when:'3,700,000,000 BC', eraLore:'t6', name:'The Fire Era', x0:52500, x1:58750, z0:-75000, z1:-62000, fl:'canopy', grav:1, sky:[[.16, .02, 0], [.95, .45, .12]], cloud:[.4, .2, .1], fog:0,
+      blurb:'A hundred million years of lava, ash and a sunset that never ended.',
+      story:'THE FIRE ERA. Ash plains, lava pools, obsidian spikes and a sky that is one long sunset. The Fire Newts love it. Nothing else does. The scrolls were right about this one too.',
+      layers:[L('Ash',1500,700,[90,85,80],[[140,135,130],[50,45,40]]), L('Cinder',2600,1200,[70,40,30],[[130,70,40],[40,20,15]],.1), L('Cooling Lava',4500,2000,[200,70,20],[[255,140,40],[120,30,10]],.5),
+        L('Obsidian',9000,4500,[30,25,40],[[70,60,90],[10,8,15]],.1), L('Magma Rock',18000,9000,[240,110,30],[[255,200,80],[160,50,10]],.7), L('Fire Core',70000,45000,[255,180,60],[[255,255,200],[230,90,20]],1)],
+      ores:[['Fire Opal',80000,[255,140,60],[1,2,3],.05,.7], ['Ember Ruby',1200000,[255,60,40],[4,5],.03,.9]],
+      surf:{top:L('Ash Grass',1300,600,[110,100,90],[[160,150,140],[70,60,55]]), trunk:L('Charred Trunk',2000,1000,[40,30,25],[[80,60,50],[20,15,10]]), canopy:L('Ember Leaves',1800,900,[240,110,30],[[255,190,80],[170,60,20]],.5),
+        dome:L('Magma Dome',3000,1500,[220,90,20],[[255,170,60],[150,40,10]],.6), pit:L('Lava Pit',2500,1200,[255,120,20],[[255,220,80],[200,50,10]],.9), spike:L('Obsidian Spike',4000,2000,[40,30,55],[[90,70,120],[15,10,25]],.1)},
+      biomes:[{k:'hills', name:'Ash Plains'}, {k:'pits', name:'Lava Pools'}, {k:'spikes', name:'Obsidian Spikes'}, {k:'domes', name:'Magma Domes'}],
+      animals:{fnewt:{name:'Fire Newt', hp:80, r:.5, yo:.4, speed:2.4, reward:1100, quips:['It scurries into the lava. Happily.', 'The Fire Newt glows a little brighter and runs off.']}},
+      core:'YOU REACHED THE FIRE CORE! It is warm. Very warm. The Fire Newts call it home.'},
+    {k:'sock', era:1, fake:1, when:'never', eraLore:'t11', name:'The Sock Era', x0:58750, x1:65000, z0:-75000, z1:-62000, fl:'canopy', grav:1, sky:[[.1, .09, .12], [.92, .82, .72]], cloud:[.95, .9, .85], fog:0,
+      blurb:'Where the Janitor says his 9,000 lost socks went. Wool hills, lint pits, knitting needles.',
+      story:'THE SOCK ERA. Everything is wool, stripes and lint. The Janitor says this is where his lost socks went. Does this look like an era to you?',
+      layers:[L('Wool',1500,700,[230,225,210],[[255,250,240],[190,185,170]]), L('Striped Wool',2600,1200,[220,60,60],[[250,250,240],[160,30,30]]), L('Lost Sock Layer',4500,2000,[90,120,200],[[150,180,240],[50,70,150]]),
+        L('Lint',9000,4500,[150,150,140],[[200,200,190],[100,100,90]]), L('Sock Core',50000,30000,[255,200,80],[[255,255,255],[200,120,40]],1)],
+      ores:[['Odd Button',40000,[255,255,255],[0,1,2],.06,.3], ['Golden Thread',600000,[255,220,100],[3,4],.03,.8]],
+      surf:{top:L('Sock Grass',1200,500,[120,200,120],[[180,240,180],[70,150,70]]), trunk:L('Sock Trunk',1800,900,[220,60,60],[[250,240,240],[160,30,30]]), canopy:L('Sock Puff',1600,800,[240,240,230],[[255,255,255],[190,190,180]]),
+        dome:L('Sock Ball',2800,1400,[200,80,120],[[240,160,190],[140,40,80]]), pit:L('Lint Pit',1800,800,[120,120,110],[[170,170,160],[80,80,70]]), spike:L('Knitting Needle',3500,1800,[200,200,210],[[240,240,250],[150,150,160]])},
+      biomes:[{k:'hills', name:'Sock Drawer'}, {k:'domes', name:'Sock Balls'}, {k:'pits', name:'Lint Traps'}, {k:'spikes', name:'Knitting Needles'}],
+      animals:{spuppet:{name:'Sock Puppet', hp:50, r:.5, yo:.7, speed:2, reward:800, quips:['It flops away. There is nobody inside it.', 'The Sock Puppet waves. With itself.']}},
+      core:'YOU REACHED THE SOCK CORE! It is one giant sock. There is a note pinned to it: "see? - J"'},
+    {k:'cloud', era:1, fake:0, when:'3,500,000,000 BC', eraLore:'t7', name:'The Soft Era', x0:52500, x1:58750, z0:-62000, z1:-49000, fl:'canopy', grav:.6, sky:[[.1, .1, .22], [.7, .82, 1]], cloud:[1, 1, 1], fog:0,
+      blurb:'When the world was cloud fluff and pillow rock. If you fell, you bounced. Cloud Whales swam in the sky.',
+      story:'THE SOFT ERA. Cloud fluff, pillow rock, sky fluff islands and Cloud Whales. Gravity is gentle here. The Janitor says it was his favourite era, because nothing ever needed mopping.',
+      layers:[L('Cloud Fluff',1500,700,[240,245,255],[[255,255,255],[200,210,230]]), L('Soft Mist',2600,1200,[200,215,240],[[240,245,255],[160,180,210]]), L('Pillow Rock',4500,2000,[220,200,230],[[250,240,255],[170,150,190]]),
+        L('Dream Dust',9000,4500,[180,200,255],[[230,240,255],[120,150,220]],.3), L('Dream Core',50000,30000,[200,230,255],[[255,255,255],[150,190,255]],1)],
+      ores:[['Rain Pearl',70000,[220,240,255],[0,1,2],.05,.6], ['Sky Sapphire',1000000,[120,170,255],[3,4],.03,.9]],
+      surf:{top:L('Cloud Grass',1300,600,[210,235,255],[[250,255,255],[170,200,230]]), trunk:L('Mist Trunk',1800,900,[190,200,220],[[230,235,245],[150,160,180]]), canopy:L('Cloud Puff',1600,800,[255,255,255],[[255,255,255],[210,215,230]]),
+        dome:L('Cloud Dome',2800,1400,[235,240,255],[[255,255,255],[190,200,230]]), pit:L('Rain Pool',1800,800,[120,170,230],[[180,220,255],[80,120,190]]), spike:L('Thunder Spike',3500,1800,[255,240,150],[[255,255,220],[220,190,80]],.5)},
+      biomes:[{k:'floats', name:'Sky Fluff'}, {k:'hills', name:'Cloud Hills'}, {k:'domes', name:'Cloud Domes'}, {k:'pits', name:'Rain Pools'}],
+      animals:{cwhale:{name:'Cloud Whale', hp:300, r:1.2, yo:1.1, speed:1.4, hop:true, reward:2500, quips:['It drifts off, humming.', 'The Cloud Whale sings one note. It is a nice note.']}},
+      core:'YOU REACHED THE DREAM CORE! It is a pillow. You could sleep here forever. Please do not.'},
+    {k:'clean', era:1, fake:1, when:'never', eraLore:'t12', name:'The Clean Era', x0:58750, x1:65000, z0:-62000, z1:-49000, fl:'canopy', grav:1, sky:[[.1, .1, .1], [.96, .96, .92]], cloud:[1, 1, 1], fog:0,
+      blurb:'The Janitor says the floor was never wet and nobody walked on it. Tiles, mops and CAUTION signs instead of trees.',
+      story:'THE CLEAN ERA. Polished tiles, mop forests, puddles and CAUTION signs where the trees should be. The floor was never wet, the Janitor says. He invented this one while mopping, did he not?',
+      layers:[L('Clean Tile',1500,700,[230,230,225],[[255,255,250],[180,180,175]]), L('Polished Tile',2600,1200,[200,210,215],[[240,245,250],[150,160,165]],.1), L('Mop Water',4500,2000,[120,160,180],[[170,210,230],[80,110,130]]),
+        L('Bleach Rock',9000,4500,[245,245,240],[[255,255,255],[200,200,195]]), L('Shiny Core',50000,30000,[255,255,220],[[255,255,255],[220,220,160]],1)],
+      ores:[['Lost Coin',50000,[255,220,80],[0,1,2],.06,.5], ['Spotless Diamond',800000,[255,255,255],[3,4],.03,.9]],
+      surf:{top:L('Clean Floor',1200,500,[225,230,230],[[250,255,255],[175,180,180]]), trunk:L('Mop Handle',1800,900,[200,160,90],[[240,200,120],[150,110,60]]), canopy:L('Mop Head',1600,800,[230,230,220],[[255,255,250],[180,180,170]]),
+        dome:L('Bucket',2800,1400,[130,130,140],[[180,180,190],[80,80,90]]), pit:L('Puddle',1800,800,[140,180,200],[[190,220,240],[90,130,150]]), spike:L('Caution Sign',3500,1800,[255,210,30],[[255,240,120],[200,150,10]])},
+      biomes:[{k:'hills', name:'Clean Floors'}, {k:'pillars', name:'Mop Forest'}, {k:'pits', name:'Puddles'}, {k:'spikes', name:'Caution Signs'}],
+      animals:{dbunny:{name:'Dust Bunny', hp:35, r:.4, yo:.4, speed:2.6, reward:600, quips:['It rolls under something.', 'The Dust Bunny sneezes and runs off.']}},
+      core:'YOU REACHED THE SHINY CORE! It has been mopped. Recently. There is a note: "nobody walks here. - J"'}
   ];
   PL.forEach(p=>{ p.z0 = p.z0 || Z0; p.z1 = p.z1 || Z1; p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((p.z0 + p.z1)/2); });
   const inAny = (x, z)=>z >= ZMIN && z < Z1 && x >= UPPER_EDGE && x < 65000;
@@ -29458,7 +29524,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   /* ------------------------------------------------ a landing pad with a sign on every planet */
   function pad(p){
     const g = new THREE.Group(); g.position.set(p.cx + .5, 0, p.cz + .5); g.visible = false; sAdd(g);
-    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff, moon:0xffe066, lost:0x60ff90}[p.k];
+    const pc = {sugar:0xff80c0, bounce:0x60e060, gear:0xff8030, ice:0x80d0ff, moon:0xffe066, lost:0x60ff90}[p.k] || 0xc0a0ff;
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, .12, 32), new THREE.MeshLambertMaterial({color:0x303040})); ring.position.y = .06; g.add(ring);
     const ring2 = new THREE.Mesh(new THREE.TorusGeometry(3.4, .12, 8, 40), new THREE.MeshBasicMaterial({color:pc})); ring2.rotation.x = Math.PI/2; ring2.position.y = .14; g.add(ring2);
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 192; const x = cv.getContext('2d');
@@ -29533,16 +29599,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   { const _t = toast; toast = function(msg){
-      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost') msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost' && !cur().era) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
-    if(p.k !== 'moon' && p.k !== 'lost' && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
+    if(p.k !== 'moon' && p.k !== 'lost' && !p.era && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
     blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
-    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' || p.era ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
   }
   const _pr = window.__planetR;
   window.__planetR = function(){
@@ -29565,9 +29631,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       let after = anchor;
       PL.forEach((p, i)=>{
         const bt = document.createElement('button'); bt.className = 'btn'; bt.id = 'mrsP' + i;
-        bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + COL[p.k];
+        bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + (COL[p.k] || '#404060');
         bt.textContent = (p.k === 'lost' ? 0 : 5 + i) + (p.k === 'moon' ? '   ' : p.k === 'lost' ? '   SECRET: ' : '   NEXT UNIVERSE: ') + p.name.toUpperCase();
         if(p.k === 'lost' && !save.lostOpen) bt.style.display = 'none';
+        if(p.era) bt.style.display = 'none';
         bt.title = p.blurb;
         bt.onclick = e=>{ e.stopPropagation(); if(panel) panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} };
         after.parentNode.insertBefore(bt, after.nextSibling); after = bt;
@@ -34266,6 +34333,296 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__lost = {LOST, PAGES, startAnn, finishAnn, nearPainted, get ann(){ return ann; }, T:{skip:()=>{ if(ann){ if(ann.phase === 'build'){ while(ann.bi < ann.bl.length){ const b = ann.bl[ann.bi++]; try{ if(!get(b.x, b.d, b.z)) setBlock(b.x, b.d, b.z, b.id); }catch(e){} } } ann.fast = 1; } }, go:()=>{ if(!ann && !done) startAnn(); }, ids:()=>({wood:idOf('Wood Floor'), neon:idOf('Neon Wood'), disco:idOf('Disco Block'), glow:idOf('Glow Crystal'), n:BLOCKS.length, names:BLOCKS.slice(0,40).map(b=>b.name)}), why:()=>({done, lostOpen:save.lostOpen, met:!!(save.doorPrize || (save.melee || []).some(w=>w && w.k === 'mop') || save.lostCall), realm, x:P.x, y:P.y, start:startEl.style.display, shopOpen, cur:!!(window.__morePlanets && window.__morePlanets.cur()), t0, ann:!!ann})}};
 })();
 /* LN-lost end */
+/* LN-truth start: break the door and the Janitor fights you; beat him and the truth comes out (Center Core, the fake Heart, the True Heart of Earth) and an Era Portal opens to six old worlds, F to enter, L to leave (Irfan 2026-11-04) */
+(function(){
+  const MP = window.__morePlanets, DR = window.__door; if(!MP || !DR) return;
+  const ERAS = MP.PL.filter(p=>p.era);
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const lore = id=>{ try{ window.__lore && window.__lore.unlock && window.__lore.unlock(id); }catch(e){} };
+  const pk = a=>a[Math.floor(Math.random()*a.length)];
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); par.add(m); return m; };
+  const label = (txt, w, big)=>{ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt, 512, 64, null, '#ffffff', (big ? 'bold 34px' : 'bold 28px') + ' Arial'), fog:false, depthWrite:false, transparent:true})); s.scale.set(w, w/8, 1); return s; };
+  const _v = new THREE.Vector3();
+
+  // ---------------- 1. a house resident that is killed is gone for good (no respawn inside the house)
+  const BH = window.__blockHomes;
+  const _ka = killAnimal;
+  killAnimal = function(a){
+    let info = null;
+    try{ if(a && a.homeOf && BH && BH.live){ for(const [k, an] of BH.live) if(an === a){ info = {id:a.homeOf, n:+k.split('#')[1]}; break; } } }catch(e){}
+    const r = _ka.apply(this, arguments);
+    try{
+      if(info){ const s = save.bHomes && save.bHomes[info.id];
+        if(s && s.res[info.n]){ const nm = s.res[info.n].name; s.res.splice(info.n, 1); s.cool = Date.now() + 180000;
+          const L = BH.live, arr = []; for(const [k, an] of L) if(k.startsWith(info.id + '#')){ arr.push([+k.split('#')[1], an]); L.delete(k); }
+          arr.forEach(q=>{ if(q[0] !== info.n) L.set(info.id + '#' + (q[0] > info.n ? q[0] - 1 : q[0]), q[1]); });
+          persist(); setTimeout(()=>toast(nm + ' lived in that home. The spot is empty now, and nobody new will move in for 3 minutes.'), 80); } }
+    }catch(e){ console.warn('LN-truth homes', e); }
+    return r;
+  };
+
+  // ---------------- 2. the Janitor as a boss
+  ED.janitorboss = {name:'The Janitor (FURIOUS)', hp:6000, speed:3.6, dmg:12, r:1.6, reward:250000, boss:true, key:'janitorboss', yo:2.2, jan:true, color:0xc0a060, quips:['Mopped.']};
+  try{ ENEMY_DROP.janitorboss = "The Janitor's Cap"; RARE["The Janitor's Cap"] = 'CS'; ITEM_COL["The Janitor's Cap"] = [138, 58, 42]; ITEM_COL['True Heart of Earth'] = [255, 240, 180]; RARE['True Heart of Earth'] = 'CS'; }catch(e){}
+  function janModel(){
+    const J = new THREE.Group();
+    bx(J, .22, .8, .22, 0x3a3a4a, -.18, .4, 0); bx(J, .22, .8, .22, 0x3a3a4a, .18, .4, 0); bx(J, .7, .8, .4, 0x4a5a6a, 0, 1.2, 0); bx(J, .5, .5, .5, 0xe0b890, 0, 1.85, 0);
+    bx(J, .56, .16, .56, 0x8a3a2a, 0, 2.15, 0); bx(J, .3, .06, .3, 0x8a3a2a, 0, 2.1, .36);
+    [-.12, .12].forEach(x=>{ const e = bx(J, .12, .08, .04, 0xff3020, x, 1.9, .26); e.material.emissive = new THREE.Color(0xff2000); });
+    const br = bx(J, .34, .05, .04, 0x3a2a1a, 0, 1.98, .27); br.rotation.z = .25;                                   // angry eyebrows
+    bx(J, .2, .2, .06, 0x8a8a8a, 0, 1.7, .26); bx(J, .2, .7, .2, 0x4a5a6a, -.5, 1.1, .1);
+    const arm = new THREE.Group(); arm.position.set(.5, 1.45, .1); J.add(arm); bx(arm, .2, .7, .2, 0x4a5a6a, 0, -.35, 0);
+    const mop = new THREE.Group(); mop.position.set(.2, -.6, .2); arm.add(mop);
+    bx(mop, .07, 2.4, .07, 0xc0a060, 0, 1.2, 0); for(let i=0;i<7;i++) bx(mop, .06, .4, .06, 0xd8d8d0, -.1 + i*.035, 2.4, (i%3 - 1)*.05);
+    J.userData.arm = arm;
+    const nm = label('THE JANITOR (FURIOUS)', 3, true); nm.position.set(0, 2.9, 0); J.add(nm);
+    J.scale.setScalar(1.5); J.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return J;
+  }
+  const _bE = buildEnemy; buildEnemy = function(type){ if(type === 'janitorboss') return janModel(); return _bE(type); };
+  const _cA = carveAround; carveAround = function(e){ if(e && e.d && e.d.jan) return; return _cA.apply(this, arguments); };
+  // the base enemy AI never sees him; he has his own
+  const _ue = updateEnemies, tmp = [];
+  updateEnemies = function(dt, li){
+    tmp.length = 0; let w = 0; for(let i=0;i<enemies.length;i++){ const e = enemies[i]; if(e.d && e.d.jan) tmp.push(e); else enemies[w++] = e; } enemies.length = w;
+    const r = _ue(dt, li);
+    for(let i=0;i<tmp.length;i++) enemies.push(tmp[i]); tmp.length = 0; return r;
+  };
+  const SAY = ['"Do you know how long it takes to mop a core? Four billion years. FOUR."', '"I had ONE door. One."', '"Wipe your feet. WIPE THEM."', '"The Moon still owes me five coins and YOU break my door?"', '"This floor was clean. WAS."', '"I am not angry. I am FURIOUS. There is a difference."'];
+  function janTick(e, dt){
+    if(!e.ji){ e.ji = 1; e.sw = 1.4; e.bk = 3; e.tp = 10; e.say = 3; e.pos.y = CH_TOP; }
+    const dx = P.x - e.pos.x, dz = P.z - e.pos.z, dh = Math.hypot(dx, dz) || 1;
+    e.g.rotation.y = Math.atan2(dx, dz);
+    const u = e.g.userData; if(u.arm) u.arm.rotation.x = e.sw < .35 ? -1.6 : -.3 + Math.sin(performance.now()*.006)*.25;
+    if(!locked){ e.g.position.copy(e.pos); return; }
+    const rage = e.hp <= e.max*.5 ? 1.45 : 1;
+    if(rage > 1 && !e.enr){ e.enr = 1; toast('THE JANITOR: "FIVE. MINUTES. I SAID FIVE MINUTES!" He mops faster.'); shake = Math.max(shake, .15); blip(80,.6,.2,'sawtooth'); }
+    if(dh > 2.2){ const s = e.d.speed*rage*dt; e.pos.x += dx/dh*s; e.pos.z += dz/dh*s; }
+    e.pos.y = CH_TOP; e.g.position.set(e.pos.x, e.pos.y, e.pos.z);
+    e.sw -= dt*rage; e.bk -= dt*rage; e.tp -= dt*rage; e.say -= dt;
+    if(e.sw <= 0){ e.sw = 1.2; if(dh < 3.2 && Math.abs(P.y - e.pos.y) < 3.5){ hurtPlayer(e.d.dmg); toast('MOP SLAP!'); blip(90,.1,.15,'square'); } }
+    if(e.bk <= 0){ e.bk = 2.6;                                                                            // throws dirty bucket water
+      for(let k=-1;k<=1;k++){ const a = k*.22, c = Math.cos(a), s = Math.sin(a); _v.set(dx*c - dz*s, P.y + 1 - (e.pos.y + 2.4), dx*s + dz*c).normalize(); fireFoe(e.pos.x + _v.x*1.5, e.pos.y + 2.4, e.pos.z + _v.z*1.5, _v, 9, 8, 0x8ab0c0); }
+      blip(500,.08,.06,'triangle'); }
+    if(e.tp <= 0){ e.tp = 9; const a = Math.random()*6.283; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); e.pos.x = P.x + Math.cos(a)*6; e.pos.z = P.z + Math.sin(a)*6; burst(e.pos.x, e.pos.y + 1.5, e.pos.z, 9, 12); toast('He mops straight through the floor and comes up behind you.'); }
+    if(e.say <= 0){ e.say = 7; toast('THE JANITOR: ' + pk(SAY)); }
+    if(P.y > CH_TOP + 8 || dh > 60){ removeEnemy(e); bossActive = false; waitT = 0; toast('The Janitor grumbles and drops back into his hole. He is still mad. He will be waiting when you come back down.'); }
+  }
+  function callJan(){
+    if(save.janBeaten) return;
+    if(bossActive && !enemies.some(q=>q.boss)) bossActive = false;
+    if(bossActive) return;
+    const d = DR.door; if(!d) return;
+    const e = spawnEnemy('janitorboss', d.position.x, CH_TOP, d.position.z + 3); e.pos.y = CH_TOP; e.g.position.copy(e.pos); bossActive = true;
+    toast('THE JANITOR climbs out of the hole where his door was. His moustache is shaking. "FOUR BILLION YEARS. One door. ONE. And you broke it." BOSS FIGHT!');
+    blip(55,1,.25,'sawtooth'); shake = Math.max(shake, .15); lore('t1');
+    news('BREAKING: A miner broke the door below the core. The Janitor has come out. He is not happy. Every animal has hidden.');
+  }
+
+  // ---------------- 3. breaking the door (hit it with the pickaxe or a melee weapon)
+  const ray = new THREE.Raycaster(); let hitT = 0, brokenShown = false, waitT = 0, brokeLbl = null;
+  if(save.doorHp == null) save.doorHp = 12;
+  function showBroken(){
+    const d = DR.door; if(!d) return; brokenShown = true;
+    d.children.forEach(c=>{ if(c.isGroup){ c.rotation.z = -.55; c.rotation.y = -2.2; c.position.y = -.1; } if(c.isSprite && c.scale.x === 5) c.visible = false; });
+    if(!brokeLbl){ brokeLbl = label('BROKEN. (who did this.)', 4.2, true); brokeLbl.position.set(0, 5.1, .3); d.add(brokeLbl); }
+  }
+  function breakDoor(){
+    save.doorBroken = 1; save.doorHp = 0; persist(); showBroken();
+    burst(DR.door.position.x, CH_TOP + 2, DR.door.position.z, 0, 40); shake = Math.max(shake, .2); blip(60,.6,.25,'sawtooth');
+    toast('YOU BROKE THE DOOR. The sign falls off. From inside: silence. Then footsteps. Angry footsteps.');
+    setTimeout(callJan, 2500);
+  }
+  function doorTick(dt){
+    const d = DR.door; if(!d || !d.visible) return;
+    if(save.doorBroken){ if(!brokenShown) showBroken(); return; }
+    if(!locked || !mouseDown || curGun){ hitT = 0; return; }
+    hitT -= dt; if(hitT > 0) return;
+    if(Math.hypot(P.x - d.position.x, P.z - d.position.z) > 5.5 || Math.abs(P.y - CH_TOP) > 4) return;
+    camera.getWorldDirection(_v); ray.set(camera.position, _v); ray.far = 6.5;
+    const hits = ray.intersectObjects(d.children, true); if(!hits.length) return;
+    hitT = .35; save.doorHp--; persist(); const h = hits[0].point; burst(h.x, h.y, h.z, 0, 6); blip(140,.08,.12,'square'); shake = Math.max(shake, .04);
+    if(save.doorHp === 10) toast('You hit the door. A voice inside: "Please do not."');
+    if(save.doorHp === 6) toast('The door cracks. "I am warning you. I have a mop."');
+    if(save.doorHp === 2) toast('"If that door comes down I am coming UP."');
+    if(save.doorHp <= 0) breakDoor();
+  }
+
+  // ---------------- 4. beating him: the truth, the fake Heart, the True Heart
+  let TH = null, PT = null, fakeLbl = null, thHp = 3;
+  function reveal(){
+    toast('The Janitor sits down on the floor. "Fine. FINE. You win. You want the truth? Here is the truth."');
+    setTimeout(()=>toast('"This was never the Even Deeper Core. There is no Even Deeper Core. This is the CENTER CORE. The sign was a lie. I painted the sign."'), 5000);
+    setTimeout(()=>{ toast('"And the Heart of the Earth? Cheap fake. I bought it at the Shop in year one. The Shopkeeper still has the receipt."'); markFake(); }, 10000);
+    setTimeout(()=>{ toast('"The TRUE HEART OF EARTH is under the floor. I mopped over it every day so nobody saw the glow. It is yours now. Press F next to it to mine it."'); lore('t2'); lore('t3');
+      news('BREAKING: The Even Deeper Core was never real. It is the CENTER CORE. The Heart of the Earth was a $4.99 fake from the Shop. The Shopkeeper declined to comment, then commented a lot.'); }, 15000);
+  }
+  function markFake(){
+    try{ heartCore.material.color.setHex(0x777777); heartShell.material.color.setHex(0x555555); heartLight.intensity = .3; }catch(e){}
+    if(!fakeLbl){ fakeLbl = label('FAKE (made in the Shop, $4.99)', 4.4, true); fakeLbl.position.set(0, 2.4, 0); heart.add(fakeLbl); }
+  }
+  function buildTH(){
+    const g = new THREE.Group();
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1, 1), new THREE.MeshBasicMaterial({color:0xfff8d0})); g.add(core);
+    const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 0), new THREE.MeshBasicMaterial({color:0x80f0ff, wireframe:true})); g.add(shell);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.3, .08, 8, 40), new THREE.MeshBasicMaterial({color:0xffd080})); ring.rotation.x = 1.2; g.add(ring);
+    const l = new THREE.PointLight(0xa0f0ff, 2.6, 40, 1.1); g.add(l);
+    const nm = label('THE TRUE HEART OF EARTH', 5, true); nm.position.set(0, 3, 0); g.add(nm);
+    const hn = label('F: mine it', 2.4); hn.position.set(0, 2.3, 0); g.add(hn);
+    g.userData = {core, shell, ring}; g.visible = false; scene.add(g); return g;
+  }
+  function buildPT(){
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.4, .3, 10, 48), new THREE.MeshLambertMaterial({color:0x80e0ff, emissive:0x2060a0})); g.add(ring);
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(2.2, 32), new THREE.MeshBasicMaterial({color:0xc080ff, side:THREE.DoubleSide, transparent:true, opacity:.85})); g.add(disc);
+    const l = new THREE.PointLight(0xc0a0ff, 2.5, 40, 1.1); g.add(l);
+    const nm = label('THE ERA PORTAL', 4, true); nm.position.set(0, 3.4, 0); g.add(nm);
+    const hn = label('F: enter  (L on the other side to come back)', 5); hn.position.set(0, 2.9, 0); g.add(hn);
+    g.userData = {ring, disc}; g.visible = false; scene.add(g); return g;
+  }
+  const spot = ()=>({x:heart.position.x, z:heart.position.z + 8});
+  const nearTH = ()=>TH && TH.visible && Math.hypot(P.x - TH.position.x, P.z - TH.position.z) < 3.6 && Math.abs(P.y - CH_TOP) < 4;
+  const nearPT = ()=>PT && PT.visible && Math.hypot(P.x - PT.position.x, P.z - PT.position.z) < 3.4 && Math.abs(P.y - CH_TOP) < 4;
+  function mineTH(){
+    thHp--; burst(TH.position.x, TH.position.y, TH.position.z, 9, 20); shake = Math.max(shake, .12); blip(200 + (3 - thHp)*120, .3, .15, 'triangle');
+    if(thHp > 0){ toast(thHp === 2 ? 'The True Heart cracks. It hums louder. Hit it again (F).' : 'Another crack. The light is almost too bright. One more (F).'); return; }
+    save.trueHeart = 1; save.coins = (save.coins || 0) + 5000000; persist();
+    try{ addItem('True Heart of Earth', 1); }catch(e){}
+    burst(TH.position.x, TH.position.y, TH.position.z, 9, 80); burst(TH.position.x, TH.position.y, TH.position.z, 0, 60); shake = Math.max(shake, .3);
+    [330,440,660,880,1320].forEach((f,i)=>setTimeout(()=>blip(f,.3,.15,'triangle'), i*140));
+    TH.visible = false;
+    toast('You mined the TRUE HEART OF EARTH! +$5,000,000. The floor shakes... and a PORTAL opens where it stood. Press F at the portal.');
+    lore('t4'); news('BREAKING: The True Heart of Earth has been mined. A portal to the old eras opened in the Center Core. The Janitor says the eras are "mostly real". Mostly.');
+    try{ window.__lost && window.__lost.T; }catch(e){}
+  }
+
+  // ---------------- 5. the Era Portal panel
+  const panel = document.createElement('div'); panel.id = 'eraPanel';
+  panel.style.cssText = 'position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.75);z-index:60;font-family:system-ui,sans-serif';
+  const box = document.createElement('div'); box.style.cssText = 'position:relative;background:#12102a;border:2px solid #80e0ff;border-radius:14px;padding:18px 18px 12px;width:min(580px,92vw);max-height:90vh;overflow:auto;color:#fff;box-shadow:0 0 40px rgba(128,224,255,.35)';
+  box.innerHTML = '<button id="eraX" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:2px solid #fff;background:#a02040;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+    '<div style="font:900 24px system-ui;color:#c0a0ff;letter-spacing:1px">THE ERA PORTAL</div>' +
+    '<div style="font:600 13px system-ui;color:#a0c0d0;margin:4px 0 12px">How the world was before Earth. The Janitor says some eras are real and some he made up. Visit three and the lore tells you which. Press a number or click. L brings you back.</div><div id="eraList"></div>';
+  panel.appendChild(box); document.body.appendChild(panel);
+  panel.addEventListener('mousedown', e=>e.stopPropagation()); panel.addEventListener('click', e=>{ if(e.target === panel) closeP(); });
+  const COLS = {purple:'#5a2a8a', glass:'#3a7a9a', fire:'#9a3a1a', sock:'#8a6a2a', cloud:'#4a6aa0', clean:'#4a8a7a'};
+  const known = ()=>Object.keys(save.eraSeen || {}).length >= 3;
+  function fill(){
+    const L = document.getElementById('eraList'); L.innerHTML = '';
+    ERAS.forEach((p, i)=>{
+      const seen = save.eraSeen && save.eraSeen[p.k];
+      const b = document.createElement('button'); b.className = 'btn';
+      b.style.cssText = 'display:block;width:100%;text-align:left;margin:6px 0;padding:10px 12px;border-radius:10px;border:2px solid rgba(255,255,255,.35);color:#fff;cursor:pointer;background:' + (COLS[p.k] || '#404060');
+      b.innerHTML = '<div style="font:900 16px system-ui">' + (i + 1) + '   ' + p.name.toUpperCase() + '   <span style="font:700 12px system-ui;color:#ffe080">' + p.when + '</span></div>' +
+        '<div style="font:600 12px system-ui;opacity:.9;margin-top:2px">' + p.blurb + '</div>' +
+        '<div style="font:800 12px system-ui;margin-top:3px;color:' + (seen ? (known() ? (p.fake ? '#ff9090' : '#90ff90') : '#ffe080') : '#c0c0c0') + '">' + (seen ? (known() ? (p.fake ? 'FAKE (the Janitor made this one up)' : 'REAL') : 'visited. real or fake? visit three eras to find out') : 'not visited yet') + '</div>';
+      b.onclick = e=>{ e.stopPropagation(); goEra(p); };
+      L.appendChild(b);
+    });
+  }
+  function openP(){ fill(); panel.style.display = 'flex'; try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){} }
+  function closeP(){ panel.style.display = 'none'; try{ renderer.domElement.requestPointerLock(); }catch(e){} }
+  document.getElementById('eraX').onclick = e=>{ e.stopPropagation(); closeP(); };
+  function goEra(p){
+    closeP(); MP.goPlanet(p);
+    save.eraSeen = save.eraSeen || {}; const first = !save.eraSeen[p.k]; save.eraSeen[p.k] = 1; persist();
+    setTimeout(()=>toast(p.story), 2600); lore(p.eraLore);
+    if(first) news('BREAKING: A miner stepped through the Era Portal into ' + p.name + '. ' + (p.fake ? 'The Janitor was seen looking nervous.' : 'Old lore scrolls are now being re-read.'));
+    if(known()){ lore('t8'); lore('t9'); }
+  }
+  function leaveEra(){
+    const s = spot(); P.x = s.x + .5; P.z = s.z + 2.6; P.y = CH_TOP + .05; P.vx = P.vy = P.vz = 0; P.yaw = 0; P.pitch = .05; chamberSeen = true; dirty = true;
+    toast('You step back through the portal into the Center Core.'); blip(720,.3,.15,'sine'); setTimeout(()=>blip(240,.3,.15,'sine'), 150);
+  }
+  // era signs at the landing pads
+  const signs = new Map();
+  function signFor(p){
+    let s = signs.get(p.k); if(s) return s;
+    s = new THREE.Group(); const a = label(p.name.toUpperCase(), 5, true); a.position.y = 4.2; s.add(a);
+    const w = label(p.fake ? 'when: never (so he says)' : 'about ' + p.when, 4.5); w.position.y = 3.5; s.add(w);
+    const b = label(known() ? (p.fake ? 'FAKE ERA (the Janitor painted it)' : 'REAL ERA (the old scrolls were right)') : '? real or fake ? (visit three eras)', 5); b.position.y = 2.9; s.add(b); s.userData.known = known();
+    bx(s, .14, 2.6, .14, 0x6a5a40, 0, 1.3, 0);
+    s.position.set(p.cx - 6.5, 0, p.cz - 1.5); scene.add(s); signs.set(p.k, s); return s;
+  }
+
+  // ---------------- keys, hint, loop
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:232px;transform:translateX(-50%);background:rgba(20,10,50,.7);color:#c0e8ff;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  const onEra = ()=>{ const p = MP.cur(); return p && p.era ? p : null; };
+  addEventListener('keydown', e=>{
+    try{
+      if(panel.style.display === 'flex'){ if(e.code === 'Escape'){ closeP(); e.stopImmediatePropagation(); return; } const m = /^Digit([1-6])$/.exec(e.code); if(m && ERAS[+m[1] - 1]){ goEra(ERAS[+m[1] - 1]); e.stopImmediatePropagation(); } return; }
+      if(won || shopOpen || realm !== 0) return;
+      if(e.code === 'KeyL' && !e.repeat && locked && onEra()){ leaveEra(); e.stopImmediatePropagation(); e.preventDefault(); return; }
+      if(e.code === 'KeyF' && locked && !e.repeat){ if(nearTH()){ mineTH(); e.stopImmediatePropagation(); e.preventDefault(); } else if(nearPT()){ openP(); e.stopImmediatePropagation(); e.preventDefault(); } }
+    }catch(err){ console.warn('LN-truth key', err); }
+  }, true);
+  const _kE = killEnemy;
+  killEnemy = function(e){
+    const jan = e && e.d && e.d.jan; _kE(e);
+    if(!jan) return; save.janBeaten = 1; bossActive = false; persist(); setTimeout(reveal, 1500);
+  };
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      doorTick(dt);
+      for(let i=0;i<enemies.length;i++) if(enemies[i].d && enemies[i].d.jan) janTick(enemies[i], dt);
+      // the mad Janitor waits for you if you broke the door and ran
+      if(chamberSeen && save.doorBroken && !save.janBeaten && locked && Math.abs(P.y - CH_TOP) < 4 && !enemies.some(q=>q.d && q.d.jan)){ waitT += dt; if(waitT > 4){ waitT = -1e9; callJan(); } } else if(!enemies.some(q=>q.d && q.d.jan)) waitT = 0;
+      // the True Heart and the portal live in the chamber
+      const showTH = chamberSeen && save.janBeaten && !save.trueHeart, showPT = chamberSeen && !!save.trueHeart;
+      if(showTH){ if(!TH) TH = buildTH(); const s = spot(); TH.position.set(s.x, CH_TOP + 1.9 + Math.sin(now*.002)*.25, s.z); TH.visible = true; TH.userData.core.rotation.y += dt; TH.userData.shell.rotation.y -= dt*.6; TH.userData.ring.rotation.z += dt*.8; } else if(TH) TH.visible = false;
+      if(showPT){ if(!PT) PT = buildPT(); const s = spot(); PT.position.set(s.x, CH_TOP + 2.6, s.z); PT.visible = true; PT.userData.ring.rotation.z += dt*.7; PT.userData.disc.material.color.setHSL((now*.0001) % 1, .8, .65); PT.rotation.y = Math.atan2(P.x - PT.position.x, P.z - PT.position.z); } else if(PT) PT.visible = false;
+      if(save.janBeaten && chamberSeen && !fakeLbl) markFake();
+      const p = onEra(); signs.forEach(s=>{ s.visible = false; }); if(p){ const s = signFor(p); if(s.userData.known !== known()){ scene.remove(s); signs.delete(p.k); } else s.visible = Math.hypot(P.x - s.position.x, P.z - s.position.z) < 120; }
+      let h = null; if(locked && realm === 0){ if(p) h = 'L: leave ' + p.name + ' (back to the Center Core)'; else if(nearTH()) h = 'F: mine the True Heart of Earth'; else if(nearPT()) h = 'F: open the Era Portal'; }
+      if(h){ hint.textContent = h; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-truth', e); } }
+  })(last);
+
+
+  // ---------------- 6. the era creatures
+  function crit(o){
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const b = (w, h, d, c, x, y, z)=>{ const m = bx(g, w, h, d, c, x, y, z); return m; };
+    const leg = (x, z, h, c)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); const m = new THREE.Mesh(new THREE.BoxGeometry(.14, h, .14), mat(c)); m.position.y = -h/2; lg.add(m); g.userData.legs.push(lg); };
+    const eyes = (y, z, w)=>{ [-w, w].forEach(x=>{ b(.12, .12, .06, 0xffffff, x, y, z); b(.06, .06, .04, 0x111111, x, y, z + .04); }); };
+    o.build(b, leg, eyes, g);
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  }
+  const ERA_M = {
+    vhopper:()=>crit({build:(b, leg, eyes)=>{ const C = 0x9a50e0; b(.7, .5, .9, C, 0, .75, 0); b(.45, .4, .45, 0xb070f0, 0, 1.15, .5); eyes(1.2, .73, .12); [-.15, .15].forEach(x=>b(.1, .4, .1, 0xb070f0, x, 1.45, .4)); [-.25, .25].forEach(x=>{ leg(x, .3, .5, 0x6a30a0); leg(x, -.3, .5, 0x6a30a0); }); b(.15, .15, .3, 0xd0a0ff, 0, .8, -.55); } }),
+    gsnail:()=>crit({build:(b, leg, eyes, g)=>{ const sh = b(.8, .8, .8, 0xa0e0ff, 0, .75, -.2); sh.material.transparent = true; sh.material.opacity = .55; const bd = b(.5, .3, 1.1, 0xd0f4ff, 0, .15, .2); bd.material.transparent = true; bd.material.opacity = .8; [-.12, .12].forEach(x=>b(.06, .4, .06, 0xd0f4ff, x, .5, .7)); eyes(.72, .72, .12); } }),
+    fnewt:()=>crit({build:(b, leg, eyes)=>{ const C = 0xff6020; b(.4, .3, 1.1, C, 0, .35, 0); b(.3, .28, .4, 0xffa030, 0, .4, .7); eyes(.5, .9, .1); const t = b(.15, .15, .6, 0xffd040, 0, .35, -.8); t.material.emissive = new THREE.Color(0x803000); [-.2, .2].forEach(x=>{ leg(x, .3, .25, 0xa03010); leg(x, -.3, .25, 0xa03010); }); for(let i=0;i<4;i++){ const f = b(.08, .14, .08, 0xffe060, 0, .55, .3 - i*.25); f.material.emissive = new THREE.Color(0xa05000); } } }),
+    spuppet:()=>crit({build:(b, leg, eyes)=>{ for(let i=0;i<4;i++) b(.5, .25, .5, i%2 ? 0xe03030 : 0xf0f0e0, 0, .35 + i*.25, 0); b(.55, .4, .6, 0xe03030, 0, 1.4, .1); b(.5, .1, .6, 0x202020, 0, 1.25, .15); eyes(1.55, .4, .14); [-.2, .2].forEach(x=>b(.1, .14, .1, 0xffffff, x, 1.55, .4)); leg(-.15, 0, .25, 0xf0f0e0); leg(.15, 0, .25, 0xf0f0e0); } }),
+    cwhale:()=>crit({build:(b, leg, eyes, g)=>{ const C = 0xf4f8ff; b(1.6, .9, .9, C, 0, 1.1, 0); b(.9, .7, .8, C, 0, 1.0, -1.1); b(.5, .4, .5, C, 0, .95, -1.75); b(.9, .12, .5, 0xdde8ff, 0, 1.0, -2.1); eyes(1.25, .46, .5); [-1, 1].forEach(sd=>{ const w = b(.8, .08, .5, 0xdde8ff, sd*1.0, .9, .1); w.rotation.z = sd*.2; g.userData.wings.push({w, sd}); }); b(.2, .3, .2, 0xa0c0ff, 0, 1.7, .1); } }),
+    dbunny:()=>crit({build:(b, leg, eyes)=>{ const C = 0x9a9a92; b(.7, .6, .7, C, 0, .55, 0); b(.5, .45, .5, 0xb0b0a8, 0, .95, .3); [-.12, .12].forEach(x=>b(.1, .45, .1, 0xb0b0a8, x, 1.35, .2)); eyes(1.0, .56, .12); for(let i=0;i<5;i++) b(.18, .18, .18, 0x80807a, Math.sin(i*2.1)*.35, .35 + (i%3)*.2, Math.cos(i*2.1)*.35); leg(-.2, 0, .25, 0x80807a); leg(.2, 0, .25, 0x80807a); } })
+  };
+  const _bA = buildAnimal; buildAnimal = function(type){ if(ERA_M[type]) return ERA_M[type](); return _bA(type); };
+
+  // ---------------- lore
+  const PAGES = [
+    ['t1','The Truth','The Broken Door','In four billion years the door below the core was knocked on nine million times and broken once. The Janitor did not take it well. He took it very, very badly.','scroll'],
+    ['t2','The Truth','The Center Core','There is no Even Deeper Core. The sign was painted by the Janitor in year one because CENTER CORE sounded boring. Every miner who read the sign believed it. Including the Pigeon.','scroll'],
+    ['t3','The Truth','The Cheap Fake','The Heart of the Earth in the chamber was bought at the Shop for $4.99. It still hums, because the Shopkeeper put a bee in it. The receipt is in the Janitor\'s Monday jar.','scroll'],
+    ['t4','The Truth','The True Heart','The True Heart of Earth is older than stone. It remembers every era the world ever had, and when it is mined it opens a portal to each of them. The Janitor mopped over it for four billion years so nobody would notice the glow coming up through the tiles.','scroll'],
+    ['t5','The Eras','The Purple Era (REAL)','Before Earth was Earth, the grass was purple and there was no stone at all. The ground was soft clay and amethyst sand. Digging was easy and everybody was happy. Then stone was invented and everyone had to buy pickaxes.','scroll'],
+    ['t6','The Eras','The Fire Era (REAL)','For a hundred million years the whole world was lava and ash. The Fire Newts loved it. Nothing else did. The sky was the colour of a sunset that never ended.','scroll'],
+    ['t7','The Eras','The Soft Era (REAL)','The world was once made of cloud fluff and pillow rock. If you fell, you bounced. Cloud Whales swam in the sky. The Janitor says this was his favourite era, because nothing ever needed mopping.','scroll'],
+    ['t8','The Eras','The Fake Eras','The Glass Era, the Sock Era and the Clean Era never happened. The Janitor made them up when he was bored and hid them behind the True Heart with the real ones so nobody could tell. Now you can. The Sock Era is his favourite lie.','scroll'],
+    ['t9','The Eras','The Lore Comes True','Every old scroll said the world was once purple, once on fire and once soft. Everybody laughed. The scrolls were right. The Pigeon claims it wrote them. The Pigeon did not.','scroll'],
+    ['t10','The Eras','The Glass Era (FAKE)','The Janitor says the world was glass once and you could see the core from the surface. He says this with a straight face. There was never a Glass Era. He just likes clean windows.','scroll'],
+    ['t11','The Eras','The Sock Era (FAKE)','Four billion years of mopping and the Janitor lost 9,000 socks. He says they went to the Sock Era. There is no Sock Era. The socks are in a jar in his basement.','scroll'],
+    ['t12','The Eras','The Clean Era (FAKE)','In the Clean Era the floor was never wet and nobody walked on it. The Janitor invented this era while mopping. It is the only era with CAUTION signs instead of trees.','scroll']
+  ];
+  try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+    if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); setTimeout(()=>toast(added + ' new lore pages in your book (Y): The Truth and The Eras.'), 12000); } } }catch(e){ console.warn('LN-truth lore', e); }
+  window.__truth = {ERAS, callJan, breakDoor, reveal, mineTH, openP, closeP, goEra, leaveEra, nearTH, nearPT, get TH(){ return TH; }, get PT(){ return PT; }, T:{hits:()=>save.doorHp}};
+})();
+/* LN-truth end */
 
 
 
