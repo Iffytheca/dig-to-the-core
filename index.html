@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 191 (Oct 31)';
+  window.__BUILD = 'Build 192 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34708,7 +34708,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{
       const list = $('shoplist'); if(!list) return r;
       const hd = document.createElement('div'); hd.className = 'item'; hd.style.cssText = 'background:rgba(200,120,40,.18);font-weight:800'; hd.innerHTML = '<div><div class="nm">MINING GEAR</div><div class="ds">Dynamite blows holes, rails and a minecart carry you through your mine, the scanner finds ores, the drill mines 3x3.</div></div>';
-      list.appendChild(hd);
+      const top = list.firstChild; list.insertBefore(hd, top);
       GEAR.forEach(([nm, price, n, ds])=>{
         const pr = Math.round(price*(save.shopOwner ? .5 : 1)), have = (save.inv || {})[nm] || 0;
         const div = document.createElement('div'); div.className = 'item';
@@ -34717,7 +34717,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         const one = nm === 'Ore Scanner' || nm === 'Mining Drill';
         const b = document.createElement('button'); b.className = 'btn'; b.textContent = (one && have) ? 'Owned' : 'Buy $'+pr.toLocaleString(); b.disabled = save.coins < pr || (one && have > 0);
         b.onclick = ()=>{ if(save.coins < pr) return; save.coins -= pr; addItem(nm, n); hotAuto('i:'+nm); persist(); renderShop(); blip(660,.1,.08,'triangle'); toast('You bought ' + (n > 1 ? n + ' ' : '') + nm + '. ' + ds); };
-        div.appendChild(b); list.appendChild(div);
+        div.appendChild(b); list.insertBefore(div, top);
       });
     }catch(e){ console.warn('LN-mining shop', e); }
     return r;
@@ -34925,6 +34925,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, true);
   const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:284px;transform:translateX(-50%);background:rgba(40,30,10,.7);color:#ffd890;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
   setTimeout(()=>{ try{ rails.forEach(showRail); (save.carts || []).forEach(c=>mkCart(c[0], c[1], c[2])); }catch(e){ console.warn('LN-mining load', e); } }, 800);
+  (function tip(){ if(startEl.style.display === 'flex'){ setTimeout(tip, 1500); return; } if(save.mineTip) return; save.mineTip = 1; persist(); toast('NEW: MINING GEAR is at the top of the shop. Dynamite, rails, a Minecart, an Ore Scanner and a Mining Drill.'); setTimeout(()=>toast('Walk to the Shopkeeper near where you start, press F to talk to him, and MINING GEAR is the first thing on his list.'), 5000); })();
   let last = performance.now(), chk = 0;
   (function loop(now){
     requestAnimationFrame(loop);
