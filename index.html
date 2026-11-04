@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 173 (Oct 31)';
+  window.__BUILD = 'Build 174 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -33422,6 +33422,26 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__swords = {VARS, makeWeapon, placeGround, pickUp, throwHeld, nearGround, cookedFor, get ground(){ return ground; }, get thrown(){ return thrown; }, get poisonT(){ return poisonT; }, spawnNear, T:{kill:a=>{ mouseDown = true; try{ killAnimal(a); } finally { mouseDown = false; } }, eat:name=>eatRef('i:'+name), hp:()=>hp}};
 })();
 /* LN-swords end */
+
+/* LN-pickboss start: the pickaxe does much less damage to bosses than a real weapon, so swords and guns matter in boss fights (Irfan 2026-11-04 "PICKAXE DOES LESS DAMAGE TO BOSS") */
+(function(){
+  const isBoss = t=>!!(t && ((t.k === 'e' && t.e && t.e.boss) || t.k === 'n' || t.k === 's' || t.k === 'p' || t.k === 'b' || t.boss || (t.e && t.e.d && t.e.d.boss)));
+  let hintT = 0;
+  const _m = maBossDmg;
+  maBossDmg = function(t, dmg){
+    let d = _m.apply(this, arguments);
+    try{
+      const M = window.__melee, pickOnly = !curGun && !(M && M.held);
+      if(pickOnly && d < 1e11 && isBoss(t)){
+        d *= .3;
+        const now = performance.now()*.001; if(now - hintT > 25){ hintT = now; toast('Your pickaxe barely scratches a boss. Press G for a sword or a gun, they hit much harder.'); }
+      }
+    }catch(e){}
+    return d;
+  };
+  window.__pickboss = {isBoss};
+})();
+/* LN-pickboss end */
 
 
 
