@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 188 (Oct 31)';
+  window.__BUILD = 'Build 189 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34363,7 +34363,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   // ---------------- 2. the Janitor as a boss
-  ED.janitorboss = {name:'The Janitor (FURIOUS)', hp:6000, speed:3.6, dmg:12, r:1.6, reward:250000, boss:true, key:'janitorboss', yo:2.2, jan:true, color:0xc0a060, quips:['Mopped.']};
+  ED.janitorboss = {name:'The Janitor (FURIOUS)', hp:1500, speed:3.6, dmg:12, r:1.6, reward:250000, boss:true, key:'janitorboss', yo:2.2, jan:true, color:0xc0a060, quips:['Mopped.']};
   try{ ENEMY_DROP.janitorboss = "The Janitor's Cap"; RARE["The Janitor's Cap"] = 'CS'; ITEM_COL["The Janitor's Cap"] = [138, 58, 42]; ITEM_COL['True Heart of Earth'] = [255, 240, 180]; RARE['True Heart of Earth'] = 'CS'; }catch(e){}
   function janModel(){
     const J = new THREE.Group();
