@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 192 (Oct 31)';
+  window.__BUILD = 'Build 193 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -4999,6 +4999,16 @@ const barwrap = document.getElementById('barwrap'), barEl = document.getElementB
 const blockName = document.getElementById('blockname');
 
 function digTime(li){ return BLOCKS[li].h / PICKS[save.equipped].power; }
+/* LN-gunlimit: one text for the block label: the real mining time (0.1s, 2.6s, 1m 20s), what Mine Anything does, and whether a gun can mine it */
+window.__mineTimeText = function(li){
+  const B = BLOCKS[li], nt = B.h/PICKS[save.equipped].power/(1+gear.dig);
+  const fmt = t=>t >= 3600 ? Math.round(t/3600) + 'h' : t >= 60 ? Math.floor(t/60) + 'm ' + Math.round(t%60) + 's' : t.toFixed(1) + 's';
+  let s = fmt(nt);
+  if(mineAny){ const mt = window.__maTime(li); s += mt > MAXT ? ' (too tuff even for Mine Anything)' : mt > .12 ? ' (Mine Anything: ' + mt.toFixed(1) + 's)' : ' (Mine Anything: instant)'; }
+  else if(nt > MAXT) s += ' (too tough for this pickaxe!)';
+  if(curGun && mineAny){ const gt = B.h/40; s += '  ·  ' + (gt <= 1 ? 'guns can mine it' : gt <= 60 ? 'only the RPG can blast it' : 'too tough for any gun'); }
+  return s;
+};
 /* LN-maslow: Mine Anything time. Easy blocks: a flash. Blocks too tough for your pickaxe: slow (1.5 s to 3.9 s by hardness). Too Tuff Rock: never. */
 let maTuffT = 0;
 window.__maTime = function(li){
@@ -5180,7 +5190,7 @@ function updateMining(dt){
     if(!cur || cur.i!==hit.i || cur.d!==hit.d || cur.k!==hit.k){ cur = hit; prog = 0; }
     hlEdges.position.set(hit.i+.5, -hit.d-.5, hit.k+.5); crack.position.copy(hlEdges.position);
     hlEdges.visible = crack.visible = true;
-    blockName.textContent = BLOCKS[li].name + (BLOCKS[li].ore ? ' (in '+(BLOCKS[li].hostName || LAYERS[BLOCKS[li].host].name)+')' : '') + '  ·  $' + BLOCKS[li].v + (window.__rarity ? '  ·  ' + window.__rarity.ofBlock(li) : '') + '  ·  Power ' + powLvl(BLOCKS[li].name) + '  ·  Hardness ' + hardLvl(BLOCKS[li]) + '  ·  ' + (mineAny ? (window.__maTime(li) > MAXT ? 'too tuff even for Mine Anything' : window.__maTime(li) > .12 ? window.__maTime(li).toFixed(1)+'s (Mine Anything, slow: very hard block)' : 'instant (Mine Anything)') : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig) > MAXT ? 'too tough!' : (BLOCKS[li].h/PICKS[save.equipped].power/(1+gear.dig)).toFixed(1)+'s'));
+    blockName.textContent = BLOCKS[li].name + (BLOCKS[li].ore ? ' (in '+(BLOCKS[li].hostName || LAYERS[BLOCKS[li].host].name)+')' : '') + '  ·  $' + BLOCKS[li].v + (window.__rarity ? '  ·  ' + window.__rarity.ofBlock(li) : '') + '  ·  Power ' + powLvl(BLOCKS[li].name) + '  ·  Hardness ' + hardLvl(BLOCKS[li]) + '  ·  ' + window.__mineTimeText(li);   /* LN-gunlimit */
     const time = (mineAny ? window.__maTime(li) : digTime(li)) / (1 + gear.dig);   /* LN-maslow */
     if(mouseDown){
       if(time > MAXT){
@@ -5679,6 +5689,7 @@ function explode(x, y, z){
     if(d < -48 || d >= D) continue;
     const id = get(i,d,k); if(!id) continue;
     const B = BLOCKS[id-1]; if(!B || ((!mineAny || B.mars) && B.h/40 > MAXT)) continue;   /* LN-marsrule */
+    if(mineAny && B.h/40 > 60) continue;   /* LN-gunlimit: the RPG stops at 1 minute blocks */
     const wasPlaced = (edits.get(ek(i,d,k))||0) > 0;
     setBlock(i,d,k,0); if(d === 0) checkTreeSupport(i,k);
     if(!wasPlaced){ save.coins += B.v; save.mined++; }
@@ -9049,6 +9060,7 @@ dbox(1.1,.22,.3,0x3a0a05,-1.1,1.5,2.75,beastG).rotation.z = .35; dbox(1.1,.22,.3
     const x = Math.floor(o.x+dir.x*bd), d = Math.floor(-(o.y+dir.y*bd)), z = Math.floor(o.z+dir.z*bd);
     const id = get(x,d,z); if(!id) return;
     const B = BLOCKS[id-1]; if(!B) return;
+    if(mineAny){ const nt = B.h/40; if(nt > 1){ if(performance.now() - (fireBullet.tuffT || 0) > 2500){ fireBullet.tuffT = performance.now(); toast('Too tough for a gun: ' + B.name + ' takes ' + (nt >= 60 ? Math.round(nt/60) + ' min' : nt.toFixed(1) + ' s') + ' with a Diamond Pickaxe. Guns only mine 1 second blocks. Use your pickaxe' + (nt <= 60 ? ' or the RPG.' : '.')); } return; } }   /* LN-gunlimit */
     const key = ek(x,d,z), acc = (gdmg.get(key) || 0) + (mineAny ? 1e12 : dmg*(1+gear.dmg));
     if(acc >= B.h*3){
       gdmg.delete(key); breakBlock({i:x, d:d, k:z});
