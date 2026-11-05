@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 203 (Oct 31)';
+  window.__BUILD = 'Build 204 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3431,8 +3431,8 @@ function createBlockMesh(L,i){
     const side = new THREE.MeshLambertMaterial({map:makeTex(soil, 2, L.base)});
     const bottom = new THREE.MeshLambertMaterial({map:makeTex(soil, 3)});
     mat = [side, side, top, bottom, side, side];     // +x -x +y -y +z -z
-  } else if(L.custom && L.spec && L.spec.biome && /grass/i.test(L.name)){   /* LN-savgrass: a coloured grass block */
-    const soil = ALL_LAYERS.filter(x=>x.name==='Soil')[0], gr = ALL_LAYERS[0], c1 = L.spec.c1, c2 = L.spec.c2 || c1;
+  } else if(/grass$/i.test(L.name) && L.name !== 'Grass' && ((L.custom && L.spec && L.spec.biome) || (!L.custom && L.upper))){   /* LN-savgrass, LN-era2: a coloured grass block */
+    const soil = ALL_LAYERS.filter(x=>x.name==='Soil')[0], gr = ALL_LAYERS[0], c1 = L.spec ? L.spec.c1 : L.base, c2 = L.spec ? (L.spec.c2 || c1) : ((L.sp && L.sp[0]) || c1);
     const GL = Object.assign({}, gr, {name:L.name, base:c1, sp:[[c1[0]*.72|0, c1[1]*.66|0, c1[2]*.5|0], c2]});
     const top = new THREE.MeshLambertMaterial({map:makeTex(GL, 1)});
     const side = new THREE.MeshLambertMaterial({map:makeTex(soil, 2, c1)});
@@ -29498,8 +29498,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const G = 7, tx = Math.floor(x/G), tz = Math.floor(z/G);
       if(hash3(tx,1,tz,sd + 4) < .5){
         const ox = tx*G + 1 + Math.floor(hash3(tx,2,tz,sd + 5)*5), oz = tz*G + 1 + Math.floor(hash3(tx,3,tz,sd + 6)*5), th = 4 + Math.floor(hash3(tx,4,tz,sd + 7)*4);
-        if(x === ox && z === oz){ c.h = th; c.cid = c.tid = I.trunk; c.f0 = th + 1; c.f1 = th + 2; c.fid = I.canopy; }
-        else if(Math.abs(x - ox) <= 1 && Math.abs(z - oz) <= 1){ c.f0 = th - 1; c.f1 = th + 1; c.fid = I.canopy; }
+        const real = /forest|woods|pine/i.test(b.name);   /* LN-era2: forests get real trees */
+        if(x === ox && z === oz){ if(real) c.tree = th; else { c.h = th; c.cid = c.tid = I.trunk; c.f0 = th + 1; c.f1 = th + 2; c.fid = I.canopy; } }
+        else if(!real && Math.abs(x - ox) <= 1 && Math.abs(z - oz) <= 1){ c.f0 = th - 1; c.f1 = th + 1; c.fid = I.canopy; }
       }
     }
     else if(b.k === 'domes' && e > .5){
@@ -35384,7 +35385,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const FY_D = D + 19;                                                    // the basement floor row (see LN-door)
   const thinId = ()=>blockIdOf('Clay') || blockIdOf('Soil') || 2;
   const holeOpen = ()=>save.janBeaten && DR.room;
-  const inPatch = (x, d, z)=>{ const r = DR.room; return r && d === FY_D && Math.abs(x - r.x) <= 1 && Math.abs(z - r.z) <= 1; };
+  const inPatch = (x, d, z)=>{ const r = DR.room; return r && d === FY_D && Math.abs(x - r.x) <= 4 && Math.abs(z - r.z) <= 4; };   /* LN-era2: the whole floor */
   const hk = (x, z)=>x + ',' + z;
   // ---------------- the thin patch: 3x3 blocks of old clay in the middle of the basement floor, only after the Janitor is beaten
   const _get = get;
@@ -35409,7 +35410,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   let sign = null;
   function signIn(){
     const r = DR.room; if(!r) return;
-    if(!sign){ sign = new THREE.Group(); const a = label('THIN FLOOR. DO NOT DIG. - J', 4.2, true); a.position.y = 1.2; sign.add(a); const b = label('(he never looked under it)', 3.4); b.position.y = .8; sign.add(b); scene.add(sign); }
+    if(!sign){ sign = new THREE.Group(); const a = label('THIN FLOOR. DO NOT DIG. - J', 4.2, true); a.position.y = 1.2; sign.add(a); const b = label('(dig any floor block and jump in)', 3.4); b.position.y = .8; sign.add(b); scene.add(sign); }
     sign.position.set(r.x + .5, -FY_D + 1, r.z + .5); sign.visible = true;
   }
   // ---------------- falling through: land on the Flipside
@@ -35475,7 +35476,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(r && save.janBeaten && !onFlip() && P.y < -FY_D - 2){ fellT += dt; if(fellT > .15){ fellT = 0; goFlip(); } } else fellT = 0;
       let h = '';
       if(onFlip()) h = 'L: climb back up to the Core Chamber';
-      else if(r && save.janBeaten && DR.inBase() && Math.hypot(P.x - r.x - .5, P.z - r.z - .5) < 3.4) h = Object.keys(save.flipHole || {}).length ? 'jump into the hole to reach THE FLIPSIDE' : 'dig the thin floor (left click)';
+      else if(r && save.janBeaten && DR.inBase()) h = Object.keys(save.flipHole || {}).length ? 'jump into the hole to reach THE FLIPSIDE' : 'the floor is thin: dig it (hold left click) and jump in';
       if(h){ hint.textContent = h; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
     }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-flip', e); } }
   })(last);
@@ -35525,6 +35526,108 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__thmine = {aiming, T:{prog:()=>prog}};
 })();
 /* LN-thmine end */
+/* LN-era2 start: real trees on the planets and eras (mine one and the whole tree comes down), coloured grass drawn like grass, Bobs can drop a discovery, the basement jars open, the whole basement floor is thin (Irfan 2026-11-05) */
+(function(){
+  const MP = window.__morePlanets, DR = window.__door; if(!MP) return;
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const col3 = a=>new THREE.Color(a[0]/255, a[1]/255, a[2]/255);
+  const lighter = a=>[Math.min(255, a[0]*1.25 + 20), Math.min(255, a[1]*1.25 + 20), Math.min(255, a[2]*1.25 + 20)];
+  // ---------------- 1. planet trees: a trunk and two crowns in the planet's own colours, mined like the trees at home
+  const live = new Map(); let scanT = 0, lastK = '';
+  const mats = {};
+  const matOf = (k, a)=>mats[k] || (mats[k] = new THREE.MeshLambertMaterial({color:col3(a)}));
+  function mkTree(p, x, z, th){
+    const g = new THREE.Group(), h = Math.max(3, th - 1 + hash3(x, 5, z, 977)*1.5);
+    const tr = p.surf.trunk, cn = p.surf.canopy;
+    const t = new THREE.Mesh(new THREE.BoxGeometry(.7, h, .7), matOf(p.k + 't', tr.base)); t.position.y = h/2; g.add(t);
+    const l1 = new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.6, 3.4), matOf(p.k + 'c1', cn.base)); l1.position.y = h + .6; g.add(l1);
+    const l2 = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.8, 2.2), matOf(p.k + 'c2', lighter(cn.base))); l2.position.y = h + 2.4; g.add(l2);
+    if(p.k === 'flip'){ g.rotation.z = Math.PI; g.position.y = h + 3.3; }                     // the Flipside: roots up, crown down... no. Trees there hang the right way up too, it is the sky that is wrong
+    g.position.set(x + .5, 0, z + .5); g.rotation.y = Math.floor(hash3(x, 6, z, 979)*4)*Math.PI/2; scene.add(g);
+    const o = {g, x:x + .5, z:z + .5, bx:x, bz:z, special:false, baseY:0, lift:0, spin:0, pkey:p.k + ':' + x + ',' + z, trunkName:tr.name, pname:p.name};
+    g.traverse(m=>{ if(m.isMesh){ m.userData.tree = o; m.castShadow = true; treeMeshes.push(m); } });
+    trees.push(o); return o;
+  }
+  function dropTree(o){
+    for(let i=treeMeshes.length-1;i>=0;i--) if(treeMeshes[i].userData.tree === o) treeMeshes.splice(i,1);
+    const i = trees.indexOf(o); if(i >= 0) trees.splice(i, 1);
+    try{ scene.remove(o.g); }catch(e){}
+  }
+  function scan(){
+    const p = MP.cur();
+    if(!p){ if(live.size){ live.forEach(dropTree); live.clear(); } return; }
+    const cut = save.pTreesCut || {}, R = 44, px = Math.floor(P.x), pz = Math.floor(P.z);
+    live.forEach((o, k)=>{ if(o.pkey.indexOf(p.k + ':') !== 0 || Math.abs(o.x - P.x) > R + 12 || Math.abs(o.z - P.z) > R + 12){ dropTree(o); live.delete(k); } });
+    for(let x = px - R; x <= px + R; x++) for(let z = pz - R; z <= pz + R; z++){
+      const c = MP.col(p, x, z); if(!c || !c.tree) continue;
+      const k = p.k + ':' + x + ',' + z; if(live.has(k) || cut[k]) continue;
+      live.set(k, mkTree(p, x, z, c.tree));
+    }
+  }
+  const _ft = fellTree;
+  fellTree = function(t, msg){
+    const r = _ft.apply(this, arguments);
+    try{ if(t && t.pkey){ save.pTreesCut = save.pTreesCut || {}; save.pTreesCut[t.pkey] = 1; persist(); addItem(t.trunkName, 2 + Math.floor(Math.random()*2)); toast('Tree chopped in ' + t.pname + '  +$5, Wood and ' + t.trunkName); } }catch(e){}
+    return r;
+  };
+  // ---------------- 2. Bobs can drop a discovery when bonked
+  try{
+    const B = window.__bobs; if(B && B.hit){
+      const _h = B.hit;
+      B.hit = function(b, dmg){
+        const was = B.bobs.indexOf(b) >= 0; const r = _h.apply(this, arguments);
+        try{ if(was && B.bobs.indexOf(b) < 0 && Math.random() < .35){ rollMaterial(b.name || 'Bob', Math.floor(b.x*7), Math.floor(b.y*7) + (save.bobsBonked || 0), Math.floor(b.z*7), 1); setTimeout(()=>toast((b.name || 'Bob') + ' dropped something on the way home. A discovery!'), 400); } }catch(e){}
+        return r;
+      };
+    }
+  }catch(e){ console.warn('LN-era2 bobs', e); }
+  // ---------------- 3. the jars in the Janitor's basement open with F
+  const JARS = [['Spare Cores', -4, 1.45], ['Lost Socks', -3.2, 1.45], ['Monday', -2.4, 1.45], ['Moon Dust', -4, 2.65], ['Old Lava', -3.2, 2.65], ['Bob (asleep)', -2.4, 2.65]];
+  const FY = -(D + 19), V = new THREE.Vector3();
+  function nearJar(){
+    const r = DR && DR.room; if(!r || !DR.inBase()) return null;
+    V.copy(camera.position).addScaledVector(_dir, 1.6);
+    let best = null, bd = 1.5;
+    JARS.forEach(j=>{ const d = Math.hypot(V.x - (r.x + .5 + j[1]), V.y - (FY + j[2]), V.z - (r.z + .5 - 3.9)); if(d < bd){ bd = d; best = j; } });
+    return best;
+  }
+  function openJar(j){
+    save.jars = save.jars || {};
+    if(save.jars[j[0]]){ toast('The ' + j[0] + ' jar is empty now. The Janitor is still cross about it.'); return; }
+    save.jars[j[0]] = 1; persist(); blip(600,.1,.1,'triangle'); setTimeout(()=>blip(900,.1,.1,'triangle'), 120);
+    const r = DR.room, jx = r.x + .5 + j[1], jy = FY + j[2], jz = r.z + .5 - 3.9;
+    burst(jx, jy, jz, 9, 10);
+    switch(j[0]){
+      case 'Spare Cores': addItem('Spare Core', 1); toast('You open the Spare Cores jar. One Spare Core, still warm. "Put that BACK." You do not put it back.'); break;
+      case 'Lost Socks': addItem('A Single Sock', 3); toast('You open the Lost Socks jar. Three single socks. None of them match. The Janitor: "Those are MINE."'); break;
+      case 'Monday': save.hunger = Math.max(0, (save.hunger == null ? 100 : save.hunger) - 25); shake = Math.max(shake || 0, .25); blip(90,.6,.2,'sawtooth');
+        toast('You opened the MONDAY jar. It is now Monday. You feel tired and hungry and you have a meeting. Nobody wanted two Mondays.'); news('BREAKING: A miner opened the Monday jar. It is now Monday everywhere. Again.'); break;
+      case 'Moon Dust': addItem('Moon Dust', 5); toast('You open the Moon Dust jar. Five pinches of Moon Dust. You sneeze. The sneeze floats.'); break;
+      case 'Old Lava': try{ hurtPlayer(8); }catch(e){} burst(jx, jy, jz, 9, 30); blip(140,.3,.2,'sawtooth'); toast('You open the Old Lava jar. It is still hot. Four billion years and it is STILL hot. Ow.'); break;
+      case 'Bob (asleep)': addItem("Bob's Propeller Hat", 1); toast('You open the jar. Bob wakes up. "Is it 1066 yet?" No. Bob gives you his hat and goes back to sleep.'); break;
+    }
+    const n = Object.keys(save.jars).length; if(n >= JARS.length){ try{ award('jars'); }catch(e){} }
+  }
+  try{ if(typeof BADGES !== 'undefined' && !BADGES.find(b=>b.id === 'jars')) BADGES.push({id:'jars', icon:'JJ', name:'Jar Opener', desc:'Open every jar in the Janitor\'s basement, Monday included.', secret:true}); }catch(e){}
+  // ---------------- keys, hint, loop
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:284px;transform:translateX(-50%);background:rgba(40,30,10,.7);color:#ffe0a0;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  addEventListener('keydown', e=>{
+    try{ if(e.code !== 'KeyF' || !locked || won || shopOpen || realm !== 0 || e.repeat) return; const j = nearJar(); if(j){ openJar(j); e.stopImmediatePropagation(); e.preventDefault(); } }catch(err){}
+  }, true);
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      scanT -= dt; const p = MP.cur(), k = p ? p.k : '';
+      if(scanT <= 0 || k !== lastK){ scanT = .8; lastK = k; scan(); }
+      const j = locked && realm === 0 ? nearJar() : null;
+      if(j){ hint.textContent = 'F: open the ' + j[0] + ' jar'; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-era2', e); } }
+  })(last);
+  window.__era2 = {scan, live, JARS, nearJar, openJar, T:{mk:mkTree}};
+})();
+/* LN-era2 end */
 
 
 
