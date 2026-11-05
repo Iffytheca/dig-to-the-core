@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 195 (Oct 31)';
+  window.__BUILD = 'Build 196 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3923,6 +3923,18 @@ const BIOME = (function(){
       const cv = vnoise(x*.03, z*.03, 881);
       if(cv > .6){ const k = Math.min(1, (cv - .6)/.02); h += Math.round(e*k*(5 + 5*vnoise(x*.09, z*.09, 883))); }
     }
+    /* LN-ocean2: seas and oceans. One slow noise picks where the sea is; it gets deeper the further in you go, with a sandy shore round it */
+    if(b.shape !== 'mountain' && b.shape !== 'volcano'){
+      const oe = Math.min(1, (hd - HR - 60)/90);
+      if(oe > 0){
+        const ov = vnoise(x*.0042, z*.0042, 893)*.72 + vnoise(x*.013, z*.013, 895)*.28;
+        if(ov > .64){
+          const dpt = Math.round(oe*Math.min(1, (ov - .64)/.1)*7 + (ov > .66 ? oe*1.4 : 0));
+          if(dpt >= 1){ h = -dpt; liq = true; cr = false; b = landVar(b, 'sea'); }
+          else { h = 0; liq = false; cr = false; b = landVar(b, 'shore'); }
+        } else if(ov > .61){ h = Math.min(h, 1); liq = false; b = landVar(b, 'shore'); }
+      }
+    }
     /* LN-land: islands in the middle of most lakes, and oases in sandy deserts */
     if(b.shape === 'lake' && liq && hash3(bx,29,bz,871) < .7){
       const tl = 1 - d1/(S*.34);
@@ -3944,6 +3956,8 @@ const BIOME = (function(){
     if(kind === 'isl') v = Object.assign({}, b, {liq:null, deco:['palm','palm','palm','palm','bush','flower','tent'], dens:.15, landKind:kind});
     else if(kind === 'beach') v = Object.assign({}, b, {liq:null, topId:sand, deco:['palm','rock'], dens:.03, landKind:kind});
     else if(kind === 'pond') v = Object.assign({}, b, {liq:'water', bedId:bid('rsand'), topId:bid('rsand'), deco:['lily','reed'], dens:.08, landKind:kind});
+    else if(kind === 'sea') v = Object.assign({}, b, {name:'Ocean', liq:'water', bedId:bid('rsand'), topId:bid('rsand'), subId:bid('rgrav'), deco:[], dens:0, an:[], landKind:kind, sea:true});   /* LN-ocean2 */
+    else if(kind === 'shore') v = Object.assign({}, b, {name:'Seashore', liq:null, topId:bid('rsand'), subId:bid('rsand'), deco:['rock','reed','tuft'], dens:.025, an:['crab','seagull','turtle'], landKind:kind, shore:true});   /* LN-ocean2 */
     else v = Object.assign({}, b, {topId:L0, subId:b.subId, deco:['palm','palm','palm','palm','bush','flower','tuft','tent','well'], dens:.16, landKind:kind});
     LV.set(key, v); return v;
   }
@@ -35090,6 +35104,81 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__world2 = {info, ravineAt, ruinAt, built, lit, T:{lava:lavaTick}};
 })();
 /* LN-world2 end */
+/* LN-ocean2 start: seas and oceans in the normal world (massive water that works like the lakes), with fish, dolphins, sharks, sea turtles, jellyfish and octopuses (Irfan 2026-11-05 "ADD SEA,OCEAN,AQUATIC LIFE,AND THEY SHOULD ACT LIKE REGULAR WATER BUT MASSIVE") */
+(function(){
+  const BM = window.__biome;
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); m.castShadow = true; par.add(m); return m; };
+  function crit(build){
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const b = (w, h, d, c, x, y, z)=>bx(g, w, h, d, c, x, y, z);
+    const eyes = (y, z, w)=>{ [-w, w].forEach(x=>{ b(.12, .12, .06, 0xffffff, x, y, z); b(.06, .06, .04, 0x111111, x, y, z + .04); }); };
+    const fin = (w, h, c, x, y, z, rz)=>{ const f = b(w, h, .06, c, x, y, z); if(rz) f.rotation.z = rz; const wg = new THREE.Group(); return f; };
+    build(b, eyes, fin, g);
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  }
+  const SEA = {
+    reeffish:{name:'Reef Fish', hp:12, r:.35, yo:.3, speed:1.6, reward:8, drop:'Raw Fish', quips:['Blub.','The reef fish flicked its tail.','Glub glub.'], depth:[.6, 2.5],
+      m:()=>crit((b, eyes)=>{ const C = [0xff8020, 0xffd020, 0x40c0ff, 0xff40a0][Math.floor(Math.random()*4)]; b(.3, .35, .7, C, 0, .3, 0); b(.1, .3, .25, C, 0, .3, -.45); b(.08, .25, .2, C, 0, .62, 0); eyes(.36, .3, .12); })},
+    dolphin:{name:'Dolphin', hp:60, r:.8, yo:.5, speed:3.2, reward:40, drop:'Dolphin Whistle', quips:['Eeee-eee!','The dolphin did a flip.','Click click click.'], depth:[.5, 2], jump:true,
+      m:()=>crit((b, eyes)=>{ const C = 0x7090b0; b(.6, .55, 1.8, C, 0, .5, 0); b(.5, .4, .5, 0xa0b8d0, 0, .35, 0); b(.3, .25, .6, C, 0, .45, 1.1); b(.9, .08, .35, C, 0, .3, -1); b(.1, .4, .35, C, 0, .95, -.1); [-.4, .4].forEach(x=>b(.4, .08, .3, C, x, .35, .2)); eyes(.6, 1.2, .18); })},
+    shark:{name:'Shark', hp:140, r:.9, yo:.6, speed:2.6, reward:80, drop:'Shark Tooth', quips:['The shark circled.','Dun dun. Dun dun.','The shark smiled. It has a lot of teeth.'], depth:[.8, 3.5], bite:true,
+      m:()=>crit((b, eyes)=>{ const C = 0x5a6a78; b(.7, .7,2.2, C, 0, .6, 0); b(.6, .5, .6, 0xdce4ea, 0, .4, .3); b(.4, .35, .5, C, 0, .55, 1.3); b(.14, .6, .5, C, 0, 1.2, -.1); b(.12, .9, .4, C, 0, .7, -1.3); [-.5, .5].forEach(x=>b(.5, .08, .35, C, x, .4, .3)); b(.5, .08, .1, 0xffffff, 0, .35, 1.5); eyes(.7, 1.45, .2); })},
+    seaturtle:{name:'Sea Turtle', hp:50, r:.6, yo:.4, speed:.9, reward:25, drop:'Turtle Shell', quips:['The sea turtle paddled slowly.','Dude.','The turtle is 140 years old and in no hurry.'], depth:[.4, 2.5],
+      m:()=>crit((b, eyes)=>{ b(.9, .35, 1.1, 0x3a6a2a, 0, .4, 0); b(.7, .12, .9, 0x2a5020, 0, .6, 0); b(.3, .25, .35, 0x7aa050, 0, .35, .7); [[-.5, .3], [.5, .3], [-.5, -.4], [.5, -.4]].forEach(q=>b(.4, .08, .25, 0x7aa050, q[0], .3, q[1])); eyes(.42, .88, .1); })},
+    octopus:{name:'Octopus', hp:35, r:.6, yo:.5, speed:1.1, reward:30, drop:'Ink Sac', quips:['The octopus changed colour.','Eight arms, zero problems.','The octopus squirted ink and vanished. Then came back.'], depth:[.3, 1.2],
+      m:()=>crit((b, eyes)=>{ const C = 0xc04080; b(.7, .7, .7, C, 0, .8, 0); for(let i=0;i<8;i++){ const a = i/8*Math.PI*2; b(.12, .5, .12, C, Math.cos(a)*.32, .3, Math.sin(a)*.32); } eyes(.9, .36, .18); })}
+  };
+  for(const k in SEA){ const s = SEA[k]; AD[k] = {name:s.name, hp:s.hp, r:s.r, yo:s.yo, speed:s.speed, reward:s.reward, fly:true, hop:false, quips:s.quips, sea:k}; ANIMAL_DROP[k] = s.drop; }
+  try{ Object.assign(ITEM_COL, {'Raw Fish':[200,160,120], 'Dolphin Whistle':[180,200,220], 'Shark Tooth':[240,240,230], 'Ink Sac':[40,20,60]}); }catch(e){}
+  const _bA = buildAnimal; buildAnimal = function(type){ if(SEA[type]) return SEA[type].m(); return _bA(type); };
+  const seaCol = (x, z)=>{ const c = BM.col(Math.floor(x), Math.floor(z)); return c && c.liq && c.b.sea ? c : null; };
+  // ---------- spawning: sea animals appear in the water near you
+  const KINDS = ['reeffish','reeffish','reeffish','dolphin','shark','seaturtle','octopus','jellyfish'];
+  let spT = 3, biteT = 0, seenT = 0;
+  function spawnTick(dt){
+    spT -= dt; if(spT > 0) return; spT = 1.4;
+    if(realm !== 0 || P.x >= UPPER_EDGE) return;
+    if(animals.filter(a=>a.d.sea || a.seaJelly).length >= 8) return;
+    const ang = Math.random()*6.283, r = 8 + Math.random()*26, x = P.x + Math.cos(ang)*r, z = P.z + Math.sin(ang)*r;
+    const c = seaCol(x, z); if(!c) return;
+    const k = KINDS[Math.floor(Math.random()*KINDS.length)]; if(!AD[k]) return;
+    const a = spawnAnimal(k, x, z); if(!a) return;
+    const S = SEA[k] || {depth:[.4, 1.5]}; const fl = -c.h;
+    a.swim = Math.min(fl - .4, S.depth[0] + Math.random()*(S.depth[1] - S.depth[0])); a.pos.y = -a.swim; a.bio = 1; if(!SEA[k]) a.seaJelly = 1;
+    if(!save.seaSeen){ save.seaSeen = 1; persist(); toast('You found the OCEAN. It is massive. Fish, dolphins, turtles and sharks live in it. Swim carefully.'); }
+  }
+  // ---------- swimming instead of flying: stay in the water, between the sea floor and the surface
+  const _ua = updateAnimals;
+  updateAnimals = function(dt){
+    _ua.apply(this, arguments);
+    try{
+      spawnTick(dt);
+      for(let i=0;i<animals.length;i++){
+        const a = animals[i]; if(!a.d.sea && !a.seaJelly) continue;
+        const c = seaCol(a.pos.x, a.pos.z);
+        if(!c){ // out of the sea: turn round and step back in
+          a.pos.x -= Math.sin(a.ang)*.6; a.pos.z -= Math.cos(a.ang)*.6; a.dir += Math.PI; a.wanderT = 2; a.moving = true;
+          const c2 = seaCol(a.pos.x, a.pos.z); if(!c2){ scene.remove(a.g); animals.splice(i, 1); i--; continue; }
+        }
+        const fl = -(c || seaCol(a.pos.x, a.pos.z)).h;
+        const S = SEA[a.type];
+        if(S && S.jump){ if(!a.jmp && Math.random() < dt*.08){ a.jmp = 1.2; } if(a.jmp > 0){ a.jmp -= dt; a.pos.y = Math.sin((1.2 - a.jmp)/1.2*Math.PI)*1.6 - .2; a.g.rotation.x = -Math.cos((1.2 - a.jmp)/1.2*Math.PI)*.8; a.g.position.y = a.pos.y + .3; a.g.position.x = a.pos.x; a.g.position.z = a.pos.z; continue; } else a.g.rotation.x = 0; }
+        const want = -Math.min(fl - .4, Math.max(.3, a.swim || 1)) + Math.sin(a.t*1.3)*.15;
+        a.pos.y += (want - a.pos.y)*Math.min(1, dt*3);
+        a.g.position.set(a.pos.x, a.pos.y + .1, a.pos.z);
+        a.g.rotation.z = Math.sin(a.t*(S && S.name === 'Shark' ? 3 : 5))*.08;
+        if(S && S.bite && biteT <= 0 && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) < 2.2 && P.y < .3 && P.y > -fl){ biteT = 2.5; hurtPlayer(6); toast('SHARK! It nibbled you. Swim away!'); blip(90,.2,.15,'sawtooth'); a.fleeT = 1.5; }
+      }
+      if(biteT > 0) biteT -= dt;
+    }catch(e){ if(!updateAnimals.w2){ updateAnimals.w2 = 1; console.warn('LN-ocean2', e); } }
+  };
+  // lore page
+  try{ const L = window.__lore; if(L && L.LORE && !L.LORE.find(r=>r[0] === 'sea1')){ L.LORE.push(['sea1','The World','The Ocean','Beyond the hills the ground drops away and the water never ends. Reef Fish, Dolphins, Sea Turtles, Octopuses and Sharks live there. The Shopkeeper says he has never seen it. He gets seasick in the bath.','scroll']); } }catch(e){}
+  window.__ocean2 = {SEA, seaCol, spawnTick};
+})();
+/* LN-ocean2 end */
 
 
 
