@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 204 (Oct 31)';
+  window.__BUILD = 'Build 205 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34219,7 +34219,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const nearUp = ()=>inBase() && Math.hypot(P.x - (room.x + .5), P.z - (room.z + .5 + 3.9)) < 2.2;
   function enterBasement(){
     room = {x:Math.floor(door.position.x), z:Math.floor(door.position.z)};
-    if(!base) base = buildBase(); base.position.set(room.x + .5, FY, room.z + .5); base.visible = true;
+    if(!base){ base = buildBase(); base.userData.noMine = true; } base.position.set(room.x + .5, FY, room.z + .5); base.visible = true;   /* LN-basefloor */
     P.x = room.x + .5; P.z = room.z + .5 + 2.5; P.y = FY + .05; P.vx = P.vy = P.vz = 0; P.yaw = Math.PI; P.pitch = .05; dirty = true;
     save.basementVisits = (save.basementVisits || 0) + 1; persist();
     toast(save.basementVisits === 1 ? 'THE JANITOR\'S BASEMENT. It smells like 4 billion years of mopping. Press F near the Janitor to talk.' : 'Back in the basement. The Janitor nods. He does not stop mopping.');
@@ -35628,6 +35628,52 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__era2 = {scan, live, JARS, nearJar, openJar, T:{mk:mkTree}};
 })();
 /* LN-era2 end */
+/* LN-basefloor start: the thin basement floor is dug with the normal left-click dig. The basement sits below the bottom of the world, where the normal block aim cannot see, so the aim at the floor is worked out here (Irfan 2026-11-05 "STILL LEFT CLICK DIDNT WORK") */
+(function(){
+  const DR = window.__door, F = window.__flip; if(!DR || !F) return;
+  const FY = -(D + 19), FY_D = D + 19;
+  let tgt = null, p = 0, sparkT = 0;
+  function aimFloor(){
+    const r = DR.room; if(!r || !save.janBeaten || !DR.inBase()) return null;
+    if(_dir.y > -.15) return null;
+    const t = (FY - camera.position.y)/_dir.y; if(t < 0 || t > 7) return null;
+    const x = Math.floor(camera.position.x + _dir.x*t), z = Math.floor(camera.position.z + _dir.z*t);
+    if(!F.T.inPatch(x, FY_D, z) || (save.flipHole || {})[x + ',' + z]) return null;
+    return {i:x, d:FY_D, k:z};
+  }
+  const _um = updateMining;
+  updateMining = function(dt){
+    try{
+      const h = aimFloor();
+      if(h){
+        cur = null; crack.visible = false; hlEdges.visible = true; hlEdges.position.set(h.i + .5, FY - .5, h.k + .5);
+        const need = mineAny ? .35 : 1.2;
+        blockName.textContent = 'Thin Floor (old clay)  ·  ' + need.toFixed(2) + 's  ·  hold left click to dig';
+        if(mouseDown){
+          if(!tgt || tgt.i !== h.i || tgt.k !== h.k){ tgt = h; p = 0; }
+          p += dt; swingT += dt; barwrap.style.display = 'block'; barEl.className = ''; barEl.style.width = Math.min(100, p/need*100) + '%';
+          sparkT -= dt; if(sparkT <= 0){ sparkT = .2; blip(170 + Math.random()*60, .05, .06, 'square'); }
+          if(p >= need){ p = 0; tgt = null; breakBlock(h); barwrap.style.display = 'none'; }
+        } else { p = 0; tgt = null; barwrap.style.display = 'none'; swingT = 0; }
+        return;
+      }
+    }catch(e){ if(!updateMining.w2){ updateMining.w2 = 1; console.warn('LN-basefloor', e); } }
+    return _um.apply(this, arguments);
+  };
+  // standing over a dug cell: the floor is gone, so drop through
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      const r = DR.room; if(!r || !save.janBeaten || !DR.inBase()) return;
+      const k = Math.floor(P.x) + ',' + Math.floor(P.z);
+      if((save.flipHole || {})[k] && P.y <= FY + .3){ P.y -= 6*dt + .05; P.vy = Math.min(P.vy || 0, -4); }
+    }catch(e){}
+  })(last);
+  window.__basefloor = {aimFloor};
+})();
+/* LN-basefloor end */
 
 
 
