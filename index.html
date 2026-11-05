@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 200 (Oct 31)';
+  window.__BUILD = 'Build 201 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3431,6 +3431,13 @@ function createBlockMesh(L,i){
     const side = new THREE.MeshLambertMaterial({map:makeTex(soil, 2, L.base)});
     const bottom = new THREE.MeshLambertMaterial({map:makeTex(soil, 3)});
     mat = [side, side, top, bottom, side, side];     // +x -x +y -y +z -z
+  } else if(L.custom && L.spec && L.spec.biome && /grass/i.test(L.name)){   /* LN-savgrass: a coloured grass block */
+    const soil = ALL_LAYERS.filter(x=>x.name==='Soil')[0], gr = ALL_LAYERS[0], c1 = L.spec.c1, c2 = L.spec.c2 || c1;
+    const GL = Object.assign({}, gr, {name:L.name, base:c1, sp:[[c1[0]*.72|0, c1[1]*.66|0, c1[2]*.5|0], c2]});
+    const top = new THREE.MeshLambertMaterial({map:makeTex(GL, 1)});
+    const side = new THREE.MeshLambertMaterial({map:makeTex(soil, 2, c1)});
+    const bottom = new THREE.MeshLambertMaterial({map:makeTex(soil, 3)});
+    mat = [side, side, top, bottom, side, side];
   } else {
     const tex = L.custom ? makeCustomTex(L) : makeTex(L, i+1);
     mat = new THREE.MeshLambertMaterial({map:tex});
@@ -3861,7 +3868,7 @@ const BIOME = (function(){
     if(ids[key] != null) return ids[key];
     let q = BB[key], j = BLOCKS.findIndex(b=>b.name === q[0]);
     if(j >= 0 && BLOCKS[j].h > q[1]*6){ q = ['Loose '+q[0]].concat(q.slice(1)); j = BLOCKS.findIndex(b=>b.name === q[0]); }   /* LN-zoo: no borrowing a deep layer */
-    if(j < 0 && (save.customBlocks || []).length < 120 && BLOCKS.length < 250){
+    if(j < 0 && BLOCKS.length < 900){   /* LN-savgrass: biome blocks are allowed past the invented-block cap */
       const spec = {name:q[0], h:q[1], v:q[2], c1:q[3], c2:q[4], glow:q[5], pattern:'plain', biome:1};
       save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
       const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
