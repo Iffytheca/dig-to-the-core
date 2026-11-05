@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 197 (Oct 31)';
+  window.__BUILD = 'Build 198 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3696,6 +3696,7 @@ const BIOME = (function(){
     mstone:['Mountain Stone',14,4,[120,118,124],[92,90,98],0], scap:['Snowcap',4,3,[248,250,255],[222,232,246],0],
     rsand:['River Sand',3,2,[214,196,150],[190,170,130],0], rgrav:['River Gravel',6,2,[130,126,120],[96,92,90],0],
     smud:['Swamp Mud',4,2,[78,70,44],[60,90,40],0], redsand:['Red Sand',3,2,[200,110,60],[222,142,82],0], terra:['Terracotta',10,5,[176,96,64],[212,150,110],0],
+    savg:['Savanna Grass',3,2,[196,174,84],[160,136,60],0], drydirt:['Dry Dirt',5,2,[150,120,80],[120,96,64],0], mesarock:['Mesa Rock',12,5,[200,124,72],[232,168,104],0],   /* LN-more */
     candy:['Candy Floss Ground',3,6,[255,170,220],[255,224,242],0], bouncy:['Bouncy Rubber',4,6,[120,200,255],[255,130,210],0],
     chsand:['Cheese Sand',3,5,[255,214,90],[240,186,60],0], cheddar:['Cheddar Rock',9,8,[240,170,40],[204,128,28],0],
     crust:['Pizza Crust',8,6,[214,150,80],[178,110,50],0], mcheese:['Melted Cheese',4,8,[255,222,100],[255,176,60],.05], vanilla:['Vanilla Scoop',3,6,[255,244,222],[250,182,204],0],
@@ -3752,6 +3753,8 @@ const BIOME = (function(){
       B('swamp','Swamp','swamp','swamp',{top:'smud', topN:2, sub:'peat', subN:3, liq:'swamp', deep:[['bogclay',3],['swampst',4]], ore:['bogiron',.06], deco:['deadtree','reed','mushroom','lily','cattail'], dens:.05, an:['frog','turtle'], col:0x5a6a30}),
       B('badlands','Badlands','desert','hills',{top:'redsand', sub:'terra', fill:'terra', subN:4, deep:[['rsstone',4],['banded',4]], ore:['ruby',.04], deco:['cactus','deadbush'], dens:.015, an:['lizard','scorpion'], col:0xc86a3c}),
       B('canyon','Canyon','desert','canyon',{top:'redsand', sub:'terra', fill:'terra', bed:'redsand', topN:2, subN:4, deep:[['rsstone',3],['banded',3],['rsstone',3],['banded',3]], ore:['ruby',.05], deco:['deadbush','cactus','rock'], dens:.014, an:['lizard','eagle','scorpion'], col:0xb8603a, canyon:1}), /* LN-land */
+      B('savanna','Savanna','plains','flat',{top:'savg', sub:'drydirt', topN:1, subN:3, deep:[['hloam',3],['chalk',4]], ore:['flint',.05], deco:['tuft','tuft','deadbush','tree','rock'], dens:.03, an:['zebra','giraffe','lion'], col:0xc8b060, nu:1}),   /* LN-more */
+      B('mesa','Mesa','desert','canyon',{top:'terra', sub:'mesarock', fill:'terra', bed:'redsand', topN:1, subN:3, deep:[['banded',4],['rsstone',3],['banded',3]], ore:['ruby',.05], deco:['cactus','deadbush','rock'], dens:.012, an:['lizard','eagle'], col:0xc8703a, nu:1}),   /* LN-more */
       B('mangrove','Mangrove Swamp','swamp','bog',{top:'mmud', topN:2, sub:'peat', subN:3, liq:'swamp', deep:[['bogclay',3],['swampst',4]], ore:['bogiron',.06], deco:['mangrove','mangrove','cattail','lily','mushroom'], dens:.07, an:['frog','turtle'], col:0x4a5a2a, extra:1})
     ],
     funny:[
@@ -3868,8 +3871,8 @@ const BIOME = (function(){
   SET.forEach(b=>{ ['top','sub','fill','cap','bed','rock','crater'].forEach(f=>{ if(b[f] != null) b[f+'Id'] = bid(b[f]); }); if(b.liq === 'frozen') b.glazeId = bid('glaze');
     b.deepIds = (b.deep || []).map(q=>[bid(q[0]), q[1]]); b.deepN = b.deepIds.reduce((a, q)=>a + q[1], 0); b.oreId = b.ore ? bid(b.ore[0]) : 0; });
   // the extra swamp of each set takes about one patch in eight; the others keep the patches they always had
-  const BASE = SET.filter(b=>!b.extra && !b.canyon), EXB = SET.find(b=>b.extra), CANB = SET.find(b=>b.canyon);   /* LN-land: the canyon takes its own patches, so the old map stays */
-  function pick(gx, gz){ if(CANB && hash3(gx,23,gz,861) < .12) return CANB; return EXB && hash3(gx,19,gz,841) < .125 ? EXB : BASE[Math.floor(hash3(gx,11,gz,817)*BASE.length)]; }
+  const BASE = SET.filter(b=>!b.extra && !b.canyon && !b.nu), EXB = SET.find(b=>b.extra), CANB = SET.find(b=>b.canyon), NEWB = SET.filter(b=>b.nu);   /* LN-more */   /* LN-land: the canyon takes its own patches, so the old map stays */
+  function pick(gx, gz){ if(NEWB.length && hash3(gx,27,gz,869) < .18) return NEWB[Math.floor(hash3(gx,29,gz,871)*NEWB.length)]; if(CANB && hash3(gx,23,gz,861) < .12) return CANB; return EXB && hash3(gx,19,gz,841) < .125 ? EXB : BASE[Math.floor(hash3(gx,11,gz,817)*BASE.length)]; }
   // ---- the map: big patches around jittered centres (each patch one biome), flat and normal near the shop
   const S = 120, HX = 12, HZ = 6, HR = 90, HRAMP = 30;
   function vnoise(x, z, sd){
@@ -3932,7 +3935,24 @@ const BIOME = (function(){
           const dpt = Math.round(oe*Math.min(1, (ov - .64)/.1)*7 + (ov > .66 ? oe*1.4 : 0));
           if(dpt >= 1){ h = -dpt; liq = true; cr = false; b = landVar(b, 'sea'); }
           else { h = 0; liq = false; cr = false; b = landVar(b, 'shore'); }
-        } else if(ov > .61){ h = Math.min(h, 1); liq = false; b = landVar(b, 'shore'); }
+        } else if(ov > .585){ h = Math.min(h, 1); liq = false; b = landVar(b, 'shore'); }
+      }
+    }
+    /* LN-more: ponds and lakes dotted about the flat land */
+    if(!liq && e > .3 && !b.sea && !b.shore && (b.shape === 'flat' || b.shape === 'hills' || b.shape === 'valley')){
+      const PG = 44, px = Math.floor(x/PG), pz = Math.floor(z/PG);
+      if(hash3(px,41,pz,911) < .4){
+        const pcx = px*PG + 10 + hash3(px,43,pz,913)*24, pcz = pz*PG + 10 + hash3(px,45,pz,915)*24, pr = 2.5 + hash3(px,47,pz,917)*3.5;
+        const dd = Math.hypot(x + .5 - pcx, z + .5 - pcz)*(1 + .12*Math.sin(x*.9 + z*1.3));
+        if(dd < pr){ h = dd < pr*.55 ? -2 : -1; liq = true; cr = false; b = landVar(b, 'pond2'); }
+      }
+      if(!liq){
+        const LG = 220, lx = Math.floor(x/LG), lz = Math.floor(z/LG);
+        if(hash3(lx,51,lz,921) < .4){
+          const lcx = lx*LG + 40 + hash3(lx,53,lz,923)*140, lcz = lz*LG + 40 + hash3(lx,55,lz,925)*140, lr = 11 + hash3(lx,57,lz,927)*9;
+          const dd = Math.hypot(x + .5 - lcx, z + .5 - lcz)*(1 + .18*vnoise(x*.15, z*.15, 929));
+          if(dd < lr){ const t = 1 - dd/lr; h = -Math.max(1, Math.round(e*(1 + 3.5*Math.sqrt(t)))); liq = true; cr = false; b = landVar(b, 'lake2'); }
+        }
       }
     }
     /* LN-land: islands in the middle of most lakes, and oases in sandy deserts */
@@ -3957,7 +3977,9 @@ const BIOME = (function(){
     else if(kind === 'beach') v = Object.assign({}, b, {liq:null, topId:sand, deco:['palm','rock'], dens:.03, landKind:kind});
     else if(kind === 'pond') v = Object.assign({}, b, {liq:'water', bedId:bid('rsand'), topId:bid('rsand'), deco:['lily','reed'], dens:.08, landKind:kind});
     else if(kind === 'sea') v = Object.assign({}, b, {name:'Ocean', liq:'water', bedId:bid('rsand'), topId:bid('rsand'), subId:bid('rgrav'), deco:[], dens:0, an:[], landKind:kind, sea:true});   /* LN-ocean2 */
-    else if(kind === 'shore') v = Object.assign({}, b, {name:'Seashore', liq:null, topId:bid('rsand'), subId:bid('rsand'), deco:['rock','reed','tuft'], dens:.025, an:['crab','seagull','turtle'], landKind:kind, shore:true});   /* LN-ocean2 */
+    else if(kind === 'shore') v = Object.assign({}, b, {name:'Beach', liq:null, topId:bid('rsand'), subId:bid('rsand'), deco:['palm','shell','shell','rock','tuft'], dens:.035, an:['crab','seagull','turtle'], landKind:kind, shore:true});   /* LN-ocean2, LN-more */
+    else if(kind === 'pond2') v = Object.assign({}, b, {name:'Pond', liq:'water', bedId:bid('rsand'), topId:bid('rsand'), deco:['lily','reed'], dens:.08, an:['duckling','frog'], landKind:'pond'});   /* LN-more */
+    else if(kind === 'lake2') v = Object.assign({}, b, {name:'Lake', liq:'water', bedId:bid('rsand'), subId:bid('rgrav'), deco:['reed','lily','lily'], dens:.04, an:['swan','duckling','frog'], landKind:'lake'});   /* LN-more */
     else v = Object.assign({}, b, {topId:L0, subId:b.subId, deco:['palm','palm','palm','palm','bush','flower','tuft','tent','well'], dens:.16, landKind:kind});
     LV.set(key, v); return v;
   }
@@ -35196,6 +35218,119 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__grass = {soilId};
 })();
 /* LN-grass end */
+/* LN-more start: savanna animals, and hidden buried treasure, half of it hilarious (Irfan 2026-11-05 "ADD BEACHES ... POND AND LAKE ... SAVANNA, MESA ... HIDDEN TREASURE ... SOME TREASURE ARE FILLED WITH HILARIOUS STUFF") */
+(function(){
+  const BM = window.__biome;
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); m.castShadow = true; par.add(m); return m; };
+  function crit(build){
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const b = (w, h, d, c, x, y, z)=>bx(g, w, h, d, c, x, y, z);
+    const leg = (x, z, h, c)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); const m = new THREE.Mesh(new THREE.BoxGeometry(.16, h, .16), mat(c)); m.position.y = -h/2; lg.add(m); g.userData.legs.push(lg); };
+    const eyes = (y, z, w)=>{ [-w, w].forEach(x=>{ b(.12, .12, .06, 0xffffff, x, y, z); b(.06, .06, .04, 0x111111, x, y, z + .04); }); };
+    build(b, leg, eyes, g);
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  }
+  // ---------- savanna animals
+  const SAV = {
+    zebra:{name:'Zebra', hp:55, r:.7, yo:.9, speed:2.6, reward:30, drop:'Zebra Stripe', quips:['The zebra is black with white stripes. Or the other way round.','Neigh. In stripes.'],
+      m:()=>crit((b, leg, eyes)=>{ b(.6, .6, 1.3, 0xf0f0f0, 0, 1.0, 0); for(let i=0;i<6;i++) b(.62, .62, .1, 0x202020, 0, 1.0, -.55 + i*.22); b(.35, .4, .5, 0xf0f0f0, 0, 1.3, .8); b(.36, .1, .5, 0x202020, 0, 1.45, .8); b(.1, .3, .15, 0x202020, 0, 1.45, .3); eyes(1.38, 1.03, .13); [[-.22, .45], [.22, .45], [-.22, -.45], [.22, -.45]].forEach(q=>leg(q[0], q[1], .7, 0xf0f0f0)); })},
+    giraffe:{name:'Giraffe', hp:80, r:.8, yo:1.2, speed:1.8, reward:40, drop:'Giraffe Spot', quips:['The giraffe looked down on you. Politely.','Munch. Leaves from the very top.'],
+      m:()=>crit((b, leg, eyes)=>{ const C = 0xe0b060, S = 0x8a5a20; b(.6, .6, 1.2, C, 0, 1.4, 0); [[-.15,.3],[.2,-.2],[-.1,-.4],[.18,.35]].forEach(q=>b(.2, .2, .2, S, q[0]*1.6, 1.4 + q[1]*.6, q[1])); b(.25, 1.3, .25, C, 0, 2.3, .5); b(.2, .3, .2, S, 0, 2.5, .5); b(.35, .3, .5, C, 0, 3.0, .6); [-.1, .1].forEach(x=>b(.06, .2, .06, S, x, 3.25, .5)); eyes(3.05, .85, .12); [[-.22, .4], [.22, .4], [-.22, -.4], [.22, -.4]].forEach(q=>leg(q[0], q[1], 1.1, C)); })},
+    lion:{name:'Lion', hp:120, r:.8, yo:.8, speed:2.4, reward:60, drop:'Lion Whisker', quips:['The lion yawned. It has a LOT of teeth.','ROAR. Then a nap.','The lion is the king of this patch of grass.'],
+      m:()=>crit((b, leg, eyes)=>{ const C = 0xd0a050, M = 0x8a5a20; b(.7, .6, 1.3, C, 0, .95, 0); b(.75, .7, .55, M, 0, 1.15, .6); b(.45, .4, .45, C, 0, 1.15, .8); b(.1, .5, .1, C, 0, 1.0, -.8); b(.16, .16, .16, M, 0, 1.0, -.88); eyes(1.22, 1.03, .12); [[-.25, .4], [.25, .4], [-.25, -.45], [.25, -.45]].forEach(q=>leg(q[0], q[1], .65, C)); })}
+  };
+  for(const k in SAV){ const s = SAV[k]; AD[k] = {name:s.name, hp:s.hp, r:s.r, yo:s.yo, speed:s.speed, reward:s.reward, fly:false, hop:false, quips:s.quips}; ANIMAL_DROP[k] = s.drop; }
+  const _bA = buildAnimal; buildAnimal = function(type){ if(SAV[type]) return SAV[type].m(); return _bA(type); };
+  try{ if(window.__fierce && window.__fierce.FIERCE) window.__fierce.FIERCE.lion = [5, 2]; }catch(e){}   // the lion gets angry like a polar bear does
+
+  // ---------- hidden treasure: buried chests under the ground. Half hold real treasure, half hold something hilarious
+  const TID = (()=>{ const i = registerCustomBlock({name:'Buried Treasure', h:6, v:100, c1:[120,80,40], c2:[255,200,60], glow:.15, pattern:'planks'}); if(i >= 0) return i + 1; return blockIdOf('Treasure Chest') || blockIdOf('Suspicious Chest') || 0; })();   // the block list is full in old saves: then the buried chests look like the Treasure Chest ore
+  try{ ITEM_COL['Buried Treasure'] = [200,150,50]; }catch(e){}
+  const TG = 40, tcache = new Map();
+  function chestAt(gx, gz){
+    const key = (gx + 5000)*10000 + (gz + 5000); let c = tcache.get(key); if(c !== undefined) return c;
+    c = null;
+    const h = k=>hash3(gx, k, gz, 931);
+    if(h(0) < .3){
+      const x = gx*TG + 6 + Math.floor(h(1)*28), z = gz*TG + 6 + Math.floor(h(2)*28);
+      if(Math.hypot(x - SHOP.x, z - SHOP.z) > 50){
+        const col = BM && BM.col(x, z);
+        if(!(col && (col.liq || col.h > 0))){ const d = 2 + Math.floor(h(3)*8); c = {x, z, d, id:'t' + gx + '_' + gz, funny:h(4) < .5, pick:h(5)}; }
+      }
+    }
+    tcache.set(key, c); return c;
+  }
+  const _bb = baseBlock;
+  baseBlock = function(x, d, z){
+    if(TID && d >= 2 && d < 12 && x < UPPER_EDGE){ const c = chestAt(Math.floor(x/TG), Math.floor(z/TG)); if(c && c.x === x && c.z === z && c.d === d) return TID; }
+    return _bb(x, d, z);
+  };
+  const FUNNY = [
+    ['A Single Sock', 'One sock. Just one. Where is the other one? Nobody knows. Nobody has ever known.'],
+    ['Rubber Duck', 'A rubber duck. It squeaks. Somebody buried it on purpose. Somebody was afraid of it.'],
+    ['Pet Rock', 'A Pet Rock. It is a rock. It is also a pet. It is not doing great at either.'],
+    ['Expired Coupon', 'A coupon for 10% off at the Shop. It expired four billion years ago. The Shopkeeper says no.'],
+    ['Slightly Used Toothbrush', 'A toothbrush. Slightly used. By whom? Do not think about it.'],
+    ['Bag of Air', 'A bag of air. Very old air. It smells like 1 million BC.'],
+    ['IOU From The Shopkeeper', 'A note: I owe you one (1) treasure. Signed, the Shopkeeper. He denies everything.'],
+    ['Map To This Chest', 'A treasure map. It leads to this exact chest. Well done. You found it. Again.'],
+    ['400 Bottle Caps', 'Four hundred bottle caps. Somebody thought they would be money one day. They were wrong.'],
+    ['Spoon', 'A spoon. Not even a golden one. Just a spoon.'],
+    ['Sandwich (Very Old)', 'A sandwich. It is older than the Janitor. Do NOT eat it. It is the food in your slot now, though.'],
+    ['Bob\'s Diary', 'A diary. Every page says: today I tried to get in the trapdoor. Bonked again.']
+  ];
+  const REAL = ['Dynamite', 'Rail', 'Minecart', 'Mega Dynamite', 'Dynamite', 'Rail'];
+  save.treasures = save.treasures || {};
+  BADGES.push({id:'xmarks', icon:'XX', name:'X Marks The Spot', desc:'Dig up 5 hidden treasures.'});
+  BADGES.push({id:'sockfound', icon:'SK', name:'Sock Collector', desc:'Find the single sock in a hidden treasure.'});
+  try{ refreshBadges(); }catch(e){}
+  const _brk = breakBlock;
+  breakBlock = function(h){
+    let t = 0; try{ t = get(h.i, h.d, h.k); }catch(e){}
+    const r = _brk.apply(this, arguments);
+    try{
+      if(TID && t === TID){
+        const c = chestAt(Math.floor(h.i/TG), Math.floor(h.k/TG)); const id = c && c.x === h.i && c.k === undefined && c.z === h.k ? c.id : 'p' + h.i + '_' + h.d + '_' + h.k;
+        const funny = c ? c.funny : Math.random() < .5, pk = c ? c.pick : Math.random();
+        save.treasures[id] = 1; const n = Object.keys(save.treasures).length;
+        try{ const inv = save.inv || {}; if(inv['Buried Treasure']){ inv['Buried Treasure']--; if(inv['Buried Treasure'] <= 0) delete inv['Buried Treasure']; updateHotbar(); } }catch(e){}
+        if(funny){
+          const f = FUNNY[Math.floor(pk*FUNNY.length)]; addItem(f[0], 1); save.coins += 5;
+          toast('HIDDEN TREASURE! You dig up... ' + f[0] + '. +$5'); setTimeout(()=>toast(f[1]), 2600); blip(300,.2,.1,'triangle'); setTimeout(()=>blip(200,.3,.1,'triangle'), 200);
+          if(f[0] === 'A Single Sock') award('sockfound');
+        } else {
+          const coins = 2000 + Math.round(pk*13000), it = REAL[Math.floor(pk*REAL.length)], k = it === 'Rail' ? 10 : it === 'Minecart' ? 1 : 3;
+          save.coins += coins; addItem(it, k); hotAuto('i:' + it);
+          toast('HIDDEN TREASURE! +$' + coins.toLocaleString() + ' and ' + k + ' ' + it + '!'); blip(660,.15,.1,'triangle'); setTimeout(()=>blip(990,.25,.1,'triangle'), 150);
+        }
+        if(n >= 5) award('xmarks');
+        persist();
+      }
+    }catch(e){ console.warn('LN-more treasure', e); }
+    return r;
+  };
+  // the pickaxe tingles when a chest is close
+  const told = new Set(); let tT = 0, last = performance.now();
+  (function tick(now){
+    requestAnimationFrame(tick);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      if(startEl.style.display === 'flex' || realm !== 0 || P.x >= UPPER_EDGE) return;
+      tT -= dt; if(tT > 0) return; tT = 1;
+      const gx = Math.floor(P.x/TG), gz = Math.floor(P.z/TG);
+      for(let i=-1;i<=1;i++) for(let j=-1;j<=1;j++){
+        const c = chestAt(gx+i, gz+j); if(!c || told.has(c.id) || save.treasures[c.id]) continue;
+        if(Math.hypot(c.x + .5 - P.x, c.z + .5 - P.z) < 6 && P.y > -c.d - 2){ told.add(c.id); toast('Your pickaxe tingles. Something is buried near here, ' + c.d + ' blocks down...'); blip(1200,.08,.08,'sine'); setTimeout(()=>blip(1500,.08,.08,'sine'), 120); }
+      }
+    }catch(e){ if(!tick.w){ tick.w = 1; console.warn('LN-more', e); } }
+  })(last);
+  // lore
+  try{ const L = window.__lore; if(L && L.LORE && !L.LORE.find(r=>r[0] === 'tre1')) L.LORE.push(['tre1','The World','Hidden Treasure','Somebody buried chests all over the world, two to nine blocks down. Half hold real treasure. The other half hold socks, spoons and coupons. The Bobs say it was them. The Bobs cannot dig.','scroll']); }catch(e){}
+  window.__more = {SAV, chestAt, TID, FUNNY};
+})();
+/* LN-more end */
 
 
 
