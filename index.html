@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 201 (Oct 31)';
+  window.__BUILD = 'Build 202 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29274,7 +29274,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const rnd = a=>a[Math.floor(Math.random()*a.length)];
   const money = v=>'$' + Math.round(v).toLocaleString('en-US');
   const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; };
-  const Z0 = -49000, Z1 = -36000, ZMIN = -75000;   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
+  const Z0 = -49000, Z1 = -36000, ZMIN = -88000;   /* LN-flip: one more row */   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
   // [name, hardness, value, base colour, speck colours, glow]
   const L = (n, h, v, base, sp, glow)=>({name:n, th:4, h, v, base, amp:20, sp, p:.35, glow:glow || 0});
   const PL = [
@@ -29425,6 +29425,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       biomes:[{k:'hills', name:'Clean Floors'}, {k:'pillars', name:'Mop Forest'}, {k:'pits', name:'Puddles'}, {k:'spikes', name:'Caution Signs'}],
       animals:{dbunny:{name:'Dust Bunny', hp:35, r:.4, yo:.4, speed:2.6, reward:600, quips:['It rolls under something.', 'The Dust Bunny sneezes and runs off.']}},
       core:'YOU REACHED THE SHINY CORE! It has been mopped. Recently. There is a note: "nobody walks here. - J"'}
+,
+    {k:'flip', flip:1, name:'THE FLIPSIDE', x0:40000, x1:46250, z0:-88000, z1:-75000, fl:'canopy', grav:1, caves:1, sky:[[.36, .5, .22], [.5, .34, .18]], cloud:[.5, .42, .3], fog:0,   /* LN-flip */
+      blurb:'The other side of the Earth. Everything grew the wrong way up and nobody told it.',
+      story:'THE FLIPSIDE. The other side of the Earth, under the Janitor\'s floor. The sky is brown because it is the ground, the trees are roots, the hills are bubbles and the cows walk upside down. Dig DOWN to reach the Bottom Core, the other half of the Center Core.',
+      layers:[L('Ceiling Grass',1600,700,[70,120,50],[[110,170,80],[40,80,30]]), L('Upside Dirt',2800,1300,[120,70,150],[[170,110,200],[70,40,100]]), L('Flipped Stone',5000,2200,[140,140,150],[[190,190,200],[90,90,100]]),
+        L('Mirror Rock',9000,4500,[200,210,230],[[250,250,255],[150,160,180]],.2), L('Backwards Bedrock',18000,9000,[50,50,60],[[90,90,100],[20,20,30]]), L('Upside Magma',30000,16000,[240,110,30],[[255,200,80],[160,50,10]],.7),
+        L('Bottom Core',90000,70000,[120,200,255],[[255,255,255],[40,120,220]],1)],
+      ores:[['Flip Coin',60000,[255,220,80],[0,1,2],.05,.5], ['Upside Diamond',700000,[255,120,230],[2,3,4],.035,.6], ['Gravity Pearl',2500000,[200,240,255],[4,5],.025,.8], ['Bottom Emerald',12000000,[60,255,160],[6],.012,1]],
+      surf:{top:L('Ceiling Grass',1600,700,[70,120,50],[[110,170,80],[40,80,30]]), trunk:L('Root Trunk',2400,1200,[120,90,60],[[160,130,90],[80,60,40]]), canopy:L('Root Ball',2200,1000,[90,60,40],[[130,100,70],[50,35,20]]),
+        dome:L('Bubble Rock',3400,1700,[170,220,240],[[230,250,255],[110,170,200]],.2), pit:L('Sky Puddle',2200,1000,[120,190,250],[[200,230,255],[70,130,210]],.3), spike:L('Stalactite',4500,2200,[150,150,165],[[200,200,215],[100,100,115]])},
+      biomes:[{k:'pillars', name:'Root Forest'}, {k:'domes', name:'Bubble Hills'}, {k:'pits', name:'Sky Puddles'}, {k:'spikes', name:'Stalactite Fields'}, {k:'floats', name:'Falling Islands'}, {k:'hills', name:'Ceiling Meadows'}],
+      animals:{flipcow:{name:'Upside-Down Cow', hp:90, r:.8, yo:.7, speed:1.2, reward:1200, quips:['It moos. The moo comes out the wrong way up.', 'The Upside-Down Cow thinks YOU are the upside-down one.']},
+               groundbat:{name:'Ground Bat', hp:40, r:.5, yo:.4, speed:2.4, hop:true, reward:800, quips:['It hangs from the floor. Somehow.', 'The Ground Bat flaps along the ground and bumps into a root.']}},
+      core:'YOU REACHED THE BOTTOM CORE! The other half of the Center Core. It hums back at the top half. The Janitor has never been here. You have.'}
   ];
   PL.forEach(p=>{ p.z0 = p.z0 || Z0; p.z1 = p.z1 || Z1; p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((p.z0 + p.z1)/2); });
   const inAny = (x, z)=>z >= ZMIN && z < Z1 && x >= UPPER_EDGE && x < 65000;
@@ -29680,16 +29694,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   { const _t = toast; toast = function(msg){
-      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost' && !cur().era) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost' && !cur().era && !cur().flip) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
-    if(p.k !== 'moon' && p.k !== 'lost' && !p.era && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
+    if(p.k !== 'moon' && p.k !== 'lost' && !p.era && !p.flip && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
     blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
-    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' || p.era ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' || p.era || p.flip ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
   }
   const _pr = window.__planetR;
   window.__planetR = function(){
@@ -29715,7 +29729,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         bt.style.cssText = 'display:block;width:100%;margin:6px 0;padding:10px;font-size:15px;background:' + (COL[p.k] || '#404060');
         bt.textContent = (p.k === 'lost' ? 0 : 5 + i) + (p.k === 'moon' ? '   ' : p.k === 'lost' ? '   SECRET: ' : '   NEXT UNIVERSE: ') + p.name.toUpperCase();
         if(p.k === 'lost' && !save.lostOpen) bt.style.display = 'none';
-        if(p.era) bt.style.display = 'none';
+        if(p.era || p.flip) bt.style.display = 'none';
         bt.title = p.blurb;
         bt.onclick = e=>{ e.stopPropagation(); if(panel) panel.style.display = 'none'; goPlanet(p); try{ renderer.domElement.requestPointerLock(); }catch(er){} };
         after.parentNode.insertBefore(bt, after.nextSibling); after = bt;
@@ -35358,6 +35372,116 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__more = {SAV, chestAt, TID, FUNNY};
 })();
 /* LN-more end */
+/* LN-flip start: THE FLIPSIDE, the other side of the Earth, under the floor the Janitor never mopped. Beat the Janitor, then dig the thin patch in the middle of his basement floor and fall through (Irfan 2026-11-05 "whats below the door where janitor didnt see and whats the opposite side ... make enter to it by digging by defeating janitor") */
+(function(){
+  const MP = window.__morePlanets, DR = window.__door; if(!MP || !DR) return;
+  const FLIP = MP.PL.find(p=>p.k === 'flip'); if(!FLIP) return;
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const lore = id=>{ try{ window.__lore && window.__lore.unlock && window.__lore.unlock(id); }catch(e){} };
+  const mat = c=>new THREE.MeshLambertMaterial({color:c});
+  const bx = (par, w, h, d, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c)); m.position.set(x, y, z); par.add(m); return m; };
+  const label = (txt, w, big)=>{ const s = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(txt, 512, 64, null, '#ffffff', (big ? 'bold 34px' : 'bold 28px') + ' Arial'), fog:false, depthWrite:false, transparent:true})); s.scale.set(w, w/8, 1); return s; };
+  const FY_D = D + 19;                                                    // the basement floor row (see LN-door)
+  const thinId = ()=>blockIdOf('Clay') || blockIdOf('Soil') || 2;
+  const holeOpen = ()=>save.janBeaten && DR.room;
+  const inPatch = (x, d, z)=>{ const r = DR.room; return r && d === FY_D && Math.abs(x - r.x) <= 1 && Math.abs(z - r.z) <= 1; };
+  const hk = (x, z)=>x + ',' + z;
+  // ---------------- the thin patch: 3x3 blocks of old clay in the middle of the basement floor, only after the Janitor is beaten
+  const _get = get;
+  get = function(x, d, z){
+    if(holeOpen() && inPatch(x, d, z)) return (save.flipHole || {})[hk(x, z)] ? 0 : thinId();
+    return _get(x, d, z);
+  };
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    try{
+      if(h && holeOpen() && inPatch(h.i, h.d, h.k) && !(save.flipHole || {})[hk(h.i, h.k)]){
+        save.flipHole = save.flipHole || {}; save.flipHole[hk(h.i, h.k)] = 1; persist(); dirty = true;
+        const n = Object.keys(save.flipHole).length;
+        burst(h.i + .5, -h.d + .5, h.k + .5, thinId() - 1, 12); blip(120, .2, .2, 'square');
+        toast(n === 1 ? 'The floor here is THIN. Under the clay there is... nothing. Wind. Upside-down wind. Keep digging and jump in.' : n < 4 ? 'More of the thin floor gives way. You can hear birds. Below you.' : 'The hole is big enough. Jump in to reach THE FLIPSIDE.');
+        lore('f1'); return;
+      }
+    }catch(e){}
+    return _bb.apply(this, arguments);
+  };
+  // a sign in the basement, once the Janitor is beaten
+  let sign = null;
+  function signIn(){
+    const r = DR.room; if(!r) return;
+    if(!sign){ sign = new THREE.Group(); const a = label('THIN FLOOR. DO NOT DIG. - J', 4.2, true); a.position.y = 1.2; sign.add(a); const b = label('(he never looked under it)', 3.4); b.position.y = .8; sign.add(b); scene.add(sign); }
+    sign.position.set(r.x + .5, -FY_D + 1, r.z + .5); sign.visible = true;
+  }
+  // ---------------- falling through: land on the Flipside
+  let ret = null;                                                         // where to come back to (the basement)
+  function goFlip(){
+    ret = {x:DR.room.x, z:DR.room.z};
+    const first = !(save.planetVisits || {}).flip;
+    MP.goPlanet(FLIP);
+    P.y = 2; P.vy = 0;
+    setTimeout(()=>toast(FLIP.story), 2600); lore('f2'); lore('f3');
+    if(first){ news('BREAKING: A miner dug through the Janitor\'s basement floor and fell out of the OTHER SIDE of the Earth. The Janitor says there is no other side. The Janitor is wrong.'); try{ award && award('flipside'); }catch(e){} }
+    save.flipSeen = 1; persist();
+  }
+  function leaveFlip(){
+    const r = ret || DR.room || {x:0, z:0};
+    const tgt = DR.door ? {x:DR.door.position.x, z:DR.door.position.z + 2} : {x:r.x + .5, z:r.z + 3};
+    P.x = tgt.x; P.z = tgt.z; P.y = CH_TOP + .05; P.vx = P.vy = P.vz = 0; P.yaw = 0; P.pitch = .05; chamberSeen = true; dirty = true;
+    toast('You climb back up through the hole, past the basement, into the Core Chamber. The Janitor pretends not to notice.'); blip(720,.3,.15,'sine'); setTimeout(()=>blip(240,.3,.15,'sine'), 150);
+  }
+  const onFlip = ()=>{ const p = MP.cur(); return p && p.k === 'flip' ? p : null; };
+  // ---------------- the flipside creatures: an upside-down cow and a bat that stands on the ground
+  function crit(o){
+    const g = new THREE.Group(); g.userData.legs = []; g.userData.wings = [];
+    const b = (w, h, d, c, x, y, z)=>bx(g, w, h, d, c, x, y, z);
+    const leg = (x, z, h, c)=>{ const lg = new THREE.Group(); lg.position.set(x, h, z); g.add(lg); const m = new THREE.Mesh(new THREE.BoxGeometry(.14, h, .14), mat(c)); m.position.y = -h/2; lg.add(m); g.userData.legs.push(lg); };
+    const eyes = (y, z, w)=>{ [-w, w].forEach(x=>{ b(.12, .12, .06, 0xffffff, x, y, z); b(.06, .06, .04, 0x111111, x, y, z + .04); }); };
+    o.build(b, leg, eyes, g);
+    g.traverse(m=>{ if(m.isMesh) m.castShadow = true; });
+    return g;
+  }
+  const FLIP_M = {
+    flipcow:()=>crit({build:(b, leg, eyes)=>{ b(.9, .6, 1.3, 0xf0f0f0, 0, .55, 0); [[.2,.3],[-.3,-.2],[.1,-.5]].forEach(q=>b(.3, .62, .3, 0x202020, q[0], .55, q[1])); b(.5, .45, .5, 0xf0f0f0, 0, .75, .8); eyes(.85, 1.05, .12);
+      [-.25, .25].forEach(x=>{ [-.4, .4].forEach(z=>b(.14, .5, .14, 0x202020, x, 1.1, z)); }); b(.3, .12, .2, 0xffb0c0, 0, .3, .1); [-.2, .2].forEach(x=>b(.08, .2, .08, 0xd0b090, x, 1.0, .95)); } }),
+    groundbat:()=>crit({build:(b, leg, eyes, g)=>{ b(.4, .4, .5, 0x504060, 0, .45, 0); b(.3, .3, .3, 0x604870, 0, .55, .3); eyes(.62, .46, .09); [-.1, .1].forEach(x=>b(.08, .18, .06, 0x604870, x, .8, .25));
+      [-1, 1].forEach(sd=>{ const w = b(.9, .06, .5, 0x403050, sd*.6, .5, 0); g.userData.wings.push({w, sd}); }); leg(-.12, 0, .25, 0x302040); leg(.12, 0, .25, 0x302040); } })
+  };
+  const _bA = buildAnimal; buildAnimal = function(type){ if(FLIP_M[type]) return FLIP_M[type](); return _bA(type); };
+  // ---------------- badge and lore
+  try{ if(typeof BADGES !== 'undefined' && !BADGES.find(b=>b.id === 'flipside')) BADGES.push({id:'flipside', icon:'OS', name:'Other Side', desc:'Reached THE FLIPSIDE, the other side of the Earth.', secret:true}); }catch(e){}
+  const PAGES = [
+    ['f1','The Flipside','The Thin Floor','The Janitor mopped under every core in every world. He never once looked under his own floor. The middle of the basement floor is one block of old clay thick. Under it is the wind.','scroll'],
+    ['f2','The Flipside','The Other Side','The Earth has two sides. We live on the top one. Under the Center Core, under the basement, under the thin floor, is THE FLIPSIDE: the other side of the Earth, where everything grew the wrong way up.','scroll'],
+    ['f3','The Flipside','Upside Down','On the Flipside the trees are roots, the hills are bubbles, the puddles are made of sky and the cows walk about with their legs in the air. They think WE are the upside-down ones.','scroll'],
+    ['f4','The Flipside','The Bottom Core','The Flipside has its own core: the Bottom Core. It is the other half of the Center Core. The two halves hum at each other through 40 blocks of rock. Nobody knows what they are saying. The Janitor thinks it is about him.','scroll'],
+    ['f5','The Flipside','What the Janitor Says','"There is no other side. I would know. I have mopped everything." He has not mopped the Flipside. The Flipside has never been mopped. It is, honestly, a bit sticky.','scroll']
+  ];
+  try{ const L = window.__lore; if(L && L.LORE){ let added = 0; PAGES.forEach(r=>{ if(!L.LORE.find(q=>q[0] === r[0])){ L.LORE.push(r); added++; } });
+    if(added && save.loreFilled){ save.lore = save.lore || {}; PAGES.forEach(r=>{ if(!save.lore[r[0]]) save.lore[r[0]] = Date.now(); }); persist(); } } }catch(e){ console.warn('LN-flip lore', e); }
+  // ---------------- keys, hint, loop
+  const hint = document.createElement('div'); hint.style.cssText = 'position:fixed;left:50%;bottom:258px;transform:translateX(-50%);background:rgba(40,20,10,.7);color:#ffd0a0;font:800 14px system-ui,sans-serif;padding:5px 12px;border-radius:8px;display:none;pointer-events:none;z-index:40'; document.body.appendChild(hint);
+  addEventListener('keydown', e=>{
+    try{ if(won || shopOpen || realm !== 0) return;
+      if(e.code === 'KeyL' && !e.repeat && locked && onFlip()){ leaveFlip(); e.stopImmediatePropagation(); e.preventDefault(); } }catch(err){}
+  }, true);
+  let last = performance.now(), fellT = 0, told = 0;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      const r = DR.room;
+      if(r && save.janBeaten){ signIn(); if(!told && DR.inBase()){ told = 1; setTimeout(()=>toast('A new sign in the basement: THIN FLOOR. DO NOT DIG. The middle of the floor looks different. Dig it.'), 1500); lore('f1'); } }
+      else if(sign && sign.visible) sign.visible = false;
+      if(r && save.janBeaten && !onFlip() && P.y < -FY_D - 2){ fellT += dt; if(fellT > .15){ fellT = 0; goFlip(); } } else fellT = 0;
+      let h = '';
+      if(onFlip()) h = 'L: climb back up to the Core Chamber';
+      else if(r && save.janBeaten && DR.inBase() && Math.hypot(P.x - r.x - .5, P.z - r.z - .5) < 3.4) h = Object.keys(save.flipHole || {}).length ? 'jump into the hole to reach THE FLIPSIDE' : 'dig the thin floor (left click)';
+      if(h){ hint.textContent = h; hint.style.display = 'block'; } else if(hint.style.display !== 'none') hint.style.display = 'none';
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-flip', e); } }
+  })(last);
+  window.__flip = {FLIP, goFlip, leaveFlip, onFlip, PAGES, T:{thin:thinId, inPatch, hole:()=>save.flipHole}};
+})();
+/* LN-flip end */
 
 
 
