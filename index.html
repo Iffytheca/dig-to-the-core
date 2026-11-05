@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 198 (Oct 31)';
+  window.__BUILD = 'Build 199 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3866,10 +3866,28 @@ const BIOME = (function(){
       save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
       const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length-1)); j = BLOCKS.length-1;
     }
+    if(j < 0) j = nearBlock(q);   /* LN-slopes */
     return (ids[key] = j >= 0 ? j+1 : 1);
   }
+  const NEAR = ['Soil','Dirt','Tough Dirt','Clay','Sand','Gravel','Sandstone','Rock','Hard Rock','Bedrock','Mountain Stone','Cave Stone','Granite','Marble','Terracotta','Basalt'];   /* LN-slopes */
+  function nearBlock(q){                                        // LN-slopes: the closest existing natural block to a missing one
+    if(/grass/i.test(q[0])) return 0;                          // a missing grass is still grass (only ever used on top)
+    let best = -1, bd = 1e9;
+    NEAR.forEach(nm=>{
+      const j = BLOCKS.findIndex(b=>b.name === nm); if(j < 0) return;
+      const Bk = BLOCKS[j], c = Bk.base || Bk.c1 || [128,128,128], qc = q[3] || [128,128,128];
+      const dh = Math.abs(Math.log(Math.max(.5, Bk.h || 1)) - Math.log(Math.max(.5, q[1] || 1)));
+      const dc = Math.hypot(c[0]-qc[0], c[1]-qc[1], c[2]-qc[2])/255;
+      const d = dh + 1.6*dc; if(d < bd){ bd = d; best = j; }
+    });
+    return best;
+  }
+  const isGrassId = id=>{ const Bk = BLOCKS[id-1]; return !!(Bk && /grass/i.test(Bk.name)); };   /* LN-slopes */
   SET.forEach(b=>{ ['top','sub','fill','cap','bed','rock','crater'].forEach(f=>{ if(b[f] != null) b[f+'Id'] = bid(b[f]); }); if(b.liq === 'frozen') b.glazeId = bid('glaze');
-    b.deepIds = (b.deep || []).map(q=>[bid(q[0]), q[1]]); b.deepN = b.deepIds.reduce((a, q)=>a + q[1], 0); b.oreId = b.ore ? bid(b.ore[0]) : 0; });
+    b.deepIds = (b.deep || []).map(q=>[bid(q[0]), q[1]]); b.deepN = b.deepIds.reduce((a, q)=>a + q[1], 0); b.oreId = b.ore ? bid(b.ore[0]) : 0;
+    ['subId','fillId','rockId','bedId'].forEach(f=>{ if(b[f] && isGrassId(b[f])) b[f] = L1; });   /* LN-slopes: no grass under grass */
+    b.deepIds.forEach(q=>{ if(isGrassId(q[0])) q[0] = L1; });
+    if(!b.subId) b.subId = L1; if(!b.fillId) b.fillId = L1; });
   // the extra swamp of each set takes about one patch in eight; the others keep the patches they always had
   const BASE = SET.filter(b=>!b.extra && !b.canyon && !b.nu), EXB = SET.find(b=>b.extra), CANB = SET.find(b=>b.canyon), NEWB = SET.filter(b=>b.nu);   /* LN-more */   /* LN-land: the canyon takes its own patches, so the old map stays */
   function pick(gx, gz){ if(NEWB.length && hash3(gx,27,gz,869) < .18) return NEWB[Math.floor(hash3(gx,29,gz,871)*NEWB.length)]; if(CANB && hash3(gx,23,gz,861) < .12) return CANB; return EXB && hash3(gx,19,gz,841) < .125 ? EXB : BASE[Math.floor(hash3(gx,11,gz,817)*BASE.length)]; }
@@ -3924,7 +3942,7 @@ const BIOME = (function(){
     /* LN-world2: cliffs. A band of noise lifts a whole plateau 5 to 10 blocks with a sharp edge */
     if(e > .15 && !liq && !cr && (b.shape === 'hills' || b.shape === 'mountain' || b.shape === 'flat' || b.shape === 'dunes' || b.shape === 'canyon')){
       const cv = vnoise(x*.03, z*.03, 881);
-      if(cv > .6){ const k = Math.min(1, (cv - .6)/.02); h += Math.round(e*k*(5 + 5*vnoise(x*.09, z*.09, 883))); }
+      if(cv > .6){ const k = Math.min(1, (cv - .6)/.07); h += Math.round(e*k*k*(5 + 5*vnoise(x*.09, z*.09, 883))); }   /* LN-slopes: a ramped edge */
     }
     /* LN-ocean2: seas and oceans. One slow noise picks where the sea is; it gets deeper the further in you go, with a sandy shore round it */
     if(b.shape !== 'mountain' && b.shape !== 'volcano'){
@@ -3993,7 +4011,8 @@ const BIOME = (function(){
       if(b.rockId && h >= b.rockH) return b.rockId;
       return b.topId;
     }
-    return j >= h - 2 ? (b.subId || b.fillId) : b.fillId;
+    const r = j >= h - 2 ? (b.subId || b.fillId) : b.fillId;
+    return isGrassId(r) ? L1 : r;   /* LN-slopes */
   }
   // ---- terrain blocks: baseBlock for the ground (carving, sand layers), get/setBlock for blocks above the ground
   const _bb = baseBlock;
