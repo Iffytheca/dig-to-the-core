@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 202 (Oct 31)';
+  window.__BUILD = 'Build 203 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -34567,7 +34567,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     toast('The Janitor sits down on the floor. "Fine. FINE. You win. You want the truth? Here is the truth."');
     setTimeout(()=>toast('"This was never the Even Deeper Core. There is no Even Deeper Core. This is the CENTER CORE. The sign was a lie. I painted the sign."'), 5000);
     setTimeout(()=>{ toast('"And the Heart of the Earth? Cheap fake. I bought it at the Shop in year one. The Shopkeeper still has the receipt."'); markFake(); }, 10000);
-    setTimeout(()=>{ toast('"The TRUE HEART OF EARTH is under the floor. I mopped over it every day so nobody saw the glow. It is yours now. Press F next to it to mine it."'); lore('t2'); lore('t3');
+    setTimeout(()=>{ toast('"The TRUE HEART OF EARTH is under the floor. I mopped over it every day so nobody saw the glow. It is yours now. Mine it with your pickaxe, like any block."'); lore('t2'); lore('t3');
       news('BREAKING: The Even Deeper Core was never real. It is the CENTER CORE. The Heart of the Earth was a $4.99 fake from the Shop. The Shopkeeper declined to comment, then commented a lot.'); }, 15000);
   }
   function markFake(){
@@ -34581,7 +34581,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const ring = new THREE.Mesh(new THREE.TorusGeometry(2.3, .08, 8, 40), new THREE.MeshBasicMaterial({color:0xffd080})); ring.rotation.x = 1.2; g.add(ring);
     const l = new THREE.PointLight(0xa0f0ff, 2.6, 40, 1.1); g.add(l);
     const nm = label('THE TRUE HEART OF EARTH', 5, true); nm.position.set(0, 3, 0); g.add(nm);
-    const hn = label('F: mine it', 2.4); hn.position.set(0, 2.3, 0); g.add(hn);
+    const hn = label('mine it with your pickaxe (hold left click)', 4.4); hn.position.set(0, 2.3, 0); g.add(hn);   /* LN-thmine */
     g.userData = {core, shell, ring}; g.visible = false; scene.add(g); return g;
   }
   function buildPT(){
@@ -34598,7 +34598,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const nearPT = ()=>PT && PT.visible && Math.hypot(P.x - PT.position.x, P.z - PT.position.z) < 3.4 && Math.abs(P.y - CH_TOP) < 4;
   function mineTH(){
     thHp--; burst(TH.position.x, TH.position.y, TH.position.z, 9, 20); shake = Math.max(shake, .12); blip(200 + (3 - thHp)*120, .3, .15, 'triangle');
-    if(thHp > 0){ toast(thHp === 2 ? 'The True Heart cracks. It hums louder. Hit it again (F).' : 'Another crack. The light is almost too bright. One more (F).'); return; }
+    if(thHp > 0){ toast(thHp === 2 ? 'The True Heart cracks. It hums louder. Keep mining.' : 'Another crack. The light is almost too bright. Nearly there.'); return; }
     save.trueHeart = 1; save.coins = (save.coins || 0) + 5000000; persist();
     try{ addItem('True Heart of Earth', 1); }catch(e){}
     burst(TH.position.x, TH.position.y, TH.position.z, 9, 80); burst(TH.position.x, TH.position.y, TH.position.z, 0, 60); shake = Math.max(shake, .3);
@@ -35482,6 +35482,49 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__flip = {FLIP, goFlip, leaveFlip, onFlip, PAGES, T:{thin:thinId, inPatch, hole:()=>save.flipHole}};
 })();
 /* LN-flip end */
+/* LN-thmine start: the True Heart of Earth is mined like a block: hold left click with the pickaxe while aiming at it (F still works) (Irfan 2026-11-05 "real core is normally minable not press F") */
+(function(){
+  const T = window.__truth; if(!T) return;
+  const bar = document.createElement('div'); bar.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);width:260px;background:rgba(10,20,40,.75);border:1px solid #80f0ff;border-radius:8px;padding:6px 10px;color:#e0ffff;font:800 13px system-ui,sans-serif;display:none;z-index:40;pointer-events:none';
+  bar.innerHTML = '<div id="thMineTxt">MINING THE TRUE HEART</div><div style="height:8px;background:rgba(255,255,255,.2);border-radius:4px;margin-top:4px;overflow:hidden"><div id="thMineBar" style="height:100%;width:0;background:linear-gradient(90deg,#80f0ff,#fff8d0)"></div></div>';
+  document.body.appendChild(bar);
+  const V = new THREE.Vector3();
+  function aiming(){
+    const TH = T.TH; if(!TH || !TH.visible) return false;
+    V.copy(TH.position).sub(camera.position); const dist = V.length(); if(dist > 7) return false;
+    V.normalize(); const cosA = V.dot(_dir);
+    return cosA > Math.cos(Math.atan2(2.0, dist));                 // inside a cone that covers the whole heart (radius 2)
+  }
+  let prog = 0, idle = 0, hits = 0, sparkT = 0;
+  const _um = updateMining;
+  updateMining = function(dt){
+    try{
+      const TH = T.TH;
+      if(TH && TH.visible && !save.trueHeart && locked && Math.abs(P.y - CH_TOP) < 5 && aiming()){
+        const pick = !curGun;                                        // pickaxe, mop or sword: all of them mine the heart
+        try{ hlEdges.visible = crack.visible = false; }catch(e){}
+        try{ blockName.textContent = pick ? 'THE TRUE HEART OF EARTH  ·  hold left click to mine it' : 'THE TRUE HEART OF EARTH  ·  put the gun away and mine it (G)'; }catch(e){}
+        if(mouseDown && pick){
+          idle = 0; const pw = (PICKS[save.equipped] || {}).power || 1, need = Math.max(1.5, 4 - Math.min(10, pw)*.25);
+          prog = Math.min(1, prog + dt/need); swingT += dt;
+          sparkT -= dt; if(sparkT <= 0){ sparkT = .25; burst(TH.position.x + (Math.random()-.5)*2, TH.position.y + (Math.random()-.5)*2, TH.position.z + (Math.random()-.5)*2, 9, 4); blip(160,.05,.08,'square'); }
+          bar.style.display = 'block'; document.getElementById('thMineBar').style.width = Math.round(prog*100) + '%'; document.getElementById('thMineTxt').textContent = 'MINING THE TRUE HEART  ' + Math.round(prog*100) + '%';
+          const want = Math.min(3, Math.floor(prog*3 + 1e-6));
+          while(hits < want && !save.trueHeart){ hits++; T.mineTH(); }
+          if(save.trueHeart){ bar.style.display = 'none'; prog = 0; hits = 0; }
+        } else {
+          idle += dt; if(idle > 2 && prog > 0 && hits < 3) prog = Math.max(hits/3, prog - dt*.2);
+          if(bar.style.display !== 'none' && idle > .5) bar.style.display = 'none';
+        }
+        return;                                                    // the block behind the heart is left alone
+      }
+      if(bar.style.display !== 'none'){ idle += dt; if(idle > .5) bar.style.display = 'none'; }
+    }catch(e){ if(!updateMining.w){ updateMining.w = 1; console.warn('LN-thmine', e); } }
+    return _um.apply(this, arguments);
+  };
+  window.__thmine = {aiming, T:{prog:()=>prog}};
+})();
+/* LN-thmine end */
 
 
 
