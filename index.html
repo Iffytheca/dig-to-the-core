@@ -212,7 +212,7 @@
 </div>
 
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 205 (Oct 31)';
+  window.__BUILD = 'Build 206 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -35674,6 +35674,117 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__basefloor = {aimFloor};
 })();
 /* LN-basefloor end */
+/* LN-throw start: throw away anything you do not want: items, discoveries, materials, crafted gear. Throw 1 or Throw all in the inventory, T in the game throws one of the carry-slot item. It flies, lands, and you can walk over it to pick it back up for 60 seconds (Irfan 2026-11-06 "add throw button to game ... if you dont like it then throw it") */
+(function(){
+  const LIFE = 60;                                                   // seconds a thrown thing stays on the ground
+  const flying = [];
+  const rgb = c=>Array.isArray(c) ? new THREE.Color(c[0]/255, c[1]/255, c[2]/255) : new THREE.Color(c || '#cfcfcf');
+  function colOf(ref){
+    try{
+      const t = ref[0], r = ref.slice(2);
+      if(t === 'm') return rgb(TIERS[+r.slice(0, r.indexOf('|'))].col);
+      if(t === 'g') return rgb('#9a7aff');
+      const m = itemMeta(r); return rgb(m && m.col);
+    }catch(e){ return rgb('#cfcfcf'); }
+  }
+  // take n of ref out of the bag and send it flying; returns how many went
+  function throwRef(ref, n){
+    const inf = refInfo(ref); if(!inf) return 0;
+    if(inf.kind === 'gear'){ try{ const eq = save.equip || {}; for(const sl in eq) if(eq[sl] && eq[sl].id === inf.gear.id){ toast('Take ' + inf.name + ' off first, then throw it.'); return 0; } }catch(e){} n = 1; }
+    n = Math.max(1, Math.min(n || 1, inf.n));
+    const back = inf.kind === 'gear' ? {g:inf.gear} : {ref, n};
+    if(!consumeRef(ref, n)) return 0;
+    try{ if(selRef === ref && !refInfo(ref)) selRef = null; }catch(e){}
+    try{ craftSlots.forEach((r, i)=>{ if(r === ref && !refInfo(ref)) craftSlots[i] = null; }); }catch(e){}
+    persist(); try{ updateHotbar(); }catch(e){}
+    launch(inf.name, back, colOf(ref), n);
+    return n;
+  }
+  function launch(name, back, color, n){
+    const s = Math.min(.55, .3 + Math.log10(n + 1)*.12);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshLambertMaterial({color, emissive:color.clone().multiplyScalar(.25)}));
+    m.userData.noMine = true;
+    const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+    m.position.copy(camera.position).addScaledVector(dir, .8); m.position.y -= .2;
+    scene.add(m);
+    const v = dir.clone().multiplyScalar(9); v.y += 3.5;
+    const lbl = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(name + (n > 1 ? ' x' + n : ''), 512, 64, 'rgba(0,0,0,.55)', '#ffffff', 'bold 26px Arial'), fog:false, depthWrite:false, transparent:true}));
+    lbl.scale.set(2.4, .3, 1); lbl.visible = false; scene.add(lbl);
+    flying.push({m, lbl, v, name, back, t:0, landed:false, n});
+    blip(420, .08, .08, 'triangle'); swingT = .2;
+  }
+  function solidAt(x, y, z){ try{ return !!get(Math.floor(x), Math.floor(-y), Math.floor(z)); }catch(e){ return false; } }
+  function giveBack(f){
+    const b = f.back;
+    if(b.g){ save.gear = save.gear || []; save.gear.push(b.g); }
+    else if(b.ref[0] === 'm'){ const k = b.ref.slice(2); save.mats = save.mats || {}; if(!save.mats[k]) save.matKinds = (save.matKinds || 0) + 1; save.mats[k] = (save.mats[k] || 0) + b.n; }
+    else addItem(b.ref.slice(2), b.n, true);
+    persist(); try{ updateHotbar(); }catch(e){}
+    toast('Picked back up: ' + f.name + (f.n > 1 ? ' x' + f.n : '')); blip(880, .08, .08, 'sine');
+  }
+  function drop(f){ try{ scene.remove(f.m); scene.remove(f.lbl); f.m.geometry.dispose(); }catch(e){} const i = flying.indexOf(f); if(i >= 0) flying.splice(i, 1); }
+  // ---------------- the inventory: a Throw bar for whatever you clicked
+  const _ri = renderInv;
+  renderInv = function(){
+    const r = _ri.apply(this, arguments);
+    try{
+      const inf = refInfo(selRef); const body = $('invbody'); if(!body) return r;
+      const old = document.getElementById('throwBar'); if(old) old.remove();
+      const bar = document.createElement('div'); bar.id = 'throwBar';
+      bar.style.cssText = 'position:sticky;top:0;z-index:5;margin:0 0 8px;padding:7px 10px;border-radius:8px;background:#2a1a14;border:1px solid #a0582a;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center';
+      if(inf){
+        bar.innerHTML = '<b style="color:#ffb070">Throw away:</b> <span>' + inf.name.replace(/</g, '&lt;') + (inf.kind === 'gear' ? '' : ' x' + inf.n.toLocaleString()) + '</span>' +
+          '<button class="mini" id="throw1">Throw 1</button>' + (inf.n > 1 ? '<button class="mini" id="throwAll">Throw all (' + inf.n.toLocaleString() + ')</button>' : '') +
+          '<span style="opacity:.65;font-size:12px">It lands in front of you. Walk over it within 60 s to pick it back up.</span>';
+      } else bar.innerHTML = '<span style="opacity:.7">Click any item, discovery or material below, then you can <b style="color:#ffb070">Throw</b> it away here. In the game, T throws one of the carry-slot item.</span>';
+      body.insertBefore(bar, body.firstChild);
+      const go = n=>{ const ref = selRef, got = throwRef(ref, n); if(got){ toast('Threw ' + (got > 1 ? got.toLocaleString() + ' x ' : '') + (refInfo(ref) ? refInfo(ref).name : 'it') + '.'); } renderInv(); };
+      const b1 = document.getElementById('throw1'); if(b1) b1.onclick = e=>{ e.stopPropagation(); go(1); };
+      const ba = document.getElementById('throwAll'); if(ba) ba.onclick = e=>{ e.stopPropagation(); go(1e12); };
+    }catch(e){ console.warn('LN-throw inv', e); }
+    return r;
+  };
+  // ---------------- T in the game: throw one of the carry-slot item (guns reload with T, held swords are thrown by LN-swords)
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code !== 'KeyT' || !locked || won || e.repeat || curGun) return;
+      const M = window.__melee; if(M && M.held) return;
+      const r = hotArr()[save.hotSel], hi = hotInfo(r);
+      if(!hi || hi.kind === 'gun'){ toast('Nothing to throw. Pick a carry slot with an item (1-9), then press T.'); return; }
+      const got = throwRef(r, 1); if(got) toast('Threw ' + hi.name + '.  (T throws one, the bag has Throw all)');
+      e.stopImmediatePropagation(); e.preventDefault();
+    }catch(err){ console.warn('LN-throw key', err); }
+  }, true);
+  // ---------------- flight, landing, pick-up
+  let last = performance.now();
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    try{
+      for(let i = flying.length - 1; i >= 0; i--){
+        const f = flying[i]; f.t += dt;
+        if(!f.landed){
+          f.v.y -= 22*dt;
+          const nx = f.m.position.x + f.v.x*dt, ny = f.m.position.y + f.v.y*dt, nz = f.m.position.z + f.v.z*dt;
+          if(solidAt(nx, f.m.position.y, f.m.position.z)) f.v.x *= -.3; else f.m.position.x = nx;
+          if(solidAt(f.m.position.x, f.m.position.y, nz)) f.v.z *= -.3; else f.m.position.z = nz;
+          if(f.v.y < 0 && solidAt(f.m.position.x, ny - .2, f.m.position.z)){ f.m.position.y = Math.floor(ny - .2) + 1 + .2; f.landed = true; f.v.set(0, 0, 0); f.lt = 0; blip(160, .06, .06, 'square'); }
+          else f.m.position.y = ny;
+          f.m.rotation.x += dt*8; f.m.rotation.y += dt*6;
+          if(f.m.position.y < -5000 || f.t > 20){ drop(f); continue; }
+        } else {
+          f.lt += dt; f.m.rotation.y += dt*1.5; f.m.position.y += Math.sin(now*.004 + i)*.002;
+          f.lbl.visible = true; f.lbl.position.set(f.m.position.x, f.m.position.y + .7, f.m.position.z);
+          if(f.lt > LIFE - 10) f.m.visible = Math.floor(now/150) % 2 === 0;           // blinks before it goes
+          if(f.lt > .8 && Math.hypot(P.x - f.m.position.x, P.z - f.m.position.z) < 1.4 && Math.abs(P.y + .9 - f.m.position.y) < 2.2){ giveBack(f); drop(f); continue; }
+          if(f.lt > LIFE){ drop(f); continue; }
+        }
+      }
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-throw', e); } }
+  })(last);
+  window.__throw = {throwRef, flying, LIFE};
+})();
+/* LN-throw end */
 
 
 
