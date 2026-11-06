@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 208 (Oct 31)';
+  window.__BUILD = 'Build 209 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -35824,6 +35824,652 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   })(last);
 })();
 /* LN-skyfall end */
+/* LN-citydef start: animal residents and Bob citizens DEFEND their city. Every town has GUARDS with swords and spears, defenders hit you up close (MELEE) or THROW BLOCKS, and every mayor gets a COURT with a judge's desk (Irfan 2026-11-06 "animal resident and bob resident can throw block defend their city have weapons also melee and guard and now mayor has a building court") */
+(function(){
+  const NA = window.__nations, C = window.__city, BC = window.__bobciv;
+  if(!NA || !C) return;
+  const pick = q=>q[Math.floor(Math.random()*q.length)];
+  const news = (t, front)=>{ try{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const alive = a=>!!a && animals.indexOf(a) >= 0 && !a.dead;
+  const NOM = o=>{ o.traverse(m=>{ m.userData.gone = true; m.userData.noMine = true; }); return o; };
+  const CALM = 35, LEAVE = 60, NEAR = 120, MAX_MELEE = 3, MAX_THROW = 2;
+  let uid = 1;
+  const newId = p=>p+Date.now().toString(36)+(uid++);
+
+  // ================= shared geometry, materials and little labels (made once, reused)
+  const BOXG = new THREE.BoxGeometry(1, 1, 1), MATS = {};
+  const mat = c=>MATS[c] || (MATS[c] = new THREE.MeshLambertMaterial({color:c}));
+  function part(par, w, h, d, c, x, y, z){ const m = new THREE.Mesh(BOXG, mat(c)); m.scale.set(w, h, d); m.position.set(x, y, z); par.add(m); return m; }
+  const TAGM = {};
+  function tag(txt, bg, fg, w){
+    const k = txt+'|'+bg+'|'+fg;
+    const m = TAGM[k] || (TAGM[k] = new THREE.SpriteMaterial({map:textTex(txt, 256, 64, bg, fg, 'bold 40px Arial'), transparent:true, depthWrite:false}));
+    const s = new THREE.Sprite(m); w = w || 1.3; s.scale.set(w, w/4, 1); return NOM(s);
+  }
+  function bigTag(top, sub){
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
+    x.font = 'bold 44px Arial'; x.strokeText(top, 320, 40); x.fillStyle = '#ffd84a'; x.fillText(top, 320, 40);
+    let fs = 28; x.font = 'bold 28px Arial'; while(x.measureText(sub).width > 620 && fs > 12){ fs--; x.font = 'bold '+fs+'px Arial'; }
+    x.strokeText(sub, 320, 92); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 92);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); sp.scale.set(9, 1.8, 1); return NOM(sp);
+  }
+  let SIGN = null, PLATE = null, ORDER = null;
+  const signTex = ()=>SIGN || (SIGN = textTex('COURT', 512, 128, '#26305a', '#ffd84a', 'bold 92px Arial'));
+  const plateTex = ()=>PLATE || (PLATE = textTex('THE JUDGE (MAYOR)', 512, 96, '#3a2010', '#ffe0a0', 'bold 44px Arial'));
+  const orderTex = ()=>ORDER || (ORDER = textTex('ORDER IN THE COURT', 512, 96, '#5a1414', '#ffffff', 'bold 46px Arial'));
+
+  // ================= weapons, helmets and hats
+  function weapon(kind, col){
+    const piv = new THREE.Group();
+    if(kind === 'sword'){ part(piv, .08, .26, .08, 0x7a5230, 0, .13, 0); part(piv, .34, .06, .1, 0xffd030, 0, .28, 0); part(piv, .11, .85, .04, 0xd8dce4, 0, .73, 0); part(piv, .05, .1, .03, 0xd8dce4, 0, 1.2, 0); }
+    else if(kind === 'spear'){ part(piv, .06, 1.7, .06, 0x7a5230, 0, .55, 0); part(piv, .15, .3, .05, 0xd8dce4, 0, 1.52, 0); part(piv, .06, .14, .05, 0xd8dce4, 0, 1.73, 0); part(piv, .17, .05, .08, 0xd02020, 0, 1.33, 0); }
+    else if(kind === 'club'){ part(piv, .08, .55, .08, 0x7a5230, 0, .27, 0); part(piv, .28, .34, .28, 0x8a5a2a, 0, .68, 0); }
+    else part(piv, .36, .36, .36, col || 0x8a6a4a, 0, .22, 0);        // a block, ready to throw
+    piv.userData.kind = kind; piv.rotation.x = .35; return NOM(piv);
+  }
+  function helmet(par, pos, s){
+    const g = new THREE.Group(); g.position.copy(pos); if(s) g.scale.setScalar(s);
+    part(g, .52, .2, .52, 0x9aa3ad, 0, .1, 0); part(g, .58, .05, .58, 0x7a838d, 0, .01, 0); part(g, .08, .24, .36, 0xd02020, 0, .32, -.02);
+    par.add(NOM(g)); return g;
+  }
+  function topHat(par, pos, s){
+    const g = new THREE.Group(); g.position.copy(pos); if(s) g.scale.setScalar(s);
+    part(g, .6, .05, .6, 0x111111, 0, .02, 0); part(g, .38, .44, .38, 0x111111, 0, .26, 0); part(g, .4, .08, .4, 0x7a3ac8, 0, .1, 0);
+    par.add(NOM(g)); return g;
+  }
+  const V = (x, y, z)=>new THREE.Vector3(x, y, z);
+
+  // ================= members: an animal resident (k 'a', ref = animal) or a Bob citizen (k 'b', ref = person)
+  const mOk = m=>m.k === 'a' ? alive(m.ref) : !!(BC && BC.people.indexOf(m.ref) >= 0);
+  const mPos = m=>m.k === 'a' ? m.ref.pos : {x:m.ref.x, y:m.ref.b.g.position.y, z:m.ref.z};
+  const mName = m=>m.k === 'a' ? m.ref.popRef.nm : m.ref.job.j+' Bob';
+  const mH = m=>m.k === 'a' ? (m.ref.tagY || 1.2) : 1.9;
+  function moveTo(m, x, z, dt, run){
+    const r = m.ref;
+    if(m.k === 'a'){ r.dir = Math.atan2(x - r.pos.x, z - r.pos.z); r.wanderT = 1; r.fleeT = 0; r.spdMul = run ? 2 : 1; return; }
+    r.wx = x; r.wz = z; r.wait = 0;
+    if(run){ const dx = x - r.x, dz = z - r.z, d = Math.hypot(dx, dz); if(d > .3){ const k = Math.min(d - .3, 2.3*dt)/d; r.x += dx*k; r.z += dz*k; } }
+  }
+  function face(m, x, z){
+    const r = m.ref;
+    if(m.k === 'a'){ r.dir = null; r.wanderT = 1; r.fleeT = 0; r.ang = Math.atan2(x - r.pos.x, z - r.pos.z); r.spdMul = 1; return; }
+    r.wx = r.x; r.wz = r.z; r.wait = .6; r.b.g.rotation.y = Math.atan2(x - r.x, z - r.z);
+  }
+  function equip(m, kind, col){
+    const r = m.ref;
+    if(r.cdW && r.cdW.userData.kind === kind){ r.cdW.visible = true; return r.cdW; }
+    unequip(m);
+    const w = weapon(kind, col);
+    if(m.k === 'a'){
+      const a = r, s = 1/(a.g.scale.x || 1), ty = a.tagY || 1.2, rad = (a.d && a.d.r) || .6, ws = Math.max(.7, Math.min(1.35, ty/1.4));
+      w.position.set(rad*.85*s, ty*.42*s, .25*s); w.scale.setScalar(ws*s); a.g.add(w);
+    } else { w.position.set(.42, .66, .1); r.b.body.add(w); }
+    r.cdW = w; return w;
+  }
+  function unequip(m){ const r = m.ref; if(r.cdW){ if(r.cdW.parent) r.cdW.parent.remove(r.cdW); r.cdW = null; } }
+  function tagOn(m, sp, extra){
+    const r = m.ref;
+    if(m.k === 'a'){ const s = 1/(r.g.scale.x || 1); sp.scale.multiplyScalar(s); sp.position.y = (r.tagY || 1.6)*s + (1.15 + (extra || 0))*s; r.g.add(sp); }
+    else { sp.position.y = 2.8 + (extra || 0); r.b.g.add(sp); }
+    return sp;
+  }
+
+  // ================= towns: animal cities (save.nations) and Bob towns (save.bobCities)
+  const ST = {};
+  const st = id=>ST[id] || (ST[id] = {id, def:false, calm:0, breaks:0, breakT:0, hitT:-9, defs:[], recT:0, siteT:0, chkT:0, addT:0, hurtT:0, sayT:0});
+  function desc(o, k){ return {k, id:o.id, o, x:o.x, z:o.z, G:o.G, name:o.name}; }
+  function towns(){
+    const out = [];
+    for(const n of save.nations || []) out.push(desc(n, 'a'));
+    if(BC) for(const c of save.bobCities || []) out.push(desc(c, 'b'));
+    return out;
+  }
+  function townById(id){
+    const n = (save.nations || []).find(o=>o.id === id); if(n) return desc(n, 'a');
+    const c = (save.bobCities || []).find(o=>o.id === id); return c ? desc(c, 'b') : null;
+  }
+
+  // ---- guards and a mayor for every animal city
+  const GN1 = ['Sir','Captain','Sergeant','Officer','Corporal','Guard'], GN2 = ['Snoutsworth','Bravepaw','Stompy','Hornblower','Fluffshield','Grumbleton','Ironhoof','Whiskerblade','Pokeyspear','Bonkworth','Pebbleguard','Toughnose'];
+  const MSUR = ['Wobbleson','Fluffbottom','Snoutley','Puddlefoot','Crumbsworth','Honkworth','Biscuitson','Pickleberry'];
+  if(C.JOBS && !C.JOBS.Mayor) C.JOBS.Mayor = {col:0x6a3ab8, say:['Welcome to our city! Visit my court, it is very fancy.','Order! Order! Sorry, I say that to everyone.','I was elected by everybody. Even the ducks voted.']};
+  function setupAnimalTown(T){
+    const n = T.o; if(!n.pop) return;
+    let changed = false;
+    const want = Math.min(4, 2 + (n.pop.length >= 12 ? 1 : 0) + (n.pop.length >= 20 ? 1 : 0));
+    let g = n.pop.filter(q=>q.guard);
+    if(g.length < want){
+      n.pop.filter(q=>!q.guard && !q.mayor && !q.kid && !q.elder && q.job === 'Guard').slice(0, want - g.length).forEach(q=>{ q.guard = 1; });
+      g = n.pop.filter(q=>q.guard);
+      while(g.length < want){ const q = {id:newId('cg'), nm:pick(GN1)+' '+pick(GN2), fam:null, role:'Resident', job:'Guard', rel:0, hx:n.x, hz:n.z, guard:1}; n.pop.push(q); g.push(q); }
+      changed = true;
+      if(Math.hypot(n.x - P.x, n.z - P.z) < 90) toast(n.name+' hired '+g.length+' GUARDS. They have swords and very shiny helmets.');
+    }
+    if(!n.pop.some(q=>q.mayor)){
+      const cand = n.pop.filter(q=>!q.guard && !q.kid && !q.elder && (q.role === 'Dad' || q.role === 'Mum') && q.job !== 'Lumberjack' && q.job !== 'Miner').sort((a, b)=>(a.role === 'Dad' ? 0 : 1) - (b.role === 'Dad' ? 0 : 1));
+      let q = cand[0];
+      if(!q){ q = {id:newId('cm'), nm:'Mayor '+pick(MSUR), fam:null, role:'Resident', job:'Mayor', rel:0, hx:n.x, hz:n.z}; n.pop.push(q); }
+      q.mayor = 1; q.job = 'Mayor';
+      const a = C.live[q.id]; if(alive(a)){ removeAnimal(a); delete C.live[q.id]; }       // comes back with the mayor's hat
+      changed = true;
+      news('NEWS: '+q.nm+' is the new MAYOR of '+n.name+'. First promise: "More snacks. Also a court."');
+    }
+    if(changed) persist();
+  }
+  function makeAnimalGuard(a, i){
+    const m = {k:'a', ref:a}; a.cdGuard = 1; a.police = 1;
+    const h = window.__headTop ? window.__headTop(a) : null; helmet(a.g, h || V(0, a.tagY || 1.4, 0));
+    equip(m, i % 2 ? 'spear' : 'sword'); a.cdGuardKind = i % 2 ? 'spear' : 'sword';
+    a.cdTag = tagOn(m, tag('GUARD', 'rgba(20,40,110,.88)', '#ffffff'));
+  }
+  function makeAnimalMayor(a){
+    const m = {k:'a', ref:a}; a.cdMayor = 1; a.police = 1;
+    const h = window.__headTop ? window.__headTop(a) : null; topHat(a.g, h || V(0, a.tagY || 1.4, 0));
+    tagOn(m, tag('MAYOR', 'rgba(90,40,140,.9)', '#ffd84a'));
+  }
+  // ---- guards and the mayor of a Bob town
+  const GUARDJ = ()=>(BC.JOBS || []).find(J=>J.j === 'Guard');
+  function makeBobGuard(p, i){
+    const b = p.b; p.cdGuard = 1;
+    if(p.cdHired){ b.g.children.filter(o=>o.isSprite).forEach(o=>b.g.remove(o)); }
+    part(b.body, .54, .52, .34, 0x9aa3ad, 0, .92, 0);
+    helmet(b.body, V(0, 1.64, 0)); const k = i % 2 ? 'spear' : 'sword'; p.cdGuardKind = k; equip({k:'b', ref:p}, k);
+    p.cdTag = tagOn({k:'b', ref:p}, tag('GUARD', 'rgba(20,40,110,.88)', '#ffffff'), p.cdHired ? -.5 : 0);
+  }
+  function makeBobMayor(p){ p.cdMayor = 1; topHat(p.b.body, V(0, 1.74, 0)); tagOn({k:'b', ref:p}, tag('MAYOR', 'rgba(90,40,140,.9)', '#ffd84a')); }
+
+  // ================= the COURT: one per town, with steps, columns, a triangle roof, a COURT sign and the judge's desk
+  save.cdCourts = save.cdCourts || {};
+  const COURTS = {};                        // id -> {grp, sol:[], on}
+  const H = 4.4;
+  function rotXZ(r, x, z){ return r === 0 ? [x, z] : r === 1 ? [z, -x] : r === 2 ? [-x, -z] : [-z, x]; }
+  function W(c, lx, lz){ const [x, z] = rotXZ(c.r, lx, lz); return {x:c.x + .5 + x, z:c.z + .5 + z}; }
+  const seatOf = c=>W(c, 0, -2.75);
+  function aabb(c, lx, lz, w, d, y0, y1){ const a = W(c, lx - w/2, lz - d/2), b = W(c, lx + w/2, lz + d/2); return [Math.min(a.x, b.x), Math.max(a.x, b.x), c.G + y0, c.G + y1, Math.min(a.z, b.z), Math.max(a.z, b.z)]; }
+  const _so = NA.siteOk;
+  function courtNear(x, z, r){ for(const id in save.cdCourts){ const c = save.cdCourts[id]; if(c && Math.hypot(c.x - x, c.z - z) < 9 + r) return true; } return false; }
+  NA.siteOk = function(x, z, r){ if(courtNear(x, z, (r || 0) + 1)) return null; return _so.apply(this, arguments); };   // nobody builds a house inside the court
+  function clashes(x, z, T){
+    const CLm = window.__cityLife;
+    if(CLm) for(const b of CLm.CL.b){ let R = 6; try{ R = CLm.planOf(b).R; }catch(e){} if(Math.hypot(b.x - x, b.z - z) < R + 9) return true; }
+    for(const t of trees) if(!t.dead && Math.abs(t.bx - x) <= 7 && Math.abs(t.bz - z) <= 7) return true;
+    for(const o of (save.nations || []).concat(save.bobCities || [])){ if(o.fx != null && Math.hypot(o.fx - x, o.fz - z) < 10) return true; if(o !== T.o && Math.hypot(o.x - x, o.z - z) < 14) return true; }
+    if(Math.hypot(x - SHOP.x, z - SHOP.z) < 30) return true;
+    return courtNear(x, z, 0);
+  }
+  function pickSite(T){
+    for(let t=0;t<60;t++){
+      const ang = Math.random()*6.283, d = (t < 30 ? 13 : 18) + Math.random()*12, x = Math.floor(T.x + Math.cos(ang)*d), z = Math.floor(T.z + Math.sin(ang)*d);
+      if(clashes(x, z, T)) continue;
+      const G = _so(x, z, t < 40 ? 6 : 5); if(G === null) continue;
+      const vx = T.x - x, vz = T.z - z, r = Math.abs(vx) > Math.abs(vz) ? (vx > 0 ? 1 : 3) : (vz > 0 ? 0 : 2);
+      let deco = false;
+      for(let i=-7;i<=7;i++) for(let j=-7;j<=7;j++) if(BIOME.decoAt(x + i, z + j)){ BIOME.gone.add((x + i)+','+(z + j)); deco = true; }
+      if(deco){ save.decoGone = [...BIOME.gone]; if(save.decoGone.length > 4000) save.decoGone = save.decoGone.slice(-4000); try{ BIOME.decoRefresh(); }catch(e){} }
+      return {x, z, G, r};
+    }
+    return null;
+  }
+  function buildCourt(T, c){
+    const grp = new THREE.Group(); grp.position.set(c.x + .5, c.G, c.z + .5); grp.rotation.y = c.r*Math.PI/2;
+    const WALL = 0xcfc4a8, TRIM = 0xa89f88, WOOD = 0x5a3418, RED = 0x9a2020;
+    part(grp, 8.4, .06, 7.4, 0xb89a70, 0, .03, 0); part(grp, 2, .07, 5, RED, 0, .05, 1.2);                   // floor and red carpet
+    part(grp, 9, H, .4, WALL, 0, H/2, -3.8); part(grp, .4, H, 8, WALL, -4.3, H/2, 0); part(grp, .4, H, 8, WALL, 4.3, H/2, 0);
+    part(grp, 3.3, H, .4, WALL, -2.85, H/2, 3.8); part(grp, 3.3, H, .4, WALL, 2.85, H/2, 3.8); part(grp, 2.4, 1.3, .4, WALL, 0, H - .65, 3.8);
+    for(const sx of [-1, 1]) for(const z of [-1.8, 1.4]) part(grp, .06, 1.4, 1.1, 0x6aa8d8, sx*4.52, 2.4, z);       // windows
+    part(grp, 9.4, .25, 8.4, TRIM, 0, H + .1, 0);
+    part(grp, 9.6, .08, 2.6, 0xa8a294, 0, .04, 5.1); part(grp, 9.6, .08, 2, 0xb4ae9e, 0, .12, 4.8); part(grp, 9.6, .08, 1.4, 0xc0baa8, 0, .2, 4.5);   // steps
+    for(const x of [-3.9, -2.1, 2.1, 3.9]){ part(grp, .7, .25, .7, TRIM, x, .37, 5.3); part(grp, .45, H - .5, .45, 0xdcd6c4, x, .35 + (H - .5)/2, 5.3); part(grp, .7, .25, .7, TRIM, x, H - .05, 5.3); }
+    part(grp, 10.2, .3, 10.8, TRIM, 0, H + .35, 1.0);
+    const sh = new THREE.Shape(); sh.moveTo(-5.1, 0); sh.lineTo(5.1, 0); sh.lineTo(0, 2.1); sh.lineTo(-5.1, 0);
+    const ped = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, {depth:10.8, bevelEnabled:false}), mat(0xc9bfa6)); ped.position.set(0, H + .5, -4.4); grp.add(ped);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({map:signTex()})); sg.position.set(0, H + 1.05, 6.43); grp.add(sg);
+    // inside: the judge's platform, desk, chair, gavel, flag, witness stand, a jury of rubber ducks and benches
+    part(grp, 4.4, .15, 1.9, WOOD, 0, .075, -2.85);
+    part(grp, 4.2, .9, .8, WOOD, 0, .45, -1.75); part(grp, 4.4, .1, 1, 0x7a4a24, 0, .95, -1.75); part(grp, 3, .1, .04, 0xffd030, 0, .7, -1.33);
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .34), new THREE.MeshBasicMaterial({map:plateTex()})); pl.position.set(0, .45, -1.33); grp.add(pl);
+    part(grp, 1.1, .12, 1, RED, 0, .85, -3.25); part(grp, 1.1, 2, .15, RED, 0, 1.85, -3.68); part(grp, 1.2, .14, .2, 0xffd030, 0, 2.9, -3.68);
+    part(grp, .34, .08, .34, 0x3a2010, 1.3, 1.04, -1.75);
+    const gav = new THREE.Group(); gav.position.set(1.3, 1.1, -1.95); part(gav, .05, .05, .5, 0x8a5a2a, 0, 0, .25); part(gav, .32, .16, .16, 0x5a3418, 0, 0, .5); grp.add(gav); gav.rotation.x = -.3;
+    part(grp, .08, 3.2, .08, 0xd8d8d8, -3.6, 1.6, -3.3);
+    const fc = T.k === 'b' ? 0x3a6ad0 : ({red:0xd03030, blue:0x3050d0, green:0x30a040}[T.o.cloth] || 0xd03030);
+    part(grp, 1.2, .75, .04, fc, -2.98, 2.75, -3.3); part(grp, .3, .3, .05, 0xffd030, -2.98, 2.75, -3.27);
+    const ord = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .64), new THREE.MeshBasicMaterial({map:orderTex()})); ord.position.set(0, 3.95, -3.58); grp.add(ord);
+    part(grp, 1.2, 1, 1.2, WOOD, 3.1, .5, -1.4);
+    part(grp, .9, .45, 2.4, WOOD, -3.4, .225, -.4);
+    for(const z of [-1.2, -.4, .4]){ part(grp, .34, .3, .34, 0xffd84a, -3.4, .6, z); part(grp, .2, .2, .2, 0xffd84a, -3.4, .85, z + .06); part(grp, .12, .06, .14, 0xff8a20, -3.4, .83, z + .2); }
+    for(const x of [-2.2, 2.2]) for(const z of [1.1, 2.5]){ part(grp, 2.4, .1, .55, 0x8a5a2a, x, .45, z); part(grp, 2.4, .5, .08, 0x8a5a2a, x, .75, z + .27); part(grp, .1, .4, .4, 0x5a3418, x - 1.05, .2, z); part(grp, .1, .4, .4, 0x5a3418, x + 1.05, .2, z); }
+    grp.traverse(o=>{ if(o.isMesh) o.castShadow = o.receiveShadow = false; });
+    const lab = bigTag('COURT', T.k === 'b' ? 'The court of '+T.name+'. Judge: the Mayor' : 'The court of '+T.name+'. Judge: the Mayor'); lab.position.set(0, H + 3.6, 1); grp.add(lab);
+    NOM(grp); scene.add(grp);
+    const sol = [
+      aabb(c, 0, -3.8, 9, .4, 0, H), aabb(c, -4.3, 0, .4, 8, 0, H), aabb(c, 4.3, 0, .4, 8, 0, H),
+      aabb(c, -2.85, 3.8, 3.3, .4, 0, H), aabb(c, 2.85, 3.8, 3.3, .4, 0, H), aabb(c, 0, 3.8, 2.4, .4, H - 1.3, H),
+      aabb(c, 0, -1.75, 4.4, 1, 0, 1), aabb(c, 3.1, -1.4, 1.2, 1.2, 0, 1)
+    ];
+    for(const x of [-3.9, -2.1, 2.1, 3.9]) sol.push(aabb(c, x, 5.3, .5, .5, 0, H));
+    return {grp, sol, on:false, gav, c};
+  }
+  function solidsOn(K, on){
+    if(K.on === on) return;
+    if(on){
+      const px = P.x, pz = P.z;
+      if(K.sol.some(b=>px + .3 > b[0] && px - .3 < b[1] && pz + .3 > b[4] && pz - .3 < b[5] && P.y + 1.75 > b[2] && P.y < b[3])) return;   // never trap you inside a wall
+      K.sol.forEach(b=>solids.push(b));
+    } else K.sol.forEach(b=>{ const i = solids.indexOf(b); if(i >= 0) solids.splice(i, 1); });
+    K.on = on;
+  }
+  function dropCourt(id){ const K = COURTS[id]; if(K){ solidsOn(K, false); scene.remove(K.grp); delete COURTS[id]; } }
+  function courtTick(T, d, s){
+    let c = save.cdCourts[T.id];
+    if(!c && d < NEAR && realm === 0 && P.y > -12){
+      s.siteT -= .5;
+      if(s.siteT <= 0){
+        s.siteT = 10; c = pickSite(T);
+        if(c){ save.cdCourts[T.id] = c; persist();
+          news('NEWS: The mayor of '+T.name+' built a COURT. It has columns, a triangle roof and a jury of rubber ducks.');
+          if(d < 100) toast('The mayor of '+T.name+' built a COURT! Find the mayor at the judge\'s desk and press F.'); }
+      }
+    }
+    if(!c) return null;
+    s.chkT -= .5;
+    if(s.chkT <= 0 && d < NEAR){                                // a new city building landed on top of it: move the court
+      s.chkT = 5; const CLm = window.__cityLife;
+      if(CLm && CLm.CL.b.some(b=>{ let R = 6; try{ R = CLm.planOf(b).R; }catch(e){} return Math.hypot(b.x - c.x, b.z - c.z) < R + 7; })){ dropCourt(T.id); delete save.cdCourts[T.id]; s.siteT = 0; persist(); return null; }
+    }
+    const want = realm === 0 && d < NEAR + 10;
+    let K = COURTS[T.id];
+    if(want && !K) K = COURTS[T.id] = buildCourt(T, c);
+    if(K){ K.grp.visible = want; solidsOn(K, want); if(!want && d > NEAR + 60) dropCourt(T.id); }
+    return c;
+  }
+
+  // ================= the town tick (twice a second): guards, mayor, courts
+  const GUARDS = [], MAYORS = [];
+  function townTick(){
+    GUARDS.length = 0; MAYORS.length = 0;
+    if(realm !== 0){ for(const id in COURTS){ COURTS[id].grp.visible = false; solidsOn(COURTS[id], false); } return; }
+    for(const T of towns()){
+      const s = st(T.id); s.T = T;
+      const d = Math.hypot(T.x - P.x, T.z - P.z);
+      const c = courtTick(T, d, s);
+      if(s.breakT > 0){ s.breakT -= .5; if(s.breakT <= 0) s.breaks = 0; }
+      if(d > NEAR) continue;
+      const seat = c ? seatOf(c) : null;
+      if(T.k === 'a'){
+        const n = T.o; if(!n.pop) continue;
+        setupAnimalTown(T);
+        let gi = 0, made = 0;
+        for(const q of n.pop){
+          if(!q.guard && !q.mayor) continue;
+          if(q.mayor && seat){ q.hx = q.hx0 = seat.x; q.hz = q.hz0 = seat.z; }
+          let a = C.live[q.id];
+          if(!alive(a) && d < 70 && P.y > -10 && made < 2 && !(q.awayUntil && Date.now() < q.awayUntil)){ try{ a = C.spawnCitizen(n, q); made++; }catch(e){ a = null; } }
+          if(!alive(a)) continue;
+          const m = {k:'a', ref:a};
+          if(q.guard){ if(!a.cdGuard) makeAnimalGuard(a, gi); gi++; GUARDS.push({m, T}); }
+          if(q.mayor){ if(!a.cdMayor) makeAnimalMayor(a); if(seat) MAYORS.push({m, T, c, seat}); }
+        }
+      } else if(BC){
+        const mine = BC.people.filter(p=>p.c === T.o); if(!mine.length) continue;
+        const want = Math.min(3, 2 + ((T.o.houses || 1) >= 4 ? 1 : 0));
+        let g = mine.filter(p=>p.job && p.job.j === 'Guard');
+        s.addT -= .5;
+        if(g.length < want && mine.length >= 2 && s.addT <= 0 && GUARDJ()){ s.addT = 1.5; try{ const p = BC.spawnCitizen(T.o); p.job = GUARDJ(); p.cdHired = 1; g.push(p); }catch(e){} }
+        g.forEach((p, i)=>{ if(!p.cdGuard) makeBobGuard(p, i); GUARDS.push({m:{k:'b', ref:p}, T}); });
+        const my = mine.find(p=>p.job && p.job.j === 'Mayor');
+        if(my){ if(!my.cdMayor) makeBobMayor(my); if(seat) MAYORS.push({m:{k:'b', ref:my}, T, c, seat}); }
+      }
+      if(s.def){ s.recT -= .5; if(s.recT <= 0){ s.recT = 1; recruit(s); } }
+    }
+  }
+
+  // ================= DEFENDING THE CITY
+  const DEF_SAY = ['For the city!','Stop breaking our houses!','Take that! It is a dirt block!','Guards! Guards! Oh wait, I am the guard.','You break it, you bought it!','Bonk! That one was for the bakery!','Nobody messes with our town!','I have a block and I am not afraid to throw it!'];
+  const THROW_SAY = ['Catch! No wait, do not catch it.','Incoming block!','I was saving this block for a wall. Now it is for YOU.'];
+  let THROWN = null;
+  function blockCol(){
+    if(!THROWN){ THROWN = []; BLOCKS.forEach((b, i)=>{ if(b && b.base && /^(Dirt|Stone|Cobblestone|Sand|Gravel|Clay|Brick|Bricks|Soil|Grass|Wood|Planks?)$/i.test(b.name)) THROWN.push(i); }); if(!THROWN.length) for(let i=0;i<Math.min(6, BLOCKS.length);i++) THROWN.push(i); }
+    const li = pick(THROWN), b = BLOCKS[li].base || [140, 110, 80];
+    return {li, col:(b[0] << 16) | (b[1] << 8) | b[2]};
+  }
+  function eligible(m){
+    const r = m.ref;
+    if(m.k === 'a'){ const q = r.popRef; return q && !q.kid && !q.elder && !q.mayor && !r.pet && !r.suspect && !r.bandit && !r.cop && !r.cdMayor; }
+    return !r.cdMayor && r.job && r.job.j !== 'Mayor';
+  }
+  function recruit(s){
+    const T = s.T; if(!T) return;
+    s.defs = s.defs.filter(mOk);
+    const have = new Set(s.defs.map(m=>m.ref));
+    let melee = s.defs.filter(m=>m.ref.cdRole === 'melee').length, thr = s.defs.filter(m=>m.ref.cdRole === 'throw').length;
+    const pool = [];
+    if(T.k === 'a'){ for(const id in C.live){ const a = C.live[id]; if(alive(a) && a.cityN === T.o) pool.push({k:'a', ref:a}); } }
+    else if(BC) BC.people.forEach(p=>{ if(p.c === T.o) pool.push({k:'b', ref:p}); });
+    const near = pool.filter(m=>!have.has(m.ref) && eligible(m) && Math.hypot(mPos(m).x - P.x, mPos(m).z - P.z) < 45);
+    near.sort((u, v)=>(v.ref.cdGuard ? 1 : 0) - (u.ref.cdGuard ? 1 : 0));        // guards first
+    for(const m of near){
+      const r = m.ref;
+      if(r.cdGuard){ if(melee >= MAX_MELEE) continue; r.cdRole = 'melee'; melee++; equip(m, r.cdGuardKind || 'sword'); }
+      else if(thr < MAX_THROW){ r.cdRole = 'throw'; thr++; const b = blockCol(); r.cdLi = b.li; r.cdCol = b.col; equip(m, 'block', b.col); }
+      else if(melee < MAX_MELEE){ r.cdRole = 'melee'; melee++; equip(m, 'club'); }
+      else continue;
+      r.cdT = .8 + Math.random(); r.cdSw = 0;
+      if(m.k === 'a' && !r.police){ r.police = 1; r.cdPol = 1; }
+      if(!r.cdGuard){ if(!r.cdDefTag) r.cdDefTag = tagOn(m, tag('DEFENDER', 'rgba(150,20,20,.88)', '#ffffff')); r.cdDefTag.visible = true; }
+      s.defs.push(m);
+    }
+  }
+  function startDef(s){
+    const T = s.T; if(!T) return;
+    s.calm = CALM;
+    if(s.def) return;
+    if(window.__police && window.__police.jail) return;
+    s.def = true; s.recT = 0; recruit(s); s.recT = 1;
+    const who = T.k === 'b' ? 'The Bobs of '+T.name : 'The residents of '+T.name;
+    toast(who+' are DEFENDING their city! Guards draw their swords and everyone else grabs a block. Run, or say sorry at the court!');
+    news('BREAKING: '+who+' are defending their city from a naughty miner. They are throwing blocks. Mostly dirt.', true);
+    for(let k=0;k<4;k++) setTimeout(()=>blip(k%2 ? 520 : 780, .12, .08, 'square'), k*160);
+  }
+  function disarm(m){
+    const r = m.ref; r.cdRole = null; r.cdSw = 0;
+    if(r.cdDefTag) r.cdDefTag.visible = false;
+    if(r.cdGuard) equip(m, r.cdGuardKind || 'sword'); else unequip(m);
+    if(m.k === 'a'){ r.spdMul = 1; if(r.cdPol){ r.police = 0; r.cdPol = 0; } }
+  }
+  function endDef(s, why){
+    if(!s.def) return;
+    s.def = false; s.defs.forEach(m=>{ if(mOk(m)) disarm(m); }); s.defs = [];
+    const nm = s.T ? s.T.name : 'the city';
+    if(why === 'far') toast('You left '+nm+'. The defenders went back to normal life. They kept the blocks.');
+    else if(why === 'court') toast('The court has spoken! The defenders of '+nm+' put their blocks down.');
+    else if(why === 'jail') toast('You are in jail, so the defenders of '+nm+' stand down.');
+    else if(why !== 'quiet') toast('The defenders of '+nm+' calmed down. Phew! They are back to work.');
+  }
+  // ---- what makes a town defend itself
+  function offend(T, what){
+    if(!T || realm !== 0) return;
+    const s = st(T.id); s.T = T;
+    const now = performance.now()/1000, o = T.o;
+    o.cdCrimes = o.cdCrimes || {b:0, h:0, t:0};
+    if(what === 'hit'){ if(now - s.hitT < .8){ if(s.def) s.calm = CALM; return; } s.hitT = now; o.cdCrimes.h++; }
+    else o.cdCrimes.b++;
+    o.cdCrimes.t = Date.now();
+    if(what === 'break' && !s.def){
+      s.breaks++; s.breakT = 30;
+      if(s.breaks < 2){ toast('A guard of '+T.name+' saw you break their building! Break one more and the whole city will DEFEND itself!'); blip(700, .1, .08, 'square'); return; }
+    }
+    startDef(s);
+  }
+  // breaking a building (animal houses, Bob houses, big city buildings)
+  function brokeAt(x, d, z){
+    const PO = window.__police, o = PO && PO.ownerOf ? PO.ownerOf(x, d, z) : null;
+    if(o && o.b && o.b.nation){ offend(townById(o.b.nation), 'break'); return; }
+    const CLm = window.__cityLife; if(!CLm) return;
+    const y = -d - 1;
+    for(const b of CLm.CL.b){
+      if(!b.done || Math.abs(b.x - x) > 16 || Math.abs(b.z - z) > 16) continue;
+      let p = null; try{ p = CLm.planOf(b); }catch(e){}
+      if(!p || y < b.G - 1 || y > b.G + (p.H || 12)) continue;
+      if(CLm.inside(b, x, z, 0)){ offend(townById(b.nid), 'break'); return; }
+    }
+  }
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    let prev = 0;
+    try{ if(!t && realm === 0 && Math.abs(x + .5 - P.x) < 9 && Math.abs(z + .5 - P.z) < 9) prev = get(x, d, z); }catch(e){}
+    const r = _sb.apply(this, arguments);
+    if(prev) try{ brokeAt(x, d, z); }catch(e){}
+    return r;
+  };
+  // hitting a resident or a Bob citizen
+  const _da = damageAnimal;
+  damageAnimal = function(a, dmg){
+    try{ if(a && a.cityN && a.popRef && !a.pet && realm === 0 && dmg > 0) offend(desc(a.cityN, 'a'), 'hit'); }catch(e){}
+    return _da.apply(this, arguments);
+  };
+  const _gh = gunTargetHit;
+  gunTargetHit = function(t, dmg){
+    try{ if(t && t.k === 'cit' && t.cit && t.cit.c && dmg > 0) offend(desc(t.cit.c, 'b'), 'hit'); }catch(e){}
+    return _gh.apply(this, arguments);
+  };
+
+  // knocked out: every town stops defending (no bonking someone who is already bonked)
+  const _ko = knockOut;
+  knockOut = function(){
+    try{ for(const id in ST) if(ST[id].def){ endDef(ST[id], 'quiet'); news('NEWS: The defenders of '+(ST[id].T ? ST[id].T.name : 'a city')+' bonked a miner and went home for tea.'); } }catch(e){}
+    return _ko.apply(this, arguments);
+  };
+  // ---- thrown blocks
+  const PROJ = [];
+  for(let i=0;i<10;i++){ const m = new THREE.Mesh(BOXG, mat(0x8a6a4a)); m.visible = false; NOM(m); scene.add(m); PROJ.push({m, on:false, v:new THREE.Vector3()}); }
+  function throwBlock(m, s){
+    const r = m.ref, pr = PROJ.find(q=>!q.on); if(!pr) return false;
+    const o = mPos(m), oy = o.y + mH(m)*.75, ty = P.y + 1.0;
+    const dx = P.x - o.x, dz = P.z - o.z, d = Math.hypot(dx, dz), Tf = Math.max(.45, Math.min(1.2, d/11)), g = 18;
+    pr.v.set(dx/Tf, (ty - oy + .5*g*Tf*Tf)/Tf, dz/Tf);
+    pr.m.material = mat(r.cdCol || 0x8a6a4a); pr.m.scale.setScalar(.38); pr.m.position.set(o.x + dx/d*.5, oy, o.z + dz/d*.5); pr.m.visible = true;
+    pr.on = true; pr.t = 0; pr.landed = false; pr.hit = false; pr.li = r.cdLi || 0; pr.dmg = 3 + Math.floor(Math.random()*3); pr.who = mName(m); pr.s = s;
+    if(r.cdW){ r.cdW.visible = false; r.cdHide = .7; }
+    blip(260, .06, .05, 'triangle');
+    return true;
+  }
+  function land(pr){ pr.landed = true; pr.lt = 1.1; try{ burst(pr.m.position.x, pr.m.position.y, pr.m.position.z, pr.li, 4); }catch(e){} }
+  function projTick(dt){
+    for(const pr of PROJ){
+      if(!pr.on) continue;
+      pr.t += dt;
+      if(pr.landed){ pr.lt -= dt; pr.m.scale.setScalar(.38*Math.max(.02, Math.min(1, pr.lt/.6))); if(pr.lt <= 0){ pr.on = false; pr.m.visible = false; } continue; }
+      pr.m.rotation.x += dt*7; pr.m.rotation.z += dt*5;
+      const q = pr.m.position, n = Math.max(1, Math.ceil(dt/.02)), h = dt/n;      // small steps, so a fast block can not skip past you
+      for(let k=0;k<n && !pr.landed;k++){
+        pr.v.y -= 18*h; q.addScaledVector(pr.v, h);
+        if(!pr.hit && Math.hypot(q.x - P.x, q.z - P.z) < .75 && q.y > P.y - .2 && q.y < P.y + 2){
+          pr.hit = true; if(canHurt() && !(pr.s && pr.s.hurtT > 0)){ if(pr.s) pr.s.hurtT = 1; hurtPlayer(pr.dmg); STATS.thrownHits++; STATS.dmg += pr.dmg;
+            if(Math.random() < .35) toast(pr.who+' hit you with a block! (-'+pr.dmg+' HP) "'+pick(THROW_SAY)+'"'); }
+          land(pr); break;
+        }
+        let gy = -1e9; try{ gy = groundTop(Math.floor(q.x), q.y + .3, Math.floor(q.z)); }catch(e){}
+        let inBlock = 0; try{ inBlock = get(Math.floor(q.x), Math.floor(-q.y), Math.floor(q.z)); }catch(e){}
+        if(q.y <= gy + .19 || inBlock || pr.t > 5){ if(q.y < gy + .19) q.y = gy + .19; STATS.landed++; land(pr); }
+      }
+    }
+  }
+  // ---- the fight, every frame
+  const STATS = {melee:0, thrown:0, thrownHits:0, landed:0, dmg:0};
+  function canHurt(){ return locked && !shopOpen && !won && realm === 0 && !(window.__police && window.__police.jail); }
+  function swingAnim(m, dt){
+    const r = m.ref;
+    if(r.cdHide > 0){ r.cdHide -= dt; if(r.cdHide <= 0 && r.cdW) r.cdW.visible = true; }
+    if(!r.cdW) return;
+    if(r.cdSw > 0){
+      r.cdSw = Math.max(0, r.cdSw - dt); const k = Math.sin((1 - r.cdSw/.35)*Math.PI);
+      r.cdW.rotation.x = .35 + k*1.5;
+      if(m.k === 'b') r.b.armR.rotation.x = -k*1.4;
+    } else r.cdW.rotation.x = .35;
+  }
+  function fight(m, s, dt){
+    const r = m.ref, o = mPos(m), dx = P.x - o.x, dz = P.z - o.z, d = Math.hypot(dx, dz), dy = P.y - o.y;
+    r.cdT = (r.cdT == null ? 1 : r.cdT) - dt;
+    if(r.cdRole === 'melee'){
+      if(d > 1.4) moveTo(m, P.x, P.z, dt, true); else face(m, P.x, P.z);
+      if(d < 2 && Math.abs(dy) < 2.2 && r.cdT <= 0 && s.hurtT <= 0 && canHurt()){
+        r.cdT = 1.6 + Math.random()*.9; r.cdSw = .35; s.hurtT = 1;
+        const dmg = 4 + Math.floor(Math.random()*3); hurtPlayer(dmg); STATS.melee++; STATS.dmg += dmg;
+        const k = 3/(d || 1); P.vx = (P.vx || 0) + dx*k; P.vz = (P.vz || 0) + dz*k;
+        blip(180, .08, .1, 'square');
+        if(s.sayT <= 0){ s.sayT = 4; toast(mName(m)+': "'+pick(DEF_SAY)+'" (-'+dmg+' HP)'); }
+      }
+    } else {
+      if(d > 13) moveTo(m, P.x, P.z, dt, true);
+      else if(d < 5) moveTo(m, o.x - dx, o.z - dz, dt, false);
+      else face(m, P.x, P.z);
+      if(d < 15 && d > 2 && Math.abs(dy) < 6 && r.cdT <= 0 && canHurt()){
+        r.cdT = 2 + Math.random()*.5;   // 2 to 2.5 s between blocks
+        if(throwBlock(m, s)){ r.cdSw = .35; STATS.thrown++; if(s.sayT <= 0 && Math.random() < .3){ s.sayT = 4; toast(mName(m)+': "'+pick(THROW_SAY)+'"'); } }
+      }
+    }
+  }
+  function defTick(dt){
+    for(const id in ST){
+      const s = ST[id]; if(!s.def) continue;
+      s.calm -= dt; s.hurtT -= dt; s.sayT -= dt;
+      const T = s.T, pd = T ? Math.hypot(P.x - T.x, P.z - T.z) : 999;
+      if(window.__police && window.__police.jail){ endDef(s, 'jail'); continue; }
+      if(realm !== 0){ endDef(s, 'quiet'); continue; }
+      if(pd > LEAVE){ endDef(s, 'far'); continue; }
+      if(s.calm <= 0){ endDef(s, 'calm'); continue; }
+      s.defs = s.defs.filter(mOk);
+      for(const m of s.defs){ fight(m, s, dt); swingAnim(m, dt); }
+    }
+  }
+  // ---- guards patrol the middle of town, the mayor stays at the court
+  function patrolTick(dt){
+    for(const G of GUARDS){
+      const m = G.m, r = m.ref; if(r.cdRole || !mOk(m)) continue;
+      const o = mPos(m);
+      if(m.k === 'a' && r.popRef && r.popRef.rel < 0) continue;          // an angry guard does its own thing
+      if(!r.cdWp || Math.hypot(r.cdWp.x - o.x, r.cdWp.z - o.z) < 1.2){
+        r.cdWait = (r.cdWait == null ? 0 : r.cdWait) - dt;
+        if(r.cdWp && r.cdWait > 0){ if(m.k === 'a'){ r.dir = null; r.wanderT = 1; } else { r.wx = r.x; r.wz = r.z; r.wait = .5; } continue; }
+        const ang = Math.random()*6.283, rad = 5 + Math.random()*7; r.cdWp = {x:G.T.x + Math.cos(ang)*rad, z:G.T.z + Math.sin(ang)*rad}; r.cdWait = 1.5 + Math.random()*2.5;
+      }
+      moveTo(m, r.cdWp.x, r.cdWp.z, dt, false);
+      swingAnim(m, dt);
+    }
+    for(const M of MAYORS){
+      const m = M.m, r = m.ref; if(!mOk(m)) continue;
+      if(m.k === 'a' && r.popRef && r.popRef.rel < 0) continue;
+      const o = mPos(m), dd = Math.hypot(M.seat.x - o.x, M.seat.z - o.z), fr = rotXZ(M.c.r, 0, 1);
+      if(dd > 25 && Math.hypot(P.x - o.x, P.z - o.z) > 12){
+        if(m.k === 'a'){ r.pos.set(M.seat.x, M.c.G, M.seat.z); r.vy = 0; r.g.position.copy(r.pos); } else { r.x = r.wx = M.seat.x; r.z = r.wz = M.seat.z; }
+        continue;
+      }
+      if(dd > .45) moveTo(m, M.seat.x, M.seat.z, dt, false);
+      else face(m, o.x + fr[0], o.z + fr[1]);
+    }
+  }
+
+  // ================= talking to the mayor at the court
+  const JURY = ['three rubber ducks','one confused goat','a very sleepy owl','a potato with a tiny wig','two Bobs and a sandwich','the mayor\'s cat'];
+  const FINE_JOKE = ['The money goes to the "Fix Our Houses" fund.','The court will spend it on glue. Lots of glue.','Please put the blocks back next time. Thank you!','The rubber ducks say: quack.'];
+  const CASES = [
+    ['Case number 1: A duck says a cow stole his bread.','The cow says it was a bread-shaped rock.','Verdict: everyone gets bread. CASE DISMISSED!'],
+    ['Case number 2: A pig is accused of being too muddy.','The pig says mud is a fashion choice.','Verdict: the pig is very stylish. CASE DISMISSED!'],
+    ['Case number 3: Somebody ate the whole town cake.','Everybody in the room has cake on their face.','Verdict: we all did it. CASE DISMISSED!'],
+    ['Case number 4: A sheep says the Moon keeps following her.','The Moon did not come to court.','Verdict: the Moon is guilty of being round. CASE DISMISSED!'],
+    ['Case number 5: The miner is accused of being TOO good at digging.','The miner says: thank you.','Verdict: NOT GUILTY. Keep digging!'],
+    ['Case number 6: A chicken crossed the road.','Nobody knows why. The chicken will not say.','Verdict: mystery. CASE DISMISSED!'],
+    ['Case number 7: Baba Caka was seen eating ALL the bananas.','Baba Caka was too busy laughing to come to court.','Verdict: we will never catch him. CASE DISMISSED!']
+  ];
+  const BOB_CASES = [['Case number 8: A Bob says his name is not Bob.','All the other Bobs gasp very loudly.','Verdict: his name is Bob. CASE DISMISSED!'], ['Case number 9: A Bob put soup in the fountain.','The fountain now smells like soup. Everyone loves it.','Verdict: soup fountain stays. CASE DISMISSED!']];
+  const pan = document.createElement('div');
+  pan.id = 'cdCourt';
+  pan.style.cssText = 'position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:40;width:min(460px,calc(100vw - 32px));box-sizing:border-box;padding:14px 40px 12px 16px;border-radius:12px;background:rgba(30,24,60,.94);border:2px solid #ffd84a;color:#fff;font:600 14px/1.45 system-ui,sans-serif;display:none;box-shadow:0 6px 24px rgba(0,0,0,.5)';
+  const panT = document.createElement('div'); panT.style.cssText = 'font:900 17px system-ui,sans-serif;color:#ffd84a;margin-bottom:6px;letter-spacing:.5px';
+  const panB = document.createElement('div');
+  const panX = document.createElement('button'); panX.textContent = 'X'; panX.title = 'Close';
+  panX.style.cssText = 'position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:6px;border:0;background:rgba(255,255,255,.18);color:#fff;font:800 13px system-ui;cursor:pointer';
+  panX.onclick = e=>{ e.stopPropagation(); closePan(); };
+  pan.append(panT, panB, panX); document.body.appendChild(pan);
+  let panT0 = 0, panAt = null;
+  function closePan(){ pan.style.display = 'none'; panAt = null; }
+  function showPan(title, lines, at){
+    panT.textContent = title; panB.innerHTML = '';
+    lines.forEach(l=>{ const p = document.createElement('div'); p.textContent = l; p.style.margin = '3px 0'; panB.appendChild(p); });
+    pan.style.display = 'block'; panT0 = 14; panAt = at;
+  }
+  let gavT = 0, gavK = null, juryT = 0;
+  function courtTalk(T, who){
+    const o = T.o, cr = o.cdCrimes, s = st(T.id);
+    const mayor = who || (T.k === 'b' ? 'Mayor Bob' : ((o.pop || []).find(q=>q.mayor) || {nm:'The Mayor'}).nm);
+    gavK = COURTS[T.id] || null; gavT = 1.2;
+    [0, 260, 520].forEach(t=>setTimeout(()=>blip(240, .07, .12, 'square'), t));
+    const lines = [mayor+' bangs the gavel: BONK! BONK! BONK!'];
+    let short;
+    if(cr && (cr.b + cr.h) > 0 && Date.now() - cr.t < 600000){
+      const ch = [];
+      if(cr.b) ch.push('breaking '+cr.b+' block'+(cr.b > 1 ? 's' : '')+' of our buildings');
+      if(cr.h) ch.push('bonking our '+(T.k === 'b' ? 'Bobs' : 'residents')+' '+cr.h+' time'+(cr.h > 1 ? 's' : ''));
+      lines.push('ORDER IN THE COURT! Today: '+T.name+' versus The Miner.');
+      lines.push('The charge: '+ch.join(' and ')+'.');
+      lines.push('The jury ('+pick(JURY)+') has decided...');
+      const fine = Math.min(150, cr.b*8 + cr.h*12), pay = Math.min(fine, Math.max(0, Math.floor(save.coins || 0)));
+      if(pay > 0){ save.coins -= pay; lines.push('GUILTY of being a bit naughty! Fine: $'+pay+'. '+pick(FINE_JOKE)); short = 'Court: GUILTY! You paid a $'+pay+' fine. All is forgiven.'; }
+      else { lines.push('GUILTY! But you have no coins, so you must say sorry to a '+pick(['potato','duck','very small rock','lamp post'])+'. You did it. Very brave.'); short = 'Court: GUILTY! You said sorry. All is forgiven.'; }
+      lines.push('Everybody in '+T.name+' forgives you. Case closed!');
+      cr.b = cr.h = 0; cr.t = 0;
+      if(T.k === 'a') (o.pop || []).forEach(q=>{ if(q.rel < 0){ q.rel = 0; const a = C.live[q.id]; if(alive(a)) try{ C.retag(a); }catch(e){} } });
+      endDef(s, 'court');
+      persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen();
+      news('NEWS: A miner went to court in '+T.name+'. The jury was '+pick(JURY)+'. Justice was served, with a side of snacks.');
+    } else {
+      const c = pick(T.k === 'b' ? CASES.concat(BOB_CASES) : CASES);
+      lines.push(...c);
+      if(juryT <= 0 && Math.random() < .5){ juryT = 120; save.coins = (save.coins || 0) + 5; lines.push('Thank you for watching. Here is $5 for jury duty!'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); }
+      short = 'Court: '+c[2];
+    }
+    showPan('COURT OF '+T.name.toUpperCase(), lines, T);
+    toast(short);
+    STATS.court = (STATS.court || 0) + 1;
+    return lines;
+  }
+  // animal mayors: the city F key (talk) goes to the court
+  const _ch = window.__cityHint;
+  window.__cityHint = function(a){ try{ if(a && a.popRef && a.popRef.mayor && a.cityN) return 'F: talk to '+a.popRef.nm+' (MAYOR) at the court'; }catch(e){} return _ch ? _ch.apply(this, arguments) : null; };
+  const _ct = window.__cityTalk;
+  window.__cityTalk = function(a, talk){
+    if(a && a.popRef && a.popRef.mayor && a.cityN){ courtTalk(desc(a.cityN, 'a'), a.popRef.nm); return; }
+    return _ct ? _ct.apply(this, arguments) : talk(a);
+  };
+  // Bob mayors (and any mayor the city F key missed): our own F key and hint
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:absolute;left:50%;bottom:235px;transform:translateX(-50%);z-index:18;padding:5px 12px;border-radius:8px;background:rgba(40,20,80,.75);color:#fff;font:600 14px system-ui,sans-serif;display:none;pointer-events:none';
+  document.body.appendChild(hint);
+  function nearMayor(){
+    let best = null, bd = 3.2;
+    for(const M of MAYORS){ if(!mOk(M.m)) continue; const o = mPos(M.m), d = Math.hypot(P.x - o.x, P.z - o.z); if(d < bd && Math.abs(P.y - o.y) < 2.5){ bd = d; best = M; } }
+    return best;
+  }
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || !locked || shopOpen || won || act || (e.target && e.target.tagName === 'INPUT')) return;
+    const M = nearMayor(); if(!M) return;
+    e.stopImmediatePropagation(); e.preventDefault(); courtTalk(M.T, M.m.k === 'a' ? M.m.ref.popRef.nm : 'Mayor Bob');
+  }, true);
+  let hT = 0;
+  function uiTick(dt){
+    hT -= dt;
+    if(hT <= 0){ hT = .2; const M = (locked && !act && realm === 0) ? nearMayor() : null; if(M && M.m.k === 'b'){ hint.textContent = 'F: talk to Mayor Bob at the court'; hint.style.display = 'block'; } else hint.style.display = 'none'; }
+    if(pan.style.display === 'block'){ panT0 -= dt; if(panT0 <= 0 || (panAt && Math.hypot(P.x - panAt.x, P.z - panAt.z) > 70)) closePan(); }
+    if(juryT > 0) juryT -= dt;
+    if(gavT > 0 && gavK){ gavT -= dt; gavK.gav.rotation.x = -.3 - Math.abs(Math.sin(gavT*8))*1.1; if(gavT <= 0) gavK.gav.rotation.x = -.3; }
+  }
+
+  // ================= the loop
+  let last = performance.now(), tA = 0;
+  function frameTick(dt){ patrolTick(dt); defTick(dt); projTick(dt); uiTick(dt); }
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      tA -= dt; if(tA <= 0){ tA = .5; townTick(); }
+      frameTick(dt);
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-citydef', e); } }
+  })(last);
+  window.__citydef = {
+    ST, COURTS, PROJ, STATS, GUARDS, MAYORS, towns, townById, townTick, frameTick, offend, startDef, endDef, recruit, courtTalk, seatOf, nearMayor, pickSite, closePan, panel:pan,
+    forceDefend(id){ const T = townById(id); if(!T) return false; const s = st(T.id); s.T = T; startDef(s); return s.def; },
+    defenders(id){ const s = ST[id]; return s ? s.defs.filter(mOk).map(m=>({k:m.k, name:mName(m), role:m.ref.cdRole, weapon:m.ref.cdW ? m.ref.cdW.userData.kind : null, x:mPos(m).x, z:mPos(m).z, d:Math.hypot(mPos(m).x - P.x, mPos(m).z - P.z)})) : []; },
+    guards(id){ return GUARDS.filter(G=>G.T.id === id && mOk(G.m)).map(G=>({k:G.m.k, name:mName(G.m), weapon:G.m.ref.cdW ? G.m.ref.cdW.userData.kind : null, x:mPos(G.m).x, z:mPos(G.m).z})); },
+    mayor(id){ const M = MAYORS.find(q=>q.T.id === id); return M && mOk(M.m) ? {k:M.m.k, name:mName(M.m), x:mPos(M.m).x, z:mPos(M.m).z, seat:M.seat} : null; },
+    court(id){ return save.cdCourts[id] || null; },
+    talkMayor(id){ const T = townById(id); return T ? courtTalk(T) : null; },
+    calm(id, sec){ const s = ST[id]; if(s) s.calm = sec; }
+  };
+})();
+/* LN-citydef end */
 
 
 
