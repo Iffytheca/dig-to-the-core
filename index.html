@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 207 (Oct 31)';
+  window.__BUILD = 'Build 208 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -25089,7 +25089,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }catch(e){}
   }, 60);
 
-  addEventListener('keydown', e=>{ if(e.code === 'Space' && RG.on){ endRag(); } }, true);  /* LN-ragfix: Space gets you up */
+  addEventListener('keydown', e=>{ if(e.code === 'Space' && RG.on){ endRag(); } }, true);
+  window.__ragEnd = ()=>{ if(RG.on) endRag(); }; window.__ragY = ()=>RG.on && RG.pts[J.hipL] ? RG.pts[J.hipL].y : null;   /* LN-skyfall */  /* LN-ragfix: Space gets you up */
   window.__fun = {cam:camera, RG, startRag, endRag, baboon, ragdoll, pieces, peels, spawnPeel:()=>{ peelT = 0; }, roll:()=>roll, startRoll:()=>{ rollT = 1.1; }, popText, zap};
 })();
 /* LN-fun end */
@@ -35801,6 +35802,28 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__throw = {throwRef, flying, LIFE};
 })();
 /* LN-throw end */
+/* LN-skyfall start: fall out of the shopkeeper's sky basement and you land back at the trapdoor by the shop (Irfan 2026-11-06 "i went to space") */
+(function(){
+  const BX = SHOP.x - 90, BY = 520, BZ = SHOP.z - 90;
+  let last = performance.now(), told = 0;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    last = now;
+    try{
+      if(realm !== 0 || won) return;
+      const ry = window.__ragY ? window.__ragY() : null, y = ry != null ? ry : P.y;
+      if(Math.hypot(P.x - BX, P.z - BZ) > 90) return;
+      if(y > 60 && y < BY - 3){
+        if(window.__ragEnd) window.__ragEnd();
+        const x = 13.5, z = 10.5; let gy = 1; try{ gy = groundTop(13, 40, 10); }catch(e){} if(!isFinite(gy)) gy = 1;
+        P.x = x; P.z = z; P.y = gy + .05; P.vx = P.vy = P.vz = 0; dirty = true;
+        toast(told++ ? 'You fell out of the basement again. Back at the shop.' : 'WHOOPS! You fell out of the shopkeeper\'s secret basement. It floats high in the sky, so you came down safely next to the shop. Use the trapdoor to go back.');
+        blip(300, .2, .15, 'sine');
+      }
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-skyfall', e); } }
+  })(last);
+})();
+/* LN-skyfall end */
 
 
 
