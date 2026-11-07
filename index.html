@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 209 (Oct 31)';
+  window.__BUILD = 'Build 210 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -20541,6 +20541,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function arrive(){
     if(!place(36)) return;
     B.on = true; B.came = true; B.flee = 0; B.stun = 0; g.visible = true;
+    if(window.__babaProud){ toast('Baba Caka walks over with a big smile. You did your homework, so he is PROUD of you and will not hurt you tonight!'); sound(); return; }
     toast('You hear a baboon laughing in the dark... BABA CAKA is coming! He can not be killed. Run, hide, or dig!'); sound();
     news('SPOOKY NEWS: Baba Caka the immortal baboon was seen near the dig site again. Nobody has ever beaten him. Nobody ever will.', true);
   }
@@ -28875,6 +28876,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(madSign) madSign.visible = !!on;
   }
   // ---- day and night
+  let proudSign = null, proudTries = 99, proudSay = 4;
+  const PROUD = ['Baba Caka: "OOH OOH! Good miner! You did ALL your homework!"', 'Baba Caka gives you a big proud thumbs up.', 'Baba Caka: "HEE HEE! Smartest miner in the whole world!"', 'Baba Caka does a happy dance because you did your homework.', 'Baba Caka pats you on the head. He is so proud.'];
+  function setProud(on){
+    if(on && !proudSign){
+      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 80; const x = cv.getContext('2d');
+      x.fillStyle = 'rgba(20,150,50,.92)'; x.fillRect(6, 6, 500, 68); x.font = 'bold 34px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('PROUD: HOMEWORK DONE!', 256, 41);
+      proudSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); proudSign.scale.set(3.4, .53, 1); proudSign.position.y = 3.85; BB.g.add(proudSign);
+    }
+    if(proudSign) proudSign.visible = !!on;
+  }
   let wasNight = BB.isNight(), happyNight = false, madTries = 99;
   if(!H.tasks && !wasNight) setTimeout(newHW, 8000);
   function tick(){
@@ -28884,8 +28895,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(nt && !wasNight){                       // night falls: homework is due
       if(H.active && H.tasks){
         if(done()){
-          happyNight = true; H.mad = false; save.coins += 2000; persist();
-          toast('Baba Caka checked your homework: ALL DONE! "OOH OOH, good miner!" He gives you $2,000 and stays home tonight.');
+          happyNight = true; H.mad = false; save.coins += 2000; persist(); proudTries = 0; proudSay = 6; if(BB.B.on) BB.leave();
+          toast('Baba Caka checked your homework: ALL DONE! "OOH OOH, good miner!" He gives you $2,000 and is coming to visit you tonight. He is PROUD!');
           newsQ('NEWS: Baba Caka was seen smiling for the first time ever. A miner did all their homework.');
           try{ window.__lore && window.__lore.unlock && window.__lore.unlock('k4', 'Lore of the night'); }catch(e){}
         } else {
@@ -28897,9 +28908,17 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         H.active = false; H.toldDone = false; persist();
       }
     }
-    if(!nt && wasNight){ setMad(false); H.mad = false; happyNight = false; newHW(); }
+    if(!nt && wasNight){ setMad(false); setProud(false); H.mad = false; happyNight = false; window.__babaProud = false; newHW(); }
     wasNight = nt;
-    if(nt && happyNight && BB.B.on) BB.leave('Baba Caka waves at you, remembers your finished homework, and goes back to sleep.');
+    window.__babaProud = !!(nt && happyNight);
+    if(nt && happyNight){
+      if(!BB.B.on && proudTries < 20){ proudTries++; try{ BB.arrive(); }catch(e){} }
+      if(BB.B.on){ BB.B.hitT = 5; BB.B.prey = null; BB.B.preyCD = 9; BB.B.sayT = 5;
+        const d = Math.hypot(P.x - BB.B.pos.x, P.z - BB.B.pos.z);
+        if(--proudSay <= 0 && d < 25){ proudSay = 9; toast(pick(PROUD)); }
+      }
+    }
+    setProud(nt && happyNight && BB.B.on);
     if(nt && H.mad && !BB.B.on && madTries < 20){ madTries++; try{ BB.arrive(); }catch(e){} }
     setMad(nt && H.mad && BB.B.on);
     draw();
