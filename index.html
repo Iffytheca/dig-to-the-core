@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 212 (Oct 31)';
+  window.__BUILD = 'Build 213 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3403,6 +3403,8 @@ function makeCustomTex(L){
     g.fillStyle = rgb(sp.c2); g.fillRect(0,3,3,4); g.fillRect(13,3,3,4);
     g.fillStyle = 'rgb(255,255,255)'; g.fillRect(1,4,1,2); g.fillRect(14,4,1,2);
     g.fillStyle = 'rgb(255,200,220)'; g.fillRect(6,10,4,1); g.fillRect(7,9,2,3);
+  } else if(/^gw(glass|pane|wool)$/.test(pat || '') && window.__gwTex){   /* LN-glasswool */
+    window.__gwTex(g, pat, sp, L);
   } else if(/^dp(gold|diamond|rainbow|void)$/.test(pat || '')){   /* LN-diaperpigs */
     if(window.__dpTex) window.__dpTex(g, pat, sp); else { g.fillStyle = rgb(sp.c1); g.fillRect(0,0,16,16); }
   } else if(pat === 'plain'){
@@ -3496,7 +3498,9 @@ function registerCustomBlock(spec){
 const _m4 = new THREE.Matrix4(), _c = new THREE.Color();
 function rebuild(){
   const counts = new Array(BLOCKS.length).fill(0);
-  const W = (lx,d,lz)=> (lx<0||lx>=WIN||lz<0||lz>=WIN) ? 1 : (d<0||d>=D) ? 0 : wblk[(d*WIN+lz)*WIN+lx];
+  const GWT = window.__gwTr || (window.__gwTr = new Uint8Array(65536));   /* LN-glasswool: glass does not count as a wall when hiding buried blocks */
+  const W = (lx,d,lz)=>{ if(lx<0||lx>=WIN||lz<0||lz>=WIN) return 1; if(d<0||d>=D) return 0; const t = wblk[(d*WIN+lz)*WIN+lx]; return GWT[t] ? 0 : t; };
+  const gq = (x,d,z)=>{ const t = get(x,d,z); return t && !GWT[t]; };
   for(let d=0; d<D; d++) for(let lz=0; lz<WIN; lz++) for(let lx=0; lx<WIN; lx++){
     const t = wblk[(d*WIN+lz)*WIN+lx]; if(!t) continue;
     if(W(lx-1,d,lz) && W(lx+1,d,lz) && W(lx,d,lz-1) && W(lx,d,lz+1) && W(lx,d-1,lz) && W(lx,d+1,lz)) continue;   // buried
@@ -3511,7 +3515,7 @@ function rebuild(){
   skyEdits.forEach(v=>{                                           // blocks built above the ground
     const lx = v.x-wox, lz = v.z-woz; if(lx<0||lx>=WIN||lz<0||lz>=WIN) return;
     const x = v.x, d = v.d, z = v.z;
-    if(get(x-1,d,z) && get(x+1,d,z) && get(x,d,z-1) && get(x,d,z+1) && get(x,d-1,z) && get(x,d+1,z)) return;
+    if(gq(x-1,d,z) && gq(x+1,d,z) && gq(x,d,z-1) && gq(x,d,z+1) && gq(x,d-1,z) && gq(x,d+1,z)) return;
     const li = v.t-1, m = meshes[li]; if(!m || counts[li] >= m.userData.max) return;
     const c = counts[li]++;
     _m4.makeTranslation(x+.5, -d-.5, z+.5); m.setMatrixAt(c, _m4);
@@ -24215,7 +24219,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       for(let k=0;k<14 && b.i < L.length;k++){
         const q = L[b.i], w = W(b, q[0], q[1], q[2]), d = -(w.y + 1);
         if(Math.abs(w.x + .5 - P.x) < 1 && Math.abs(w.z + .5 - P.z) < 1 && w.y + 1 > P.y - .2 && w.y < P.y + 2){ break; }   // do not build a wall inside you
-        setBlock(w.x, d, w.z, mat(q[3])); b.i++;
+        setBlock(w.x, d, w.z, (q[3] === 'glass' && window.__gwHouse && window.__gwHouse(b, q, L)) || mat(q[3])); b.i++;
       }
       if(Math.random() < .3 && Math.hypot(b.x - P.x, b.z - P.z) < 40) blip(300 + Math.random()*200, .03, .04, 'square');
       if(b.i >= L.length) finish(b);
@@ -24509,7 +24513,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }catch(e){ console.warn(e); }
   })(performance.now());
   window.__cityLife = {CL, PLANS, KINDS, ORDER, planOf, listOf, W, startBuilding, findLot, lotOk, finish, show, VIS, mat, MID, spotFor, inside, insideWalls, door, byCity, cities,
-    growNow(n, kinds){ n = n || cities()[0]; if(!n) return []; if(!n.pop) C.initCity(n); const out = []; (kinds || ORDER).forEach(k=>{ const b = startBuilding(n, k); if(b){ const L = listOf(b); L.forEach(q=>{ const w = W(b, q[0], q[1], q[2]); setBlock(w.x, -(w.y + 1), w.z, mat(q[3])); }); b.i = L.length; finish(b); out.push(b); } }); return out; }};
+    growNow(n, kinds){ n = n || cities()[0]; if(!n) return []; if(!n.pop) C.initCity(n); const out = []; (kinds || ORDER).forEach(k=>{ const b = startBuilding(n, k); if(b){ const L = listOf(b); L.forEach(q=>{ const w = W(b, q[0], q[1], q[2]); setBlock(w.x, -(w.y + 1), w.z, (q[3] === 'glass' && window.__gwHouse && window.__gwHouse(b, q, L)) || mat(q[3])); }); b.i = L.length; finish(b); out.push(b); } }); return out; }};
 })();
 /* LN-citylife end */
 /* LN-memesfx start (run): real meme sound effects from Myinstants, played at funny moments; meme moments only in Meme Mode, criticals, everyday action sounds (Irfan 2026-10-28) */
@@ -36517,7 +36521,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       }
       if(!id) id = k === 'G' ? (cm('lamp') || NA.ID.duck) : cm('plaster');
     } else id = ({K:()=>nameId('Limestone') || nameId('Chalk') || cm('plaster'), M:()=>nameId('White Marble') || cm('plaster'), C:()=>nameId('Quartz') || nameId('Quartz Block') || nameId('White Marble') || cm('plaster'), N:()=>nameId('Mountain Stone') || cm('stone'),
-      W:()=>cm('plaster'), R:()=>cm('roof'), L:()=>cm('glass'), O:()=>NA.ID.gold || cm('gold'), F:()=>cm('floor'), T:()=>cm('stone'), P:()=>cm('lamp')}[k] || (()=>cm('plaster')))();
+      W:()=>cm('plaster'), R:()=>cm('roof'), L:()=>(window.__gwId && window.__gwId('glass', 0)) || cm('glass'), O:()=>NA.ID.gold || cm('gold'), F:()=>cm('floor'), T:()=>cm('stone'), P:()=>cm('lamp')}[k] || (()=>cm('plaster')))();
     return (IDS[k] = id || 2);
   }
   ['S', 'G'].forEach(k=>{ if(nameId(CUST[k].name)) bid(k); });           // blocks made in an earlier game come back at once
@@ -36602,12 +36606,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   function demolishCourt(id){
     const c = save.rsCourts[id]; if(!c) return;
-    cellsOfCourt(c, (x, y, z, k)=>{ if(y < 0) return; const d = -(c.G + y + 1); if(get(x, d, z) === bid(k)) put(x, d, z, 0); });
+    cellsOfCourt(c, (x, y, z, k)=>{ if(y < 0) return; const d = -(c.G + y + 1); const g0 = get(x, d, z); if(g0 === bid(k) || (k === 'L' && g0 === cm('glass'))) put(x, d, z, 0); });
     delete save.rsCourts[id]; persist();
   }
   const sameCourt = (a, b)=>a && b && a.x === b.x && a.z === b.z && a.G === b.G && a.r === b.r;
   // LN-diaperpigs: an old house-shaped court (no version) comes down block by block, then the courthouse goes up in its place
-  const oldBid = k=>k === 'W' ? cm('plaster') : bid(k);
+  const oldBid = k=>k === 'W' ? cm('plaster') : k === 'L' ? cm('glass') : bid(k);
   function demolishOld(id){
     const c = save.rsCourts[id]; if(!c) return;
     for(const q of courtOld()){ if(q[1] < 0) continue; const [dx, dz] = rotXZ(c.r, q[0], q[2]), x = c.x + dx, z = c.z + dz, d = -(c.G + q[1] + 1); if(get(x, d, z) === oldBid(q[3])) put(x, d, z, 0); }
@@ -36736,12 +36740,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return out.slice(0, 3);
   }
   function kindFor(n, rel, nth){
+    if(window.__gwKind){ const k = window.__gwKind(relById(rel), rel, nth); if(k && KINDS[k]) return k; }   // LN-glasswool: monuments, not houses
     const r = relById(rel), h = ((rel || 1)*7 + (r ? r.name.length : 0)*3 + nth*5) % KORDER.length;
     return KORDER[h];
   }
   function startSite(n, rel, k, spot){
     const r = relById(rel);
-    const s = {id:'rs' + Date.now().toString(36) + Math.floor(Math.random()*999), t:n.id, rel, rn:r ? r.name : '', k, x:spot.x, z:spot.z, G:spot.G, rot:spot.rot, r:KINDS[k].r, i:0, done:0};
+    const s = {id:'rs' + Date.now().toString(36) + Math.floor(Math.random()*999), t:n.id, rel, rn:r ? r.name : '', k, x:spot.x, z:spot.z, G:spot.G, rot:spot.rot, r:KINDS[k].r, i:0, done:0, v:2};
     S.push(s); if(S.length > 36) S.shift();
     persist();
     const nm = siteName(s);
@@ -36755,7 +36760,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const mine = S.filter(s=>s.t === n.id);
     if(mine.length >= 3) return null;
     if(!force && mine.some(s=>!s.done)) return null;                          // one at a time
-    const W = wants(n), have = {};
+    const W = wants(n).filter(id=>!(window.__noSites && window.__noSites(id))), have = {};   // LN-glasswool: some religions build no holy places
     mine.forEach(s=>{ have[s.rel] = (have[s.rel] || 0) + 1; });
     for(const rel of W){
       if(have[rel] > 0){ have[rel]--; continue; }
@@ -36767,7 +36772,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   // put one block of a site (relative to the site), rotated to face the town
   function cell(s, q){ const [dx, dz] = rotXZ(s.rot || 0, q[0], q[2]); return [s.x + dx, -(s.G + q[1] + 1), s.z + dz]; }
-  function blockOf(s, key){ return key === 'A' ? accId(relById(s.rel) || {col:s.col}) : bid(key); }
+  function blockOf(s, key){ return key === 'A' ? accId(relById(s.rel) || {col:s.col}) : (key === 'Q' && window.__gwRelGlass) ? (window.__gwRelGlass(relById(s.rel) || {col:s.col}) || bid('L')) : bid(key); }
   function placeNext(s){
     const L = listOf(s.k);
     while(s.i < L.length){
@@ -36892,7 +36897,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       siteTick(dt);
     }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-relsite', e); } }
   })(last);
-  window.__relsite = {courtOld, demolishOld, S, KINDS, KORDER, listOf, wants, tryTown, startSite, findSpot, placeNext, buildNow, cell, blockOf, bid, siteAt, courtAt, courtList, buildCourtBlocks, demolishCourt, cellsOfCourt, courtTick, seed, tagFor, TAGS};
+  window.__relsite = {LC, put, relById, topOf, courtOld, demolishOld, S, KINDS, KORDER, listOf, wants, tryTown, startSite, findSpot, placeNext, buildNow, cell, blockOf, bid, siteAt, courtAt, courtList, buildCourtBlocks, demolishCourt, cellsOfCourt, courtTick, seed, tagFor, TAGS};
 })();
 /* LN-relsite end */
 /* LN-diaperpigs start: some towns have NO religion, the court looks like a real courthouse, RARE DIAPER PIGS (golden, diamond, rainbow, void) with diaper blocks you can craft, and SERVER T full of them (Irfan 2026-11-08 "some country have no religion and also court is not a house and add rare diaper pig there diaper are golden,diamond,rainbow,void gold is the most common but rare but void is rarest and spawn me a server called t to spawn so many of them and they can craft block like golden diaper block diamond diaper block void diaper block rainbow diaper block") */
@@ -37202,6 +37207,591 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__diaperpigs = {KINDS, RK, DI, roll, srvSpawn, goSrv, dBlockId, dPreview, noRelig, SRV, banner};
 })();
 /* LN-diaperpigs end */
+/* LN-glasswool start: religious sites are big monuments (not houses), some religions build no holy places at all, GLASS and GLASS PANES in 16 colours, coloured WOOL from sheep, and towns that put glass in their windows (Irfan 2026-11-08 "RELIGIOUS SITE ARE NOT HOME AND SOME COUNTRY HAVE NO RELIGIOUS SITE LIKE COUNTRY WITH NO RELIGION OR A RELIGION WITH NO RELIGIOUS SITE AND ADD BLOCK CALLED GLASS AND GLASS PANE ANIMAL CAN USE IT IN THEIR HOUSE OR NOT ALSO CAN BE USED TO BUILD BUILDING GLASS ITS TRANSPARENT NOT INVISIBLE AND ADD WOOL TO GAME WOOL CAN HAVE DIFFERENT COLOUR LIKE GLASS AND GLASS PANE ACTUAL WOOL OBTAINED FROM SHEEP") */
+(function(){
+  const hs = s=>{ let h = 2166136261; s = String(s); for(let i=0;i<s.length;i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); h ^= h >>> 13; h = Math.imul(h, 1274126177); return ((h >>> 0) % 10000)/10000; };
+  const pick = q=>q[Math.floor(Math.random()*q.length)];
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+
+  // ================= 1. THE COLOURS, AND THE BLOCKS: Glass, Glass Pane and Wool in each colour
+  const COLS = [
+    ['clear', '', [206,232,250]], ['white', 'White', [242,242,242]], ['red', 'Red', [214,48,48]], ['orange', 'Orange', [244,138,36]],
+    ['yellow', 'Yellow', [250,218,46]], ['lime', 'Lime', [138,226,58]], ['green', 'Green', [50,140,58]], ['cyan', 'Cyan', [36,186,196]],
+    ['lightblue', 'Light Blue', [112,182,250]], ['blue', 'Royal Blue', [48,78,214]], ['purple', 'Purple', [138,58,198]], ['magenta', 'Magenta', [216,66,196]],
+    ['pink', 'Pink', [248,150,190]], ['brown', 'Brown', [128,84,48]], ['grey', 'Grey', [128,128,134]], ['black', 'Black', [34,34,40]]
+  ];
+  const glassName = ci=>ci ? COLS[ci][1] + ' Glass' : 'Glass';
+  const paneName = ci=>glassName(ci) + ' Pane';
+  const woolName = ci=>COLS[ci || 1][1] + ' Wool';
+  const DEF = {};
+  COLS.forEach((C, ci)=>{ DEF[glassName(ci)] = {k:'glass', ci}; DEF[paneName(ci)] = {k:'pane', ci}; if(ci) DEF[woolName(ci)] = {k:'wool', ci}; });
+  // a colour word typed in the crafting box (or in a dye's name)
+  const WORDS = [['light blue', 8], ['lightblue', 8], ['sky', 8], ['clear', 0], ['white', 1], ['red', 2], ['orange', 3], ['yellow', 4], ['lime', 5], ['green', 6], ['cyan', 7], ['teal', 7],
+    ['royal blue', 9], ['blue', 9], ['purple', 10], ['violet', 10], ['magenta', 11], ['pink', 12], ['brown', 13], ['grey', 14], ['gray', 14], ['black', 15]];
+  function colourIn(t){ t = String(t || '').toLowerCase(); for(const [w, ci] of WORDS) if(new RegExp('\\b' + w + '\\b').test(t)) return ci; return -1; }
+  const rgbOf = ci=>COLS[ci][2];
+  const shade = (c, f)=>c.map(v=>Math.max(0, Math.min(255, v*f|0)));
+  try{ for(const n in DEF) ITEM_COL[n] = rgbOf(DEF[n].ci); ITEM_COL['Shears'] = [200,204,214]; }catch(e){}
+
+  // see-through block ids (the world mesher reads this so blocks behind glass still get drawn)
+  const TR = window.__gwTr || (window.__gwTr = new Uint8Array(65536));
+  const PANES = [], PANEID = new Uint8Array(65536);
+
+  // ---- the textures (makeCustomTex calls this for patterns gwglass / gwpane / gwwool)
+  function paintWool(g, c, seed){
+    for(let y=0;y<16;y++) for(let x=0;x<16;x++){ const n = (hs(seed + 'w' + x + '_' + y) - .5)*34 + ((x + y*2) % 5 === 0 ? -14 : 0); g.fillStyle = 'rgb(' + shade(c, 1).map(v=>Math.max(0, Math.min(255, v + n|0))).join(',') + ')'; g.fillRect(x, y, 1, 1); }
+    const dk = 'rgba(0,0,0,.16)', lt = 'rgba(255,255,255,.18)';                     // little curls of wool
+    for(let i=0;i<9;i++){ const x = Math.floor(hs(seed + 'cx' + i)*14), y = Math.floor(hs(seed + 'cy' + i)*14); g.fillStyle = dk; g.fillRect(x, y + 1, 2, 1); g.fillRect(x + 2, y, 1, 1); g.fillStyle = lt; g.fillRect(x, y, 2, 1); }
+  }
+  function paintGlass(g, c, clear, pane){
+    g.clearRect(0, 0, 16, 16);
+    g.fillStyle = 'rgba(' + c.join(',') + ',' + (clear ? .16 : .34) + ')'; g.fillRect(0, 0, 16, 16);
+    const fr = clear ? 'rgba(150,196,226,.95)' : 'rgba(' + shade(c, .62).join(',') + ',.95)';
+    g.fillStyle = fr; g.fillRect(0, 0, 16, 1); g.fillRect(0, 15, 16, 1); g.fillRect(0, 0, 1, 16); g.fillRect(15, 0, 1, 16);   // the frame, so you can always see it
+    g.fillStyle = 'rgba(' + shade(c, clear ? 1 : 1.25).join(',') + ',.55)'; g.fillRect(1, 1, 14, 1); g.fillRect(1, 1, 1, 14);
+    if(pane){ g.fillStyle = fr; g.fillRect(7, 1, 2, 14); }                                    // a pane has a middle bar, like a window
+    g.fillStyle = 'rgba(255,255,255,.6)';                                                       // shine
+    for(let i=0;i<4;i++){ g.fillRect(3 + i, 6 - i, 1, 1); g.fillRect(10 + i, 13 - i, 1, 1); }
+    g.fillRect(4, 8, 1, 1); g.fillRect(12, 4, 1, 1);
+  }
+  window.__gwTex = function(g, pat, sp, L){
+    const D = (L && DEF[L.name]) || {ci:1}, c = sp.c1 || rgbOf(D.ci);
+    if(pat === 'gwwool') paintWool(g, c, (L && L.name) || 'w');
+    else paintGlass(g, c, D.ci === 0, pat === 'gwpane');
+  };
+
+  // ---- the block objects; registered only when first needed, through LN-blockfix's saved list so their ids stay the same every time the game loads
+  function blockObj(name){
+    const D = DEF[name], c = rgbOf(D.ci).slice();
+    const spec = {name, c1:c, c2:shade(c, .7), pattern:'gw' + D.k, glow:0, h:D.k === 'glass' ? 4 : 3, v:D.k === 'glass' ? 6 : D.k === 'pane' ? 3 : 5, power:2, gw:D.k};
+    return {name, custom:true, spec, ore:false, th:0, h:spec.h, v:spec.v, base:c, amp:16, sp:[spec.c2], p:.2, glow:0, gw:D.k};
+  }
+  const nameIdx = n=>{ const j = BLOCKS.findIndex(b=>b.name === n); return j >= 0 ? j + 1 : 0; };
+  let regBusy = false;
+  function ensure(name){
+    if(!DEF[name]) return 0;
+    let id = nameIdx(name); if(id) return id;
+    if(regBusy) return 0;
+    regBusy = true;
+    try{
+      const o = blockObj(name);
+      save.blkSnap = save.blkSnap || {}; save.extraBlocks = save.extraBlocks || [];
+      save.blkSnap[name] = JSON.parse(JSON.stringify(o));
+      if(window.__blockfix){ id = window.__blockfix.regBlock(save.blkSnap[name]); if(save.extraBlocks.indexOf(name) < 0) save.extraBlocks.push(name); }
+      try{ _blockIds = null; }catch(e){}
+      try{ persist(); }catch(e){}
+    } finally { regBusy = false; }
+    return id || 0;
+  }
+  window.__gwId = (k, ci)=>ensure(k === 'pane' ? paneName(ci) : k === 'wool' ? woolName(ci) : glassName(ci));
+  // the meshes: see-through, never invisible (the frame and the tint always show), panes are thin
+  const _cbm = createBlockMesh;
+  createBlockMesh = function(L, i){
+    if(!L || !L.gw) return _cbm.apply(this, arguments);
+    const tex = makeCustomTex(L), see = L.gw !== 'wool';
+    const mat = see ? new THREE.MeshLambertMaterial({map:tex, transparent:true, depthWrite:false}) : new THREE.MeshLambertMaterial({map:tex});
+    const geo = L.gw === 'pane' ? new THREE.BoxGeometry(1, 1, .125) : new THREE.BoxGeometry(1, 1, 1);
+    const max = see ? 3000 : 4000;
+    const m = new THREE.InstancedMesh(geo, mat, max);
+    m.userData.max = max; m.userData.gw = L.gw; m.frustumCulled = false; m.castShadow = !see; m.receiveShadow = true;
+    if(see){ m.renderOrder = 2; TR[i + 1] = 1; }
+    if(L.gw === 'pane'){ PANES.push(m); PANEID[i + 1] = 1; }
+    m.setColorAt(0, new THREE.Color(1, 1, 1));
+    scene.add(m);
+    return m;
+  };
+  // panes stand across the gap between the blocks beside them (or face you, when you put one down on its own)
+  save.gwFace = save.gwFace || {};
+  const fKey = (x, d, z)=>x + ',' + d + ',' + z;
+  function paneO(x, d, z){
+    const ax = (get(x - 1, d, z) ? 1 : 0) + (get(x + 1, d, z) ? 1 : 0), az = (get(x, d, z - 1) ? 1 : 0) + (get(x, d, z + 1) ? 1 : 0);
+    if(ax > az) return 0; if(az > ax) return 1;
+    return save.gwFace[fKey(x, d, z)] ? 1 : 0;
+  }
+  const _M = new THREE.Matrix4();
+  function fixPanes(){
+    for(const m of PANES){
+      if(!m.count) continue; let ch = false;
+      for(let i=0;i<m.count;i++){
+        m.getMatrixAt(i, _M); const e = _M.elements, px = e[12], py = e[13], pz = e[14];
+        if(paneO(Math.floor(px), Math.round(-py - .5), Math.floor(pz))){ _M.makeRotationY(Math.PI/2); _M.setPosition(px, py, pz); m.setMatrixAt(i, _M); ch = true; }
+      }
+      if(ch) m.instanceMatrix.needsUpdate = true;
+    }
+  }
+  const _rb = rebuild;
+  rebuild = function(){ const r = _rb.apply(this, arguments); try{ if(PANES.length) fixPanes(); }catch(e){ console.warn('LN-glasswool panes', e); } return r; };
+  let townBusy = 0;
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    try{
+      if(!townBusy && t && PANEID[t] && Math.abs(x + .5 - P.x) < 9 && Math.abs(z + .5 - P.z) < 9){
+        const v = new THREE.Vector3(); camera.getWorldDirection(v);
+        const k = fKey(x, d, z); if(Math.abs(v.x) > Math.abs(v.z)) save.gwFace[k] = 1; else delete save.gwFace[k];
+        const ks = Object.keys(save.gwFace); if(ks.length > 3000) delete save.gwFace[ks[0]];
+      } else if(!t && save.gwFace[fKey(x, d, z)]) delete save.gwFace[fKey(x, d, z)];
+    }catch(e){}
+    return _sb.apply(this, arguments);
+  };
+
+  // ================= 2. GETTING GLASS, PANES AND WOOL
+  // ---- crafting: Sand -> Glass, Glass -> 2 Glass Panes (type "pane"), any colour word (or a Dye) colours glass, panes and wool
+  const isSand = n=>/\bsand\b/i.test(n) && !DEF[n] && !/stone|wich|paper|castle/i.test(n);
+  const WOOLY = {'Wool':1, 'Llama Wool':1, 'Disco Wool':11, 'Sock Wool':1};
+  function gwPreview(){
+    const refs = craftSlots.filter(Boolean); if(!refs.length) return null;
+    const infos = refs.map(refInfo); if(infos.some(i=>!i || i.kind !== 'item')) return null;
+    const want = (craftWant || '').trim().toLowerCase(), wc = colourIn(want);
+    const dyes = infos.filter(i=>/\bdye\b/i.test(i.name) && colourIn(i.name) >= 0), rest = infos.filter(i=>dyes.indexOf(i) < 0);
+    if(!rest.length || new Set(rest.map(i=>i.name)).size !== 1) return null;
+    const col = dyes.length ? colourIn(dyes[0].name) : wc, nm = rest[0].name, D = DEF[nm], n = rest.length;
+    const pane = /pane|window/.test(want);
+    let out = null, count = n, how = '';
+    if(isSand(nm)){
+      if(want && !/glass|pane|window/.test(want) && wc < 0) return null;
+      const ci = col >= 0 ? col : 0; out = pane ? paneName(ci) : glassName(ci); count = pane ? n*2 : n; how = 'sand melts into glass';
+    } else if(D && D.k === 'glass'){
+      if(pane){ const ci = col >= 0 ? col : D.ci; out = paneName(ci); count = n*2; how = 'one glass makes two panes'; }
+      else if(col >= 0 && col !== D.ci){ out = glassName(col); how = 'colouring glass'; }
+      else return null;
+    } else if(D && D.k === 'pane'){
+      if(col >= 0 && col !== D.ci){ out = paneName(col); how = 'colouring panes'; } else return null;
+    } else if(D && D.k === 'wool'){
+      if(col > 0 && col !== D.ci){ out = woolName(col); how = 'colouring wool'; } else return null;
+    } else if(WOOLY[nm]){
+      if(want && wc < 0 && !/wool|block/.test(want)) return null;
+      out = woolName(col > 0 ? col : WOOLY[nm]); how = 'fluffy wool blocks';
+    } else return null;
+    return {kind:'gw', out, count, how, name:count + ' x ' + out, power:2};
+  }
+  const _cp = craftPreview;
+  craftPreview = function(){ try{ const d = gwPreview(); if(d) return d; }catch(e){ console.warn(e); } return _cp.apply(this, arguments); };
+  const _ph = previewHTML;
+  previewHTML = function(pv){
+    if(pv && pv.kind === 'gw') return 'Makes: <b>' + pv.name + '</b> (building block, ' + pv.how + '). Right-click to place it.';
+    return _ph.apply(this, arguments);
+  };
+  const _cg = craftGo;
+  craftGo = function(){
+    const pv = craftPreview();
+    if(!pv || pv.kind !== 'gw') return _cg.apply(this, arguments);
+    const need = {}; craftSlots.filter(Boolean).forEach(r=>{ need[r] = (need[r] || 0) + 1; });
+    for(const r in need){ const i = refInfo(r); if(!i || i.n < need[r]){ toast('You do not have enough ' + (i ? i.name : 'of that') + '.'); return; } }
+    if(!ensure(pv.out)){ toast('The ' + pv.out + ' could not be made. Try again later.'); return; }
+    for(const r in need) consumeRef(r, need[r]);
+    craftSlots = [null, null, null]; activeSlot = 0;
+    save.crafted = (save.crafted || 0) + 1;
+    addItem(pv.out, pv.count);
+    try{ hotAuto('i:' + pv.out); }catch(e){}
+    toast('You made ' + pv.count + ' ' + pv.out + '! Right-click to build with it.');
+    blip(700, .12, .12, 'triangle'); setTimeout(()=>blip(1000, .2, .12, 'triangle'), 110); persist();
+    try{ award('crafter'); if(save.crafted >= 25) award('craft25'); }catch(e){}
+  };
+  // ---- new items become real blocks the moment you get them, plus a tip the first time you find sand or wool
+  save.gwTips = save.gwTips || {};
+  const _ai = addItem;
+  addItem = function(name, n, silent){
+    try{ if(DEF[name]) ensure(name); }catch(e){}
+    const r = _ai.apply(this, arguments);
+    try{
+      if(isSand(name) && !save.gwTips.sand){ save.gwTips.sand = 1; setTimeout(()=>toast('Tip: put ' + name + ' in a crafting slot (bag, I) and type "glass" to make Glass. Type "red glass" or "blue pane" for colours!'), 1500); }
+      if(DEF[name] && DEF[name].k === 'wool' && !save.gwTips.wool){ save.gwTips.wool = 1; setTimeout(()=>toast('You got ' + name + '! It is a block: right-click to build with it. Type a colour in the crafting box to dye it.'), 1500); }
+    }catch(e){}
+    return r;
+  };
+
+  // ---- the Glass and Wool shop (a button in the shop)
+  const PRICE = {glass:[8, 60], pane:[16, 60], wool:[8, 50]};
+  let shopEl = null, shopTab = 'glass';
+  function swatch(k, ci){
+    const c = rgbOf(ci), dk = shade(c, .6).join(',');
+    if(k === 'wool') return '<div style="width:34px;height:34px;border-radius:6px;background:rgb(' + c.join(',') + ');border:2px solid rgb(' + dk + ');box-shadow:inset 0 0 0 3px rgba(255,255,255,.12)"></div>';
+    const bg = 'repeating-linear-gradient(45deg,#e8e8e8 0 6px,#9a9a9a 6px 12px)';
+    return '<div style="width:34px;height:34px;border-radius:4px;background:' + bg + ';position:relative;border:2px solid rgb(' + dk + ')"><div style="position:absolute;inset:0;background:rgba(' + c.join(',') + ',' + (ci ? .5 : .22) + ')' + (k === 'pane' ? ';border-left:14px solid transparent;border-right:14px solid transparent;background-clip:padding-box' : '') + '"></div>' + (k === 'pane' ? '<div style="position:absolute;left:14px;top:0;bottom:0;width:2px;background:rgb(' + dk + ')"></div>' : '') + '</div>';
+  }
+  function renderGW(){
+    if(!shopEl) return;
+    const tabs = [['glass', 'Glass'], ['pane', 'Glass Panes'], ['wool', 'Wool'], ['tools', 'Shears and tips']];
+    let h = '<button data-gw="x" title="Close" style="position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:8px;background:#a03030;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+      '<div style="font:900 24px system-ui;color:#bfe8ff">Glass and Wool Shop</div><div style="opacity:.85;margin:2px 0 8px">You have <b style="color:#ffd84a">$' + (save.coins || 0).toLocaleString() + '</b>. Glass is see-through. Wool is soft and comes from sheep.</div><div style="margin-bottom:8px">' +
+      tabs.map(t=>'<button data-gwt="' + t[0] + '" style="margin:0 6px 6px 0;padding:6px 12px;border-radius:8px;border:2px solid ' + (shopTab === t[0] ? '#ffd84a' : '#6d5a45') + ';background:' + (shopTab === t[0] ? '#5a4630' : '#2a2018') + ';color:#fff;font:800 14px system-ui;cursor:pointer">' + t[1] + '</button>').join('') + '</div>';
+    if(shopTab === 'tools'){
+      const has = save.inv && save.inv['Shears'] > 0;
+      h += '<div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.06);padding:8px;border-radius:8px"><div style="width:34px;height:34px;border-radius:6px;background:#c8ccd6;color:#333;font:900 12px system-ui;display:flex;align-items:center;justify-content:center">CUT</div><div style="flex:1"><b>Shears</b><br><span style="font-size:13px;opacity:.85">Hold them (or keep your hand empty) and press F next to a sheep to get its wool. The wool grows back.</span></div>' +
+        (has ? '<span style="opacity:.7">You have them</span>' : '<button data-gwb="Shears" data-n="1" data-p="40" style="padding:8px 12px;border-radius:8px;border:0;background:#3a8a4a;color:#fff;font:800 14px system-ui;cursor:pointer"' + ((save.coins || 0) < 40 ? ' disabled' : '') + '>Buy $40</button>') + '</div>' +
+        '<div style="margin-top:10px;font-size:14px;line-height:1.5"><b>Make your own:</b><br>- Mine some <b>Sand</b>, put it in a crafting slot (bag, I) and type <b>glass</b>.<br>- Put <b>Glass</b> in a slot and type <b>pane</b>: one glass makes two panes.<br>- Type a colour like <b>red</b>, <b>light blue</b> or <b>black</b> to colour glass, panes or wool. A Dye works too.<br>- <b>Wool</b> comes from sheep: shear them (F) or catch them. Most sheep are white, some are other colours.<br>- Panes stand between the blocks next to them, or face you when they are on their own.</div>';
+    } else {
+      const [n, p] = PRICE[shopTab];
+      h += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px">';
+      COLS.forEach((C, ci)=>{
+        if(shopTab === 'wool' && !ci) return;
+        const name = shopTab === 'glass' ? glassName(ci) : shopTab === 'pane' ? paneName(ci) : woolName(ci), have = (save.inv && save.inv[name]) || 0;
+        h += '<div style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);padding:6px;border-radius:8px">' + swatch(shopTab, ci) + '<div style="flex:1;font-size:13px"><b>' + name + '</b>' + (have ? '<br><span style="opacity:.7">you have ' + have + '</span>' : '') + '</div>' +
+          '<button data-gwb="' + name + '" data-n="' + n + '" data-p="' + p + '" style="padding:6px 8px;border-radius:8px;border:0;background:#3a8a4a;color:#fff;font:800 12px system-ui;cursor:pointer"' + ((save.coins || 0) < p ? ' disabled' : '') + '>' + n + ' for $' + p + '</button></div>';
+      });
+      h += '</div>';
+    }
+    shopEl.firstChild.innerHTML = h;
+  }
+  function openGW(){
+    if(!shopEl){
+      shopEl = document.createElement('div');
+      shopEl.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center';
+      shopEl.innerHTML = '<div style="position:relative;width:min(760px,94vw);max-height:86vh;overflow:auto;background:#241a12;border:3px solid #8ac8f0;border-radius:14px;padding:14px 16px;color:#fff;font:14px system-ui,sans-serif;box-sizing:border-box"></div>';
+      shopEl.addEventListener('click', e=>{
+        e.stopPropagation();
+        const t = e.target.closest('button');
+        if(e.target === shopEl || (t && t.dataset.gw === 'x')){ closeGW(); return; }
+        if(!t) return;
+        if(t.dataset.gwt){ shopTab = t.dataset.gwt; renderGW(); return; }
+        if(t.dataset.gwb){
+          const name = t.dataset.gwb, n = +t.dataset.n, p = +t.dataset.p;
+          if((save.coins || 0) < p){ toast('You need $' + p + '.'); return; }
+          if(DEF[name] && !ensure(name)){ toast('That could not be made right now.'); return; }
+          save.coins -= p; addItem(name, n); persist(); blip(660, .12, .12, 'triangle');
+          toast('You bought ' + n + ' ' + name + '! ' + (name === 'Shears' ? 'Hold them and press F next to a sheep.' : 'Right-click to build with it.'));
+          renderGW(); try{ refreshShopIfOpen(); }catch(e){}
+        }
+      });
+      addEventListener('keydown', e=>{ if(shopEl && shopEl.style.display === 'flex' && e.code === 'Escape'){ e.stopImmediatePropagation(); closeGW(); } }, true);
+      document.body.appendChild(shopEl);
+    }
+    renderGW(); shopEl.style.display = 'flex';
+    try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+  }
+  function closeGW(){ if(shopEl) shopEl.style.display = 'none'; }
+  const _rs = renderShop;
+  renderShop = function(){
+    const r = _rs.apply(this, arguments);
+    try{
+      const list = document.getElementById('shoplist');
+      if(list){
+        const div = document.createElement('div'); div.className = 'item';
+        div.innerHTML = '<div class="sw" style="background:linear-gradient(135deg,rgba(120,200,255,.75),rgba(255,120,200,.75));border:2px solid #dff4ff"></div><div><div class="nm">Glass and Wool Shop</div><div class="ds">Glass, Glass Panes and Wool in 16 colours, and Shears for sheep.</div></div>';
+        const b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Open'; b.onclick = e=>{ e.stopPropagation(); openGW(); };
+        div.appendChild(b); list.insertBefore(div, list.firstChild);
+      }
+    }catch(e){}
+    return r;
+  };
+
+  // ================= 3. SHEEP WITH COLOURED WOOL: shear them (F, empty hand or Shears) or catch them
+  const woolTexC = {};
+  function woolTex(ci){
+    if(woolTexC[ci]) return woolTexC[ci];
+    const c = document.createElement('canvas'); c.width = c.height = 16; paintWool(c.getContext('2d'), rgbOf(ci), 'sheep' + ci);
+    const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+    return (woolTexC[ci] = t);
+  }
+  const woolMat = {}, skinMat = new THREE.MeshLambertMaterial({color:0xf2b0a8});
+  const near = (a, b)=>Math.abs(a - b) < .02;
+  function rollFleece(){
+    const r = Math.random();
+    if(r < .58) return 1; if(r < .68) return 14; if(r < .75) return 15; if(r < .81) return 13;
+    return 2 + Math.floor(Math.random()*11);                                          // red ... pink, now and then
+  }
+  function dressSheep(a, ci){
+    if(!a || !a.g) return;
+    let body = null, top = null;
+    a.g.traverse(m=>{ if(!m.isMesh || !m.geometry || !m.geometry.parameters) return; const q = m.geometry.parameters;
+      if(!body && near(q.width, .9) && near(q.height, .8) && near(q.depth, 1.2)) body = m;
+      else if(!top && near(q.width, 1) && near(q.height, .3) && near(q.depth, 1.1)) top = m; });
+    if(!body) return;
+    a.gwF = ci == null ? rollFleece() : ci;
+    const wm = woolMat[a.gwF] || (woolMat[a.gwF] = new THREE.MeshLambertMaterial({color:0xffffff, map:woolTex(a.gwF)}));
+    body.material = wm; if(top) top.material = wm;
+    a.g.userData.gw = {body, top, wm};
+    a.gwBald = 0;
+  }
+  function setBald(a, bald){
+    const U = a.g && a.g.userData.gw; if(!U) return;
+    U.body.material = bald ? skinMat : U.wm; U.body.scale.set(bald ? .84 : 1, bald ? .86 : 1, bald ? .9 : 1);
+    if(U.top) U.top.visible = !bald;
+  }
+  const _sA = spawnAnimal;
+  spawnAnimal = function(type, x, z){
+    const a = _sA.apply(this, arguments);
+    try{ if(a && a.type === 'sheep') dressSheep(a); }catch(e){ console.warn('LN-glasswool sheep', e); }
+    return a;
+  };
+  const _kA = killAnimal;
+  killAnimal = function(a){
+    if(!a || a.type !== 'sheep' || a.gwF == null) return _kA.apply(this, arguments);
+    const was = ANIMAL_DROP.sheep, bald = a.gwBald > 0, wn = woolName(a.gwF);
+    if(!bald) ensure(wn);
+    ANIMAL_DROP.sheep = bald ? 'Sheep Skin' : wn;
+    let r; try{ r = _kA.apply(this, arguments); } finally { ANIMAL_DROP.sheep = was; }
+    try{ if(!bald && Math.random() < .6) addItem(wn, 1); }catch(e){}
+    return r;
+  };
+  // shearing
+  let hintT = 0;
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !locked || realm !== 0 || won) return;
+    if(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    let best = null, bd = 3.2;
+    for(const a of animals){ if(a.type !== 'sheep' || a.dead || a.gwF == null) continue; const d = Math.hypot(a.pos.x - P.x, a.pos.z - P.z); if(d < bd && Math.abs(a.pos.y - P.y) < 2.5){ bd = d; best = a; } }
+    if(!best) return;
+    let hi = null; try{ hi = hotInfo(hotArr()[save.hotSel]); }catch(er){}
+    const shears = hi && hi.name === 'Shears', empty = !hi && !curGun;
+    if(!shears && !empty){ if(performance.now() - hintT > 4000){ hintT = performance.now(); toast('To shear the sheep, pick an empty carry slot (or hold Shears) and press F.'); } return; }
+    e.preventDefault(); e.stopImmediatePropagation();
+    if(best.gwBald > 0){ toast('This sheep has no wool right now. It grows back soon.'); return; }
+    const n = 1 + Math.floor(Math.random()*3), wn = woolName(best.gwF);
+    ensure(wn); addItem(wn, n);
+    best.gwBald = 75 + Math.random()*30; setBald(best, true); best.fleeT = 1.5;
+    save.gwSheared = (save.gwSheared || 0) + 1;
+    toast('Snip snip! You got ' + n + ' ' + wn + '. The sheep says baaa. Its wool grows back.');
+    blip(1200, .05, .08, 'square'); setTimeout(()=>blip(1500, .05, .08, 'square'), 90);
+    try{ burst(best.pos.x, best.pos.y + 1.2, best.pos.z, 0, 8); }catch(er){}
+    persist();
+  }, true);
+  window.__gwShear = function(a){ if(!a || a.gwF == null || a.gwBald > 0) return 0; const n = 1 + Math.floor(Math.random()*3), wn = woolName(a.gwF); ensure(wn); addItem(wn, n); a.gwBald = 90; setBald(a, true); return n; };
+  // a little flock now and then on Earth, so there are always sheep to find
+  let flockT = 6;
+  function flockTick(dt){
+    flockT -= dt; if(flockT > 0) return; flockT = 9;
+    if(realm !== 0 || P.x >= UPPER_EDGE || P.y < -3 || won) return;
+    for(const a of animals) if(a.type === 'sheep' && a.gwBald > 0){ a.gwBald -= 9; if(a.gwBald <= 0){ a.gwBald = 0; setBald(a, false); } }
+    if(Math.random() > .45) return;
+    const have = animals.filter(a=>a.type === 'sheep' && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) < 70).length; if(have >= 3) return;
+    const ang = Math.random()*6.283, r = 18 + Math.random()*16, x = P.x + Math.cos(ang)*r, z = P.z + Math.sin(ang)*r;
+    try{ const c = BIOME.col(Math.floor(x), Math.floor(z)); if(!c || c.liq) return; }catch(e){ return; }
+    const k = 2 + Math.floor(Math.random()*2);
+    for(let i=0;i<k;i++){ const a = spawnAnimal('sheep', x + (Math.random() - .5)*4, z + (Math.random() - .5)*4); if(a) a.gwFlock = 1; }
+  }
+
+  // ================= 4. TOWNS USE GLASS: some towns put glass or panes in their windows (each town decides once), some keep the old windows
+  save.gwTown = save.gwTown || {};
+  function townGlass(nid){
+    const k = String(nid), M = save.gwTown;
+    if(M[k] == null){
+      const vals = Object.keys(M).map(q=>M[q]), yes = vals.filter(v=>v >= 0).length, no = vals.length - yes;
+      let v = hs('gwt' + k) < .4 ? -1 : 1 + Math.floor(hs('gwc' + k)*15);
+      if(v < 0 && yes === 0) v = 1 + Math.floor(hs('gwc' + k)*15);                // the first town always tries glass
+      else if(v >= 0 && no === 0 && yes >= 2) v = -1;                             // and some towns never do
+      M[k] = v; try{ persist(); }catch(e){}
+    }
+    return M[k];
+  }
+  const sideC = new WeakMap();
+  function cellsOf(L){ let S = sideC.get(L); if(!S){ S = new Set(L.map(q=>q[0] + ',' + q[1] + ',' + q[2])); sideC.set(L, S); } return S; }
+  // the block for one window: a pane when the window is in a wall (blocks on two opposite sides), else a whole glass block (skylights, glass walls)
+  function houseGlass(b, q, L){
+    const v = townGlass(b.nid); if(v < 0) return 0;
+    const ci = hs(b.id + 'clr') < .25 ? 0 : v;
+    let pane = hs(b.id + 'pn') < .55;
+    if(pane && L && q){ const S = cellsOf(L), has = (dx, dz)=>S.has((q[0] + dx) + ',' + q[1] + ',' + (q[2] + dz));
+      const ax = has(-1, 0) && has(1, 0), az = has(0, -1) && has(0, 1); if(ax === az) pane = false; }
+    townBusy++; try{ return ensure(pane ? paneName(ci) : glassName(ci)); } finally { townBusy--; }
+  }
+  window.__gwHouse = (b, q, L)=>{ try{ townBusy++; return houseGlass(b, q, L); }catch(e){ return 0; } finally { townBusy--; } };
+  window.__gwTownGlass = townGlass;
+  // houses already built in an earlier game get their windows swapped (once) when you come near
+  const CLm = window.__cityLife;
+  function retrofit(){
+    if(!CLm || !CLm.CL || realm !== 0) return;
+    for(const b of CLm.CL.b){
+      if(!b.done || b.gw || Math.hypot(b.x - P.x, b.z - P.z) > 110) continue;
+      b.gw = 1;
+      if(townGlass(b.nid) < 0) continue;
+      const L = CLm.listOf(b), old = CLm.mat('glass');
+      townBusy++;
+      try{ for(const q of L){ if(q[3] !== 'glass') continue; const w = CLm.W(b, q[0], q[1], q[2]), d = -(w.y + 1); if(get(w.x, d, w.z) !== old) continue; const id = houseGlass(b, q, L); if(id) setBlock(w.x, d, w.z, id); } }
+      finally { townBusy--; }
+      persist(); return;                                               // one building at a time
+    }
+  }
+
+  // ================= 5. RELIGIOUS SITES ARE MONUMENTS, NOT HOUSES (and some religions build none)
+  const RS = window.__relsite;
+  const SYMS = [
+    ['Star',    ['...x...', '..xxx..', 'xxxxxxx', '.xxGxx.', '..xxx..', '.xx.xx.', 'xx...xx']],
+    ['Sun',     ['o..o..o', '.xxxxx.', '.xxGxx.', 'oxGGGxo', '.xxGxx.', '.xxxxx.', 'o..o..o']],
+    ['Moon',    ['..xxx..', '.xx....', 'xx.....', 'xx...o.', 'xx.....', '.xx....', '..xxx..']],
+    ['Eye',     ['.......', '..xxx..', '.x...x.', 'x..G..x', '.x...x.', '..xxx..', '.......']],
+    ['Heart',   ['.xx.xx.', 'xxxxxxx', 'xxxGxxx', 'xxxxxxx', '.xxxxx.', '..xxx..', '...x...']],
+    ['Diamond', ['...o...', '..xxx..', '.xxxxx.', 'oxxGxxo', '.xxxxx.', '..xxx..', '...o...']],
+    ['Spiral',  ['xxxxxxx', 'x.....x', 'x.xxx.x', 'x.xGx.x', 'x.x...x', 'x.xxxxx', 'x......']]
+  ];
+  const symOf = rel=>Math.floor(hs('sym' + rel)*SYMS.length);
+  save.relNoSite = save.relNoSite || {};
+  function noSites(rel){
+    if(rel == null || !RS) return false;
+    const M = save.relNoSite, k = String(rel);
+    if(M[k] == null){
+      const has = RS.S.some(s=>s.rel === rel), vals = Object.keys(M).map(q=>M[q]), withS = vals.filter(v=>!v).length, none = vals.length - withS;
+      let v = !has && hs('nosite' + k) < .36;
+      if(v && withS === 0) v = false;                                   // the first religion always builds, so there are holy places in the world
+      if(!v && !has && none === 0 && withS >= 2) v = true;              // and once there are a few, at least one builds none
+      M[k] = v ? 1 : 0; try{ persist(); }catch(e){}
+    }
+    return M[k] === 1;
+  }
+  window.__noSites = noSites;
+  const HEART = ['This religion believes holy places are in your heart.', 'They say the whole world is their temple, so they do not build one.', 'They meet under the open sky, wherever they like.'];
+  if(RS){
+    const K = RS.KINDS, OLDF = {}, OLDR = {};
+    for(const k in K){ OLDF[k] = K[k].f; OLDR[k] = K[k].r; }
+    // each plan: [x, y, z, key] from the ground up, front towards +z (the town). Keys: S temple stone, M marble, N grey stone, T stone, A the religion's colour,
+    // O gold, G holy glow, P lamp, L clear glass, Q glass in the religion's colour, R roof tile
+    const plan = ()=>{ const L = [], at = {}; return {L, add(x, y, z, k){ const key = x + ',' + y + ',' + z; if(at[key] != null){ L[at[key]][3] = k; return; } at[key] = L.length; L.push([x, y, z, k]); }}; };
+    const NEW = {
+      temple:{name:'Ziggurat', r:5, f(){ const P0 = plan();                      // a big stepped tower with a stair up the front and a glowing altar on top
+        for(let t=0;t<5;t++){ const h = 5 - t, y0 = t*2;
+          for(let y=y0;y<=y0+1;y++) for(let x=-h;x<=h;x++) for(let z=-h;z<=h;z++){
+            const m = Math.max(Math.abs(x), Math.abs(z)), edge = m === h, top = y === y0 + 1;
+            if(!edge && !(top && (m >= h - 1 || t === 4))) continue;
+            P0.add(x, y, z, top && edge ? 'A' : (t === 4 && top ? 'M' : 'S'));
+          } }
+        for(let x=-1;x<=1;x++){ P0.add(x, 0, 6, 'M'); for(let t=1;t<5;t++) P0.add(x, 2*t, 6 - t, 'M'); }
+        for(const sx of [-1, 1]) for(const sz of [-1, 1]){ P0.add(sx, 10, sz, 'A'); P0.add(sx, 11, sz, 'P'); }
+        P0.add(0, 10, 0, 'O'); P0.add(0, 11, 0, 'G'); P0.add(0, 12, 0, 'G');
+        for(const sx of [-3, 3]){ P0.add(sx, 0, 6, 'N'); P0.add(sx, 1, 6, 'G'); }
+        return P0.L; }},
+      shrine:{name:'Pagoda', r:3, f(){ const P0 = plan();                          // three shrinking tiers with flared roofs and lanterns
+        for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++) P0.add(x, 0, z, 'N');
+        let y = 1;
+        [[2, 3], [1, 2], [0, 1]].forEach(([bw, rw])=>{
+          for(let yy=y;yy<=y+1;yy++) for(let x=-bw;x<=bw;x++) for(let z=-bw;z<=bw;z++){
+            const cor = Math.abs(x) === bw && Math.abs(z) === bw, edge = Math.abs(x) === bw || Math.abs(z) === bw; if(!edge) continue;
+            P0.add(x, yy, z, cor ? 'A' : (yy === y + 1 && bw > 0 && (x === 0 || z === 0)) ? 'Q' : 'W'); }
+          const yr = y + 2;
+          for(let x=-rw;x<=rw;x++) for(let z=-rw;z<=rw;z++) P0.add(x, yr, z, (Math.abs(x) === rw || Math.abs(z) === rw) ? 'A' : 'R');
+          for(const sx of [-1, 1]) for(const sz of [-1, 1]){ P0.add(sx*rw, yr + 1, sz*rw, 'O'); P0.add(sx*rw, yr - 1, sz*rw, 'P'); }
+          y = yr + 1; });
+        P0.add(0, y, 0, 'O'); P0.add(0, y + 1, 0, 'O'); P0.add(0, y + 2, 0, 'G');
+        return P0.L; }},
+      pyramid:{name:'Great Pyramid', r:5, f(){ const P0 = plan();                  // a solid stone pyramid with a gold capstone and two obelisks
+        for(let y=0;y<=4;y++){ const s = 4 - y; for(let x=-s;x<=s;x++) for(let z=-s;z<=s;z++){ if(Math.max(Math.abs(x), Math.abs(z)) !== s) continue; P0.add(x, y, z, s === 0 ? 'O' : y === 2 ? 'A' : 'S'); } }
+        P0.add(0, 5, 0, 'G');
+        for(const sx of [-5, 5]){ P0.add(sx, 0, 5, 'N'); for(let y=1;y<=5;y++) P0.add(sx, y, 5, 'M'); P0.add(sx, 6, 5, 'O'); }
+        return P0.L; }},
+      tower:{name:'Holy Spire', r:2, f(){ const P0 = plan();                       // a tall spire with a glowing orb on top
+        for(let x=-2;x<=2;x++) for(let z=-2;z<=2;z++) P0.add(x, 0, z, 'N');
+        for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++) P0.add(x, 1, z, 'S');
+        for(let y=2;y<=10;y++) for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++){ if(!x && !z) continue; P0.add(x, y, z, y % 3 === 1 ? 'A' : ((x === 0 || z === 0) && y >= 8 ? 'Q' : 'M')); }
+        for(const sx of [-1, 1]) for(const sz of [-1, 1]) P0.add(sx, 11, sz, 'O');
+        P0.add(0, 11, 0, 'M'); P0.add(0, 12, 0, 'M'); P0.add(0, 13, 0, 'A');
+        for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++) P0.add(x, 15, z, (x && z) ? 'O' : 'G');
+        P0.add(0, 14, 0, 'G'); P0.add(0, 16, 0, 'G'); P0.add(0, 17, 0, 'O');
+        return P0.L; }},
+      dome:{name:'Stone Circle', r:4, f(){ const P0 = plan();                      // a ring of tall standing stones with a stone ring on top and a glowing middle
+        const ring = []; for(let x=-4;x<=4;x++) for(let z=-4;z<=4;z++) if(Math.abs(Math.hypot(x, z) - 4) < .5) ring.push([x, z]);
+        [[4, 0], [3, 3], [-3, 3], [-4, 0], [-3, -3], [0, -4], [3, -3]].forEach(([x, z])=>{ for(let y=0;y<=4;y++) P0.add(x, y, z, y === 4 ? 'A' : 'N'); });
+        for(const [x, z] of ring) P0.add(x, 5, z, 'T');
+        for(const q of [[-1, 0], [1, 0], [0, -1], [0, 1], [0, 0]]) P0.add(q[0], 0, q[1], 'M');
+        P0.add(0, 1, 0, 'O'); P0.add(0, 2, 0, 'G'); P0.add(0, 3, 0, 'G');
+        for(const sx of [-2, 2]) for(const sz of [-2, 2]) P0.add(sx, 0, sz, 'P');
+        return P0.L; }},
+      gate:{name:'Holy Arch', r:4, f(){ const P0 = plan();                         // a big open gate with two beams, a gold plaque and lanterns
+        for(const sx of [-3, 3]){ for(let y=0;y<=6;y++) P0.add(sx, y, 0, 'A'); P0.add(sx, 0, -1, 'N'); P0.add(sx, 0, 1, 'N'); P0.add(sx - 1, 0, 0, 'N'); P0.add(sx + 1, 0, 0, 'N'); }
+        for(let x=-3;x<=3;x++) P0.add(x, 5, 0, 'N');
+        P0.add(0, 6, 0, 'O');
+        for(let x=-4;x<=4;x++){ P0.add(x, 7, 0, Math.abs(x) <= 1 ? 'O' : 'N'); P0.add(x, 8, 0, 'A'); }
+        P0.add(-4, 9, 0, 'A'); P0.add(4, 9, 0, 'A'); P0.add(0, 4, 0, 'G');
+        for(const sx of [-4, 4]){ P0.add(sx, 0, 2, 'N'); P0.add(sx, 1, 2, 'N'); P0.add(sx, 2, 2, 'P'); }
+        P0.add(0, 0, -3, 'M'); P0.add(0, 1, -3, 'O'); P0.add(0, 2, -3, 'G');
+        return P0.L; }}
+    };
+    SYMS.forEach(([sn, rows], i)=>{                                              // a giant statue of the religion's own symbol on a marble plinth
+      NEW['statue' + i] = {name:'Holy Statue', sym:sn, r:3, f(){ const P0 = plan();
+        for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++) P0.add(x, 0, z, (Math.abs(x) === 3 && Math.abs(z) === 3) ? 'O' : 'N');
+        for(let x=-2;x<=2;x++) for(let z=-2;z<=2;z++) P0.add(x, 1, z, 'M');
+        for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++) P0.add(x, 2, z, 'M');
+        P0.add(0, 3, 0, 'M');
+        rows.forEach((row, r)=>{ for(let c=0;c<7;c++){ const ch = row[c]; if(ch === '.') continue; P0.add(c - 3, 10 - r, 0, ch === 'x' ? 'A' : ch === 'o' ? 'O' : 'G'); } });
+        for(const sx of [-3, 3]) for(const sz of [-3, 3]) P0.add(sx, 1, sz, 'P');
+        return P0.L; }};
+    });
+    for(const k in NEW) K[k] = NEW[k];
+    RS.KORDER.length = 0; Object.keys(NEW).forEach(k=>RS.KORDER.push(k));
+    if(RS.LC) for(const k in RS.LC) delete RS.LC[k];
+    const NK = ['temple', 'shrine', 'pyramid', 'tower', 'dome', 'gate', 'statue'];
+    window.__gwKind = function(r, rel, nth){
+      let k = NK[Math.floor(hs('rk' + rel + '_' + nth + '_' + (r ? r.name : ''))*NK.length)];
+      if(k === 'statue') k = 'statue' + symOf(rel);
+      return k;
+    };
+    // the religion's colour in glass
+    const HEXC = h=>{ const n = parseInt(String(h || '#ffd84a').slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    window.__gwRelGlass = function(r){
+      const c = HEXC(r && r.col); let best = 1, bd = 1e9;
+      for(let i=2;i<COLS.length;i++){ const q = COLS[i][2], d = (q[0] - c[0])**2 + (q[1] - c[1])**2 + (q[2] - c[2])**2; if(d < bd){ bd = d; best = i; } }
+      return ensure(glassName(best)) || ensure(glassName(0));
+    };
+    // sites built in an earlier game (the old house-like plans) come down and go back up in the new shape. Stop them building until then.
+    const OLDK = Object.keys(OLDF);
+    RS.S.forEach(s=>{ if((s.v || 0) < 2 && OLDF[s.k]){ s.mg = {i:s.i, d:s.done}; s.done = 1; } });
+    let migDone = false;
+    const nameIdx0 = n=>{ const j = BLOCKS.findIndex(b=>b.name === n); return j >= 0 ? j + 1 : -1; };
+    function migrate(){
+      if(realm !== 0) return;
+      const oldGlass = CLm && CLm.mat ? CLm.mat('glass') : -1, newGlass = nameIdx0('Glass');
+      let any = false;
+      for(const s of RS.S){
+        if(!s.mg) continue;
+        const L = OLDF[s.k] ? OLDF[s.k]() : [], upto = s.mg.d ? L.length : Math.min(L.length, s.mg.i || 0);
+        for(let i=0;i<upto;i++){
+          const q = L[i], [x, d, z] = RS.cell(s, q), cur = get(x, d, z); if(!cur) continue;
+          const want = q[3] === 'L' ? -2 : RS.blockOf(s, q[3]);
+          if(cur === want || (q[3] === 'L' && (cur === oldGlass || cur === newGlass))) RS.put(x, d, z, 0);
+        }
+        delete s.mg; s.v = 2; s.r = (K[s.k] && K[s.k].r) || s.r; s.i = 0; s.done = 0; any = true;
+        try{ RS.tagFor(s, true); }catch(e){}
+      }
+      if(any){ persist(); news('NEWS: The holy places got a makeover! Temples are now huge ziggurats, pagodas, pyramids, spires, stone circles, arches and giant statues.'); }
+      migDone = true;
+    }
+    // built courts get real see-through glass in their windows (once)
+    function courtGlass(){
+      if(realm !== 0 || !RS.courtList) return;
+      const old = CLm && CLm.mat ? CLm.mat('glass') : -1;
+      for(const id in save.rsCourts || {}){
+        const c = save.rsCourts[id]; if(!c || c.gw || (c.v || 0) < 2) continue;
+        if(Math.hypot(c.x - P.x, c.z - P.z) > 140) continue;
+        const g = ensure('Glass'); if(!g) return;
+        RS.cellsOfCourt(c, (x, y, z, k)=>{ if(k !== 'L' || y < 0) return; const d = -(c.G + y + 1); if(get(x, d, z) === old) RS.put(x, d, z, g); });
+        c.gw = 1; persist(); return;
+      }
+    }
+    // the Religions panel: every religion shows its holy symbol and where its holy places are (or why there are none)
+    const RRu = window.__religRules;
+    if(RRu && RRu.html){
+      const _h = RRu.html;
+      RRu.html = function(r){
+        let h = _h.apply(this, arguments);
+        try{
+          if(r && r.id != null){
+            const sym = SYMS[symOf(r.id)][0];
+            if(noSites(r.id)) h += '<div style="font-size:13px"><b>Holy places:</b> none. ' + HEART[Math.floor(hs('hrt' + r.id)*HEART.length)] + '</div>';
+            else if(!RS.S.some(s=>s.rel === r.id)) h += '<div style="font-size:13px"><b>Holy places:</b> none built yet.</div>';
+            h += '<div style="font-size:13px"><b>Holy symbol:</b> ' + sym + '</div>';
+          }
+        }catch(e){}
+        return h;
+      };
+    }
+    window.__gwRel = {NEW, OLDF, OLDR, SYMS, symOf, noSites, migrate, courtGlass, get migDone(){ return migDone; }};
+    RS._gwTick = function(){ if(!migDone) migrate(); courtGlass(); };
+  }
+
+  // ================= hello, and the loop
+  setTimeout(()=>{ try{ if(!save.gwHello){ save.gwHello = 1; news('NEWS: Glass, Glass Panes and coloured Wool have arrived! Find them in the shop, make glass from sand, and shear sheep for wool.'); persist(); } }catch(e){} }, 9000);
+  let last = performance.now(), tT = 1, rT = 2;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      flockTick(dt);
+      tT -= dt; if(tT <= 0){ tT = 1; if(RS && RS._gwTick) RS._gwTick(); }
+      rT -= dt; if(rT <= 0){ rT = 2; retrofit(); }
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-glasswool', e); } }
+  })(last);
+  window.__glasswool = {COLS, DEF, glassName, paneName, woolName, colourIn, ensure, gwPreview, openGW, closeGW, dressSheep, setBald, townGlass, houseGlass, retrofit, paneO, fixPanes, PANES, TR, noSites, symOf};
+})();
+/* LN-glasswool end */
 
 
 
