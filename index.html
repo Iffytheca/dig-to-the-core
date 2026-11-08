@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 210 (Oct 31)';
+  window.__BUILD = 'Build 211 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -36033,41 +36033,27 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function buildCourt(T, c){
     const grp = new THREE.Group(); grp.position.set(c.x + .5, c.G, c.z + .5); grp.rotation.y = c.r*Math.PI/2;
     const WALL = 0xcfc4a8, TRIM = 0xa89f88, WOOD = 0x5a3418, RED = 0x9a2020;
-    part(grp, 8.4, .06, 7.4, 0xb89a70, 0, .03, 0); part(grp, 2, .07, 5, RED, 0, .05, 1.2);                   // floor and red carpet
-    part(grp, 9, H, .4, WALL, 0, H/2, -3.8); part(grp, .4, H, 8, WALL, -4.3, H/2, 0); part(grp, .4, H, 8, WALL, 4.3, H/2, 0);
-    part(grp, 3.3, H, .4, WALL, -2.85, H/2, 3.8); part(grp, 3.3, H, .4, WALL, 2.85, H/2, 3.8); part(grp, 2.4, 1.3, .4, WALL, 0, H - .65, 3.8);
-    for(const sx of [-1, 1]) for(const z of [-1.8, 1.4]) part(grp, .06, 1.4, 1.1, 0x6aa8d8, sx*4.52, 2.4, z);       // windows
-    part(grp, 9.4, .25, 8.4, TRIM, 0, H + .1, 0);
-    part(grp, 9.6, .08, 2.6, 0xa8a294, 0, .04, 5.1); part(grp, 9.6, .08, 2, 0xb4ae9e, 0, .12, 4.8); part(grp, 9.6, .08, 1.4, 0xc0baa8, 0, .2, 4.5);   // steps
-    for(const x of [-3.9, -2.1, 2.1, 3.9]){ part(grp, .7, .25, .7, TRIM, x, .37, 5.3); part(grp, .45, H - .5, .45, 0xdcd6c4, x, .35 + (H - .5)/2, 5.3); part(grp, .7, .25, .7, TRIM, x, H - .05, 5.3); }
-    part(grp, 10.2, .3, 10.8, TRIM, 0, H + .35, 1.0);
-    const sh = new THREE.Shape(); sh.moveTo(-5.1, 0); sh.lineTo(5.1, 0); sh.lineTo(0, 2.1); sh.lineTo(-5.1, 0);
-    const ped = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, {depth:10.8, bevelEnabled:false}), mat(0xc9bfa6)); ped.position.set(0, H + .5, -4.4); grp.add(ped);
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({map:signTex()})); sg.position.set(0, H + 1.05, 6.43); grp.add(sg);
+    part(grp, 2, .07, 5, RED, 0, .05, 1.2);                   // red carpet (the floor, walls and roof are real blocks: LN-relsite)
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({map:signTex()})); sg.position.set(0, 6.55, 6.52); grp.add(sg);
     // inside: the judge's platform, desk, chair, gavel, flag, witness stand, a jury of rubber ducks and benches
     part(grp, 4.4, .15, 1.9, WOOD, 0, .075, -2.85);
     part(grp, 4.2, .9, .8, WOOD, 0, .45, -1.75); part(grp, 4.4, .1, 1, 0x7a4a24, 0, .95, -1.75); part(grp, 3, .1, .04, 0xffd030, 0, .7, -1.33);
     const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .34), new THREE.MeshBasicMaterial({map:plateTex()})); pl.position.set(0, .45, -1.33); grp.add(pl);
-    part(grp, 1.1, .12, 1, RED, 0, .85, -3.25); part(grp, 1.1, 2, .15, RED, 0, 1.85, -3.68); part(grp, 1.2, .14, .2, 0xffd030, 0, 2.9, -3.68);
+    part(grp, 1.1, .12, 1, RED, 0, .85, -3.25); part(grp, 1.1, 2, .15, RED, 0, 1.85, -3.4); part(grp, 1.2, .14, .2, 0xffd030, 0, 2.9, -3.4);
     part(grp, .34, .08, .34, 0x3a2010, 1.3, 1.04, -1.75);
     const gav = new THREE.Group(); gav.position.set(1.3, 1.1, -1.95); part(gav, .05, .05, .5, 0x8a5a2a, 0, 0, .25); part(gav, .32, .16, .16, 0x5a3418, 0, 0, .5); grp.add(gav); gav.rotation.x = -.3;
     part(grp, .08, 3.2, .08, 0xd8d8d8, -3.6, 1.6, -3.3);
     const fc = T.k === 'b' ? 0x3a6ad0 : ({red:0xd03030, blue:0x3050d0, green:0x30a040}[T.o.cloth] || 0xd03030);
     part(grp, 1.2, .75, .04, fc, -2.98, 2.75, -3.3); part(grp, .3, .3, .05, 0xffd030, -2.98, 2.75, -3.27);
-    const ord = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .64), new THREE.MeshBasicMaterial({map:orderTex()})); ord.position.set(0, 3.95, -3.58); grp.add(ord);
+    const ord = new THREE.Mesh(new THREE.PlaneGeometry(3.4, .64), new THREE.MeshBasicMaterial({map:orderTex()})); ord.position.set(0, 3.6, -3.46); grp.add(ord);
     part(grp, 1.2, 1, 1.2, WOOD, 3.1, .5, -1.4);
     part(grp, .9, .45, 2.4, WOOD, -3.4, .225, -.4);
     for(const z of [-1.2, -.4, .4]){ part(grp, .34, .3, .34, 0xffd84a, -3.4, .6, z); part(grp, .2, .2, .2, 0xffd84a, -3.4, .85, z + .06); part(grp, .12, .06, .14, 0xff8a20, -3.4, .83, z + .2); }
     for(const x of [-2.2, 2.2]) for(const z of [1.1, 2.5]){ part(grp, 2.4, .1, .55, 0x8a5a2a, x, .45, z); part(grp, 2.4, .5, .08, 0x8a5a2a, x, .75, z + .27); part(grp, .1, .4, .4, 0x5a3418, x - 1.05, .2, z); part(grp, .1, .4, .4, 0x5a3418, x + 1.05, .2, z); }
     grp.traverse(o=>{ if(o.isMesh) o.castShadow = o.receiveShadow = false; });
-    const lab = bigTag('COURT', T.k === 'b' ? 'The court of '+T.name+'. Judge: the Mayor' : 'The court of '+T.name+'. Judge: the Mayor'); lab.position.set(0, H + 3.6, 1); grp.add(lab);
+    const lab = bigTag('COURT', T.k === 'b' ? 'The court of '+T.name+'. Judge: the Mayor' : 'The court of '+T.name+'. Judge: the Mayor'); lab.position.set(0, 11, 1); grp.add(lab);
     NOM(grp); scene.add(grp);
-    const sol = [
-      aabb(c, 0, -3.8, 9, .4, 0, H), aabb(c, -4.3, 0, .4, 8, 0, H), aabb(c, 4.3, 0, .4, 8, 0, H),
-      aabb(c, -2.85, 3.8, 3.3, .4, 0, H), aabb(c, 2.85, 3.8, 3.3, .4, 0, H), aabb(c, 0, 3.8, 2.4, .4, H - 1.3, H),
-      aabb(c, 0, -1.75, 4.4, 1, 0, 1), aabb(c, 3.1, -1.4, 1.2, 1.2, 0, 1)
-    ];
-    for(const x of [-3.9, -2.1, 2.1, 3.9]) sol.push(aabb(c, x, 5.3, .5, .5, 0, H));
+    const sol = [aabb(c, 0, -1.75, 4.4, 1, 0, 1), aabb(c, 3.1, -1.4, 1.2, 1.2, 0, 1)];     // walls are real blocks now (LN-relsite)
     return {grp, sol, on:false, gav, c};
   }
   function solidsOn(K, on){
@@ -36489,6 +36475,365 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 })();
 /* LN-citydef end */
+/* LN-relsite start: every mayor's COURT is now built from real blocks you can mine one at a time, and towns with a religion build TEMPLES, shrines, pyramids, towers, dome halls and holy gates for it, also from real blocks (Irfan 2026-11-08 "mayor is made of block you can mine and add religious site not real one and country can build on or more each for that religion it could be teple or more made of blocks and you can mine blocks") */
+(function(){
+  const NA = window.__nations, CD = window.__citydef, CLm = window.__cityLife;
+  if(!NA || !CD) return;
+  const pick = q=>q[Math.floor(Math.random()*q.length)];
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const rotXZ = (r, x, z)=>r === 0 ? [x, z] : r === 1 ? [z, -x] : r === 2 ? [-x, -z] : [-z, x];
+
+  // ================= block types: a couple of new ones, the city blocks for the rest
+  const CUST = {
+    S:{name:'Temple Stone', h:9, v:7, c1:[232,214,170], c2:[206,184,138], glow:0, pattern:'brick'},
+    G:{name:'Holy Glow', h:5, v:10, c1:[255,244,170], c2:[255,214,90], glow:.9, pattern:'plain'}
+  };
+  const IDS = {};
+  const nameId = n=>{ const j = BLOCKS.findIndex(b=>b.name === n); return j >= 0 ? j + 1 : 0; };
+  function cm(k){ return CLm && CLm.mat ? CLm.mat(k) : (NA.ID.toast || 2); }
+  function bid(k){
+    if(IDS[k]) return IDS[k];
+    let id = 0;
+    if(CUST[k]){
+      id = nameId(CUST[k].name);
+      if(!id && (save.customBlocks || []).length < 120 && BLOCKS.length < 250){
+        const spec = Object.assign({relsite:1}, CUST[k]); save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
+        const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length - 1)); id = BLOCKS.length;
+      }
+      if(!id) id = k === 'G' ? (cm('lamp') || NA.ID.duck) : cm('plaster');
+    } else id = ({W:()=>cm('plaster'), R:()=>cm('roof'), L:()=>cm('glass'), O:()=>NA.ID.gold || cm('gold'), F:()=>cm('floor'), T:()=>cm('stone'), P:()=>cm('lamp')}[k] || (()=>cm('plaster')))();
+    return (IDS[k] = id || 2);
+  }
+  ['S', 'G'].forEach(k=>{ if(nameId(CUST[k].name)) bid(k); });           // blocks made in an earlier game come back at once
+  // the accent colour of a religion, from its colour
+  const ACC = {'#ff8a3a':'carrot', '#6ae0ff':'blue', '#ff6ad8':'red', '#9aff5a':'green', '#ffd84a':'gold', '#b08aff':'blue', '#ff5a5a':'red', '#5affb0':'green'};
+  const accId = r=>NA.ID[ACC[(r && r.col) || ''] || 'gold'] || bid('O');
+
+  let quiet = 0;                         // our own demolishing does not count as you breaking things
+  const put = (x, d, z, t)=>{ quiet++; try{ setBlock(x, d, z, t); } finally { quiet--; } };
+  const inPlayer = (x, y, z)=>Math.abs(x + .5 - P.x) < .85 && Math.abs(z + .5 - P.z) < .85 && y + 1 > P.y - .1 && y < P.y + 1.9;
+
+  // ================= 1. THE COURT, MADE OF BLOCKS
+  // local layout: front faces the town (+z), y 0 = the first block above the ground, y -1 = the floor (replaces the ground)
+  let COURT_L = null;
+  function courtList(){
+    if(COURT_L) return COURT_L;
+    const L = [];
+    for(let x=-4;x<=4;x++) for(let z=-3;z<=3;z++) L.push([x, -1, z, 'F']);                 // wooden floor inside
+    for(let x=-1;x<=1;x++) L.push([x, -1, 4, 'T']);                                         // doorstep
+    for(let x=-5;x<=5;x++) for(let z=5;z<=6;z++) L.push([x, -1, z, 'T']);                   // porch
+    for(let y=0;y<=4;y++){
+      for(let x=-5;x<=5;x++){
+        L.push([x, y, -4, Math.abs(x) === 5 ? 'T' : 'W']);                                    // back wall
+        if(!(Math.abs(x) <= 1 && y <= 2)) L.push([x, y, 4, Math.abs(x) === 5 ? 'T' : 'W']); // front wall with a big door
+      }
+      for(let z=-3;z<=3;z++) for(const x of [-5, 5]) L.push([x, y, z, (y >= 1 && y <= 2 && (z === -2 || z === 1)) ? 'L' : 'W']);   // side walls with windows
+    }
+    for(const x of [-5, -3, 3, 5]) for(let y=0;y<=4;y++) L.push([x, y, 6, 'W']);           // columns on the porch
+    for(let x=-5;x<=5;x++) for(let z=-4;z<=6;z++) L.push([x, 5, z, (Math.abs(x) === 2 && (z === -1 || z === 2)) ? 'P' : (z === 6 || Math.abs(x) === 5 ? 'O' : 'W')]);   // ceiling with lamps, gold trim
+    for(let y=6;y<=8;y++){ const s = 4 - (y - 6)*2; for(let x=-s;x<=s;x++) for(let z=-4;z<=6;z++) L.push([x, y, z, z === 6 ? 'W' : 'R']); }   // triangle roof
+    return (COURT_L = L);
+  }
+  save.rsCourts = save.rsCourts || {};          // id -> {x, z, G, r} of the courts we built from blocks
+  function cellsOfCourt(c, fn){
+    for(const q of courtList()){ const [dx, dz] = rotXZ(c.r, q[0], q[2]); fn(c.x + dx, q[1], c.z + dz, q[3]); }
+  }
+  function buildCourtBlocks(id, c){
+    let n = 0;
+    cellsOfCourt(c, (x, y, z, k)=>{
+      const d = -(c.G + y + 1); if(d < -60) return;
+      if(y >= 0 && (get(x, d, z) || inPlayer(x, c.G + y, z))) return;
+      put(x, d, z, bid(k)); n++;
+    });
+    c.blk = 1; save.rsCourts[id] = {x:c.x, z:c.z, G:c.G, r:c.r}; persist();
+    return n;
+  }
+  function demolishCourt(id){
+    const c = save.rsCourts[id]; if(!c) return;
+    cellsOfCourt(c, (x, y, z, k)=>{ if(y < 0) return; const d = -(c.G + y + 1); if(get(x, d, z) === bid(k)) put(x, d, z, 0); });
+    delete save.rsCourts[id]; persist();
+  }
+  const sameCourt = (a, b)=>a && b && a.x === b.x && a.z === b.z && a.G === b.G && a.r === b.r;
+  const MST = {};
+  function courtTick(){
+    if(realm !== 0) return;
+    const C = save.cdCourts || {};
+    for(const id in save.rsCourts) if(!sameCourt(save.rsCourts[id], C[id])) demolishCourt(id);       // the court moved: take the old one down
+    for(const id in C){
+      const c = C[id]; if(!c) continue;
+      if(c.blk && sameCourt(save.rsCourts[id], c)) continue;
+      if(Math.hypot(c.x - P.x, c.z - P.z) < 140) buildCourtBlocks(id, c);
+    }
+    // the mayor walks in by the door; if he gets stuck on a wall he pops back to his desk
+    for(const M of CD.MAYORS || []){
+      const m = M.m, r = m.ref; if(!r) continue;
+      const o = m.k === 'a' ? r.pos : {x:r.x, z:r.z}; if(!o) continue;
+      const dd = Math.hypot(M.seat.x - o.x, M.seat.z - o.z), k = (m.k === 'a' ? 'a' : 'b') + (M.T && M.T.id);
+      const s = MST[k] || (MST[k] = {d:dd, t:0});
+      if(dd < 1.2){ s.t = 0; s.d = dd; continue; }
+      if(dd < s.d - .4){ s.d = dd; s.t = 0; continue; }
+      s.t += .5;
+      if(s.t >= 3 && Math.hypot(P.x - o.x, P.z - o.z) > 6){
+        s.t = 0; s.d = 0;
+        if(m.k === 'a'){ r.pos.set(M.seat.x, M.c.G, M.seat.z); r.vy = 0; r.g.position.copy(r.pos); } else { r.x = r.wx = M.seat.x; r.z = r.wz = M.seat.z; }
+      }
+    }
+  }
+  function courtAt(x, y, z){
+    for(const id in save.rsCourts){ const c = save.rsCourts[id]; if(Math.abs(x - c.x) <= 6 && Math.abs(z - c.z) <= 6 && y >= c.G - 1 && y <= c.G + 9) return id; }
+    return null;
+  }
+
+  // ================= 2. RELIGIOUS SITES, MADE OF BLOCKS
+  // each design: list of [x, y, z, block] from the ground up, front (the door) towards +z.  S stone, W white, R roof, A the religion's colour, O gold, G holy glow, L glass
+  const KINDS = {
+    temple:{name:'Temple', r:5, f(){ const L = [];
+      for(let x=-4;x<=4;x++) for(let z=-3;z<=3;z++) L.push([x, 0, z, (Math.abs(x) === 4 || Math.abs(z) === 3) ? 'A' : 'S']);
+      for(let y=1;y<=4;y++){ for(const x of [-4, -2, 2, 4]) for(const z of [-3, 3]) L.push([x, y, z, 'W']); for(const z of [-1, 1]) for(const x of [-4, 4]) L.push([x, y, z, 'W']); L.push([0, y, -3, 'W']); }
+      L.push([0, 1, -1, 'O']); L.push([0, 2, -1, 'G']);
+      for(let x=-4;x<=4;x++) for(let z=-3;z<=3;z++) L.push([x, 5, z, (Math.abs(x) === 4 || Math.abs(z) === 3) ? 'A' : 'S']);
+      for(let y=6;y<=8;y++){ const s = 3 - (y - 6)*1.5|0; for(let x=-s;x<=s;x++) for(let z=-3;z<=3;z++) L.push([x, y, z, z === 3 ? 'S' : 'R']); }
+      L.push([0, 9, 3, 'G']); return L; }},
+    shrine:{name:'Shrine', r:3, f(){ const L = [];
+      for(let x=-2;x<=2;x++) for(let z=-2;z<=2;z++) L.push([x, 0, z, 'S']);
+      for(let y=1;y<=3;y++) for(const x of [-2, 2]) for(const z of [-2, 2]) L.push([x, y, z, 'A']);
+      L.push([0, 1, 0, 'O']); L.push([0, 2, 0, 'G']);
+      for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++) if(Math.abs(x) === 3 || Math.abs(z) === 3 || (Math.abs(x) <= 2 && Math.abs(z) <= 2)) L.push([x, 4, z, (Math.abs(x) === 3 && Math.abs(z) === 3) ? 'A' : 'R']);
+      for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++) L.push([x, 5, z, 'A']);
+      L.push([0, 6, 0, 'G']); return L; }},
+    pyramid:{name:'Pyramid', r:5, f(){ const L = [];
+      for(let y=0;y<=4;y++){ const s = 4 - y; for(let x=-s;x<=s;x++) for(let z=-s;z<=s;z++){
+        if(y > 0 && y < 4 && Math.abs(x) < s && Math.abs(z) < s) continue;                    // hollow inside
+        if(z === s && x === 0 && y >= 1 && y <= 2) continue;                                 // a little door
+        L.push([x, y, z, y === 2 ? 'A' : 'S']); } }
+      L.push([0, 1, 0, 'G']); L.push([0, 5, 0, 'O']); L.push([0, 6, 0, 'G']); return L; }},
+    tower:{name:'Holy Tower', r:2, f(){ const L = [];
+      for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++) L.push([x, 0, z, 'S']);
+      for(let y=1;y<=9;y++) for(let x=-1;x<=1;x++) for(let z=-1;z<=1;z++){ if(!x && !z) continue; if(x === 0 && z === 1 && y <= 2) continue; L.push([x, y, z, y % 3 === 0 ? 'A' : (y >= 7 && (x === 0 || z === 0) ? 'L' : 'S')]); }
+      for(const x of [-1, 1]) for(const z of [-1, 1]) L.push([x, 10, z, 'O']);
+      L.push([0, 10, 0, 'G']); L.push([0, 11, 0, 'G']); return L; }},
+    dome:{name:'Dome Hall', r:4, f(){ const L = [], seen = {};
+      for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++) L.push([x, 0, z, 'S']);
+      for(let y=1;y<=2;y++) for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++){ if(Math.abs(x) !== 3 && Math.abs(z) !== 3) continue; if(z === 3 && x === 0) continue; L.push([x, y, z, (y === 2 && (x === 0 || z === 0)) ? 'L' : 'W']); }
+      for(let y=3;y<=6;y++) for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++){
+        const q = Math.hypot(x, z, (y - 2)*1.15); if(q > 3.7 || q < 2.6) continue; const k = x+','+y+','+z; if(seen[k]) continue; seen[k] = 1; L.push([x, y, z, (y + x + z) % 3 ? 'A' : 'O']); }
+      L.push([0, 1, -1, 'G']); L.push([0, 7, 0, 'G']); return L; }},
+    gate:{name:'Holy Gate', r:3, f(){ const L = [];
+      for(const x of [-2, 2]) for(let y=0;y<=4;y++) L.push([x, y, 0, 'A']);
+      L.push([-1, 3, 0, 'S']); L.push([0, 3, 0, 'O']); L.push([1, 3, 0, 'S']);
+      for(let x=-3;x<=3;x++) L.push([x, 5, 0, 'A']); L.push([-3, 6, 0, 'A']); L.push([3, 6, 0, 'A']);
+      for(let x=-1;x<=1;x++) for(let z=-3;z<=-2;z++) L.push([x, 0, z, 'S']);
+      L.push([0, 1, -2, 'G']); L.push([-2, 0, 2, 'O']); L.push([2, 0, 2, 'O']); return L; }}
+  };
+  const KORDER = ['temple', 'shrine', 'pyramid', 'tower', 'dome', 'gate'];
+  const LC = {};
+  const listOf = k=>LC[k] || (LC[k] = KINDS[k].f());
+  const topOf = k=>{ let t = 0; listOf(k).forEach(q=>{ t = Math.max(t, q[1]); }); return t; };
+  const S = save.religSites = save.religSites || [];
+  const R = ()=>save.relig || {list:[]};
+  const relById = id=>(R().list || []).find(r=>r.id === id);
+  const towns = ()=>(save.nations || []).filter(n=>n && n.pop && n.pop.length);
+  const siteName = s=>{ const r = relById(s.rel); return KINDS[s.k].name + ' of ' + (r ? r.name : s.rn || 'a forgotten religion'); };
+
+  function siteNear(x, z, r){ for(const s of S) if(Math.abs(s.x - x) <= s.r + r + 2 && Math.abs(s.z - z) <= s.r + r + 2) return s; return null; }
+  const _so = NA.siteOk;
+  NA.siteOk = function(x, z, r){ if(siteNear(x, z, (r || 0) + 1)) return null; return _so.apply(this, arguments); };   // nobody builds a house on a temple
+  function clashes(x, z, r, n){
+    if(Math.hypot(x - P.x, z - P.z) < r + 3) return true;
+    if(Math.hypot(x - SHOP.x, z - SHOP.z) < 30 + r) return true;
+    if(CLm) for(const b of CLm.CL.b){ let R2 = 6; try{ R2 = CLm.planOf(b).R; }catch(e){} if(Math.hypot(b.x - x, b.z - z) < R2 + r + 3) return true; }
+    for(const t of trees) if(!t.dead && Math.abs(t.bx - x) <= r + 1 && Math.abs(t.bz - z) <= r + 1) return true;
+    for(const o of (save.nations || []).concat(save.bobCities || [])){ if(o.fx != null && Math.hypot(o.fx - x, o.fz - z) < r + 4) return true; if(Math.hypot(o.x - x, o.z - z) < (o === n ? 9 : 14) + r) return true; }
+    for(const id in save.cdCourts || {}){ const c = save.cdCourts[id]; if(c && Math.hypot(c.x - x, c.z - z) < 9 + r) return true; }
+    return !!siteNear(x, z, r);
+  }
+  function findSpot(n, k){
+    const r = KINDS[k].r;
+    for(let t=0;t<70;t++){
+      const ang = Math.random()*6.283, d = (t < 35 ? 13 : 20) + Math.random()*12, x = Math.floor(n.x + Math.cos(ang)*d), z = Math.floor(n.z + Math.sin(ang)*d);
+      if(clashes(x, z, r, n)) continue;
+      const G = NA.siteOk(x, z, r); if(G === null) continue;
+      let full = false;                                                       // the space above must be empty, all the way up
+      for(let i=-r;i<=r && !full;i++) for(let j=-r;j<=r && !full;j++) for(let y=0;y<=topOf(k);y += 2) if(get(x + i, -(G + y + 1), z + j)){ full = true; break; }
+      if(full) continue;
+      const vx = n.x - x, vz = n.z - z, rot = Math.abs(vx) > Math.abs(vz) ? (vx > 0 ? 1 : 3) : (vz > 0 ? 0 : 2);
+      let deco = false;
+      for(let i=-r-1;i<=r+1;i++) for(let j=-r-1;j<=r+1;j++) if(BIOME.decoAt(x + i, z + j)){ BIOME.gone.add((x + i)+','+(z + j)); deco = true; }
+      if(deco){ save.decoGone = [...BIOME.gone]; if(save.decoGone.length > 4000) save.decoGone = save.decoGone.slice(-4000); try{ BIOME.decoRefresh(); }catch(e){} }
+      return {x, z, G, rot};
+    }
+    return null;
+  }
+  // how many sites a town wants: its main religion gets 1, 2 when it is big, 3 when it is in every town; a second religion with 3 followers here gets 1
+  function wants(n){
+    const c = {}; n.pop.forEach(q=>{ if(q && q.relig){ const r = relById(q.relig); if(r && r.status !== 'flopped') c[q.relig] = (c[q.relig] || 0) + 1; } });
+    const ids = Object.keys(c).map(Number).sort((a, b)=>c[b] - c[a]), out = [];
+    if(!ids.length) return out;
+    const top = relById(ids[0]);
+    let k = 1; if(top.status === 'huge' || top.status === 'everywhere' || c[ids[0]] >= 6) k = 2; if(top.status === 'everywhere') k = 3;
+    for(let i=0;i<k;i++) out.push(ids[0]);
+    if(ids[1] && c[ids[1]] >= 3) out.push(ids[1]);
+    return out.slice(0, 3);
+  }
+  function kindFor(n, rel, nth){
+    const r = relById(rel), h = ((rel || 1)*7 + (r ? r.name.length : 0)*3 + nth*5) % KORDER.length;
+    return KORDER[h];
+  }
+  function startSite(n, rel, k, spot){
+    const r = relById(rel);
+    const s = {id:'rs' + Date.now().toString(36) + Math.floor(Math.random()*999), t:n.id, rel, rn:r ? r.name : '', k, x:spot.x, z:spot.z, G:spot.G, rot:spot.rot, r:KINDS[k].r, i:0, done:0};
+    S.push(s); if(S.length > 36) S.shift();
+    persist();
+    const nm = siteName(s);
+    news('NEWS: The residents of ' + n.name + ' are building the ' + nm + '. It is made of real blocks. Please do not mine it. Okay, maybe a little bit.');
+    if(Math.hypot(n.x - P.x, n.z - P.z) < 100) toast(n.name + ' is building the ' + nm + '! Watch it go up block by block.');
+    return s;
+  }
+  function tryTown(n, force){
+    if(realm !== 0) return null;
+    const mine = S.filter(s=>s.t === n.id);
+    if(mine.length >= 3) return null;
+    if(!force && mine.some(s=>!s.done)) return null;                          // one at a time
+    const W = wants(n), have = {};
+    mine.forEach(s=>{ have[s.rel] = (have[s.rel] || 0) + 1; });
+    for(const rel of W){
+      if(have[rel] > 0){ have[rel]--; continue; }
+      const k = kindFor(n, rel, mine.length), spot = findSpot(n, k);
+      if(!spot){ const k2 = 'gate', sp2 = findSpot(n, k2); return sp2 ? startSite(n, rel, k2, sp2) : null; }
+      return startSite(n, rel, k, spot);
+    }
+    return null;
+  }
+  // put one block of a site (relative to the site), rotated to face the town
+  function cell(s, q){ const [dx, dz] = rotXZ(s.rot || 0, q[0], q[2]); return [s.x + dx, -(s.G + q[1] + 1), s.z + dz]; }
+  function blockOf(s, key){ return key === 'A' ? accId(relById(s.rel) || {col:s.col}) : bid(key); }
+  function placeNext(s){
+    const L = listOf(s.k);
+    while(s.i < L.length){
+      const q = L[s.i++], [x, d, z] = cell(s, q);
+      if(d < -60 || get(x, d, z)) continue;
+      if(inPlayer(x, q[1] + s.G, z)){ s.i--; return false; }                  // wait until you step out of the way
+      put(x, d, z, blockOf(s, q[3]));
+      if(Math.hypot(x - P.x, z - P.z) < 30 && Math.random() < .25) blip(320 + Math.random()*200, .03, .04, 'square');
+      return true;
+    }
+    s.done = 1; persist(); tagFor(s, true);
+    const n = (save.nations || []).find(o=>o.id === s.t);
+    if(Math.hypot(s.x - P.x, s.z - P.z) < 100) toast('The ' + siteName(s) + ' is finished! ' + (n ? 'The residents of ' + n.name + ' are very proud.' : '') + ' (You can mine it, but they might be a bit sad.)');
+    news('NEWS: ' + (n ? n.name : 'A town') + ' finished the ' + siteName(s) + '. Everyone says it is the best ' + KINDS[s.k].name.toLowerCase() + ' they have ever seen.');
+    return false;
+  }
+  function buildNow(s){ let g = 0; while(!s.done && g++ < 2000){ if(placeNext(s) === false && !s.done) break; } return s.done; }
+
+  // ---- floating name tags
+  const TAGS = {};
+  function tagFor(s, redo){
+    let T = TAGS[s.id];
+    const top = siteName(s), n = (save.nations || []).find(o=>o.id === s.t);
+    const sub = (s.done ? 'Built by ' : 'Being built by ') + (n ? n.name : 'the residents');
+    if(T && !redo && T.k === top + sub) return T.sp;
+    if(T){ scene.remove(T.sp); T.sp.material.map.dispose(); T.sp.material.dispose(); }
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const x = cv.getContext('2d');
+    const r = relById(s.rel);
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
+    let fs = 40; x.font = 'bold 40px Arial'; while(x.measureText(top).width > 620 && fs > 16){ fs--; x.font = 'bold ' + fs + 'px Arial'; }
+    x.strokeText(top, 320, 42); x.fillStyle = (r && r.col) || '#ffd84a'; x.fillText(top, 320, 42);
+    fs = 26; x.font = 'bold 26px Arial'; while(x.measureText(sub).width > 620 && fs > 12){ fs--; x.font = 'bold ' + fs + 'px Arial'; }
+    x.strokeText(sub, 320, 96); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 96);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    sp.scale.set(10, 2, 1); sp.position.set(s.x + .5, s.G + topOf(s.k) + 3.2, s.z + .5);
+    sp.traverse(m=>{ m.userData.gone = true; m.userData.noMine = true; });
+    scene.add(sp); TAGS[s.id] = {sp, k:top + sub};
+    return sp;
+  }
+
+  // ---- no religions yet? a couple of residents start one, so there is something to build temples for
+  let seedT = 20;
+  function seed(){
+    const RR = window.__rich; if(!RR || !RR.found) return;
+    const T = towns(); if(!T.length) return;
+    const R0 = R(); if((R0.list || []).some(r=>r.status !== 'flopped')) return;
+    T.slice().sort((a, b)=>Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z)).slice(0, 2).forEach(n=>{ try{ RR.found(n); }catch(e){} });
+  }
+  // ---- the ticks
+  let sT = 0, bT = 0, tagT = 0;
+  function siteTick(dt){
+    if(realm !== 0){ for(const id in TAGS) TAGS[id].sp.visible = false; return; }
+    bT -= dt;
+    if(bT <= 0){ bT = .15;
+      for(const s of S){ if(s.done || !KINDS[s.k]) continue; if(Math.hypot(s.x - P.x, s.z - P.z) > 160) continue; placeNext(s); }
+    }
+    sT -= dt;
+    if(sT <= 0){ sT = 2;
+      seedT -= 2; if(seedT <= 0){ seedT = 240; try{ seed(); }catch(e){} }
+      for(const n of towns()){
+        if(Math.hypot(n.x - P.x, n.z - P.z) > 150 || P.y < -12) continue;
+        n.rsT = (n.rsT == null ? 4 : n.rsT) - 2; if(n.rsT > 0) continue;
+        n.rsT = 25; try{ tryTown(n); }catch(e){ console.warn('LN-relsite', e); }
+      }
+      for(const s of S){ const r = relById(s.rel); if(r && r.name !== s.rn){ s.rn = r.name; tagFor(s, true); } }
+    }
+    tagT -= dt;
+    if(tagT <= 0){ tagT = .5;
+      for(const s of S){ if(!KINDS[s.k]) continue; const d = Math.hypot(s.x - P.x, s.z - P.z); if(d < 130){ tagFor(s).visible = true; } else if(TAGS[s.id]) TAGS[s.id].sp.visible = false; }
+    }
+  }
+  function siteAt(x, y, z){
+    for(const s of S){ if(Math.abs(x - s.x) <= s.r + 1 && Math.abs(z - s.z) <= s.r + 1 && y >= s.G && y <= s.G + topOf(s.k) + 1) return s; }
+    return null;
+  }
+
+  // ---- mining a temple or the court: the residents notice (kid-friendly)
+  const SAD = ['Hey! That is our ', 'Oh no, not the ', 'Excuse me! Please be gentle with the '];
+  const told = new Set();
+  const _sb = setBlock;
+  setBlock = function(x, d, z, t){
+    let prev = 0;
+    try{ if(!quiet && !t && realm === 0 && Math.abs(x + .5 - P.x) < 9 && Math.abs(z + .5 - P.z) < 9) prev = get(x, d, z); }catch(e){}
+    const out = _sb.apply(this, arguments);
+    if(prev) try{
+      const y = -d - 1, s = siteAt(x, y, z);
+      if(s && !told.has(s.id)){
+        told.add(s.id); const r = relById(s.rel), n = (save.nations || []).find(o=>o.id === s.t);
+        toast((n ? 'The residents of ' + n.name : 'The followers') + ': "' + pick(SAD) + KINDS[s.k].name.toLowerCase() + (r ? ' of ' + r.name : '') + '! Okay... you can keep that block. Just one. Maybe two."');
+      }
+      const cid = courtAt(x, y, z);
+      if(cid && CD.townById && CD.offend){ const T = CD.townById(cid); if(T) CD.offend(T, 'break'); }
+    }catch(e){}
+    return out;
+  };
+
+  // ---- the Religions panel: each religion lists its holy places
+  const RRu = window.__religRules;
+  if(RRu && RRu.html){
+    const _h = RRu.html;
+    RRu.html = function(r){
+      let h = _h.apply(this, arguments);
+      try{
+        const mine = S.filter(s=>s.rel === r.id && KINDS[s.k]);
+        if(mine.length){
+          const parts = mine.map(s=>{ const n = (save.nations || []).find(o=>o.id === s.t); return KINDS[s.k].name + ' in ' + (n ? n.name : 'a lost town') + (s.done ? '' : ' (being built)'); });
+          h += '<div style="font-size:13px"><b>Holy places:</b> ' + parts.join(', ') + '</div>';
+        }
+      }catch(e){}
+      return h;
+    };
+  }
+
+  // ================= the loop
+  let last = performance.now(), cT = 0;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      cT -= dt; if(cT <= 0){ cT = .5; courtTick(); }
+      siteTick(dt);
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-relsite', e); } }
+  })(last);
+  window.__relsite = {S, KINDS, KORDER, listOf, wants, tryTown, startSite, findSpot, placeNext, buildNow, cell, blockOf, bid, siteAt, courtAt, courtList, buildCourtBlocks, demolishCourt, cellsOfCourt, courtTick, seed, tagFor, TAGS};
+})();
+/* LN-relsite end */
 
 
 
