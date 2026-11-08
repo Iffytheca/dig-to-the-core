@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 211 (Oct 31)';
+  window.__BUILD = 'Build 212 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3403,6 +3403,8 @@ function makeCustomTex(L){
     g.fillStyle = rgb(sp.c2); g.fillRect(0,3,3,4); g.fillRect(13,3,3,4);
     g.fillStyle = 'rgb(255,255,255)'; g.fillRect(1,4,1,2); g.fillRect(14,4,1,2);
     g.fillStyle = 'rgb(255,200,220)'; g.fillRect(6,10,4,1); g.fillRect(7,9,2,3);
+  } else if(/^dp(gold|diamond|rainbow|void)$/.test(pat || '')){   /* LN-diaperpigs */
+    if(window.__dpTex) window.__dpTex(g, pat, sp); else { g.fillStyle = rgb(sp.c1); g.fillRect(0,0,16,16); }
   } else if(pat === 'plain'){
     for(let y=0;y<16;y++) for(let x=0;x<16;x++){
       const n = (strHash(L.name+x+'_'+y)-.5)*16, base = strHash(L.name+y+'-'+x) < .18 ? sp.c2 : sp.c1;
@@ -18795,7 +18797,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const cv = document.createElement('canvas'); cv.width = 640; cv.height = 128; const x = cv.getContext('2d');
     x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
     x.font = 'bold 36px system-ui,sans-serif'; x.strokeText(n.name, 320, 40); x.fillStyle = '#ffe680'; x.fillText(n.name, 320, 40);
-    x.font = 'bold 24px system-ui,sans-serif'; const sub = 'Home of the '+plural(n.animal); x.strokeText(sub, 320, 90); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 90);
+    x.font = 'bold 24px system-ui,sans-serif'; const sub = 'Home of the '+plural(n.animal) + ((window.__noRelig && window.__noRelig(n)) ? '  -  Religion: none' : ''); x.strokeText(sub, 320, 90); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 90);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
     sp.scale.set(16, 3.2, 1); sp.position.set((n.fx||n.x)+2, n.G + 10.5, n.fz||n.z); scene.add(sp);
     return (nameTags[n.id] = sp);
@@ -25175,7 +25177,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return 'The Church of the ' + rnd(THING) + ' ' + R.next;
   }
   function found(n, q){
-    n = n || rnd(towns()); if(!n) return null;
+    const NR = window.__noRelig;     /* LN-diaperpigs: some towns want no religion at all */
+    if(n && NR && NR(n)){ if(Math.hypot(P.x - n.x, P.z - n.z) < 90) toast(n.name + ' does not want a religion. ' + rnd(['They are happy just the way they are.', 'They said no thank you, very politely.', 'They would rather have a nap.'])); return null; }
+    n = n || rnd(towns().filter(m=>!(NR && NR(m)))); if(!n) return null;
     q = q || rnd(adults(n).length ? adults(n) : n.pop); if(!q) return null;
     const r = {id:R.next++, name:makeName(), rule:rnd(RULES), founder:q.nm, town:n.name, col:rnd(COL), appeal:.15 + Math.random()*.85, born:Date.now(), status:'new', peak:1, everyTown:false};
     R.list.push(r); q.relig = r.id;
@@ -25200,6 +25204,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     active.forEach(r=>{
       r.appeal = Math.max(.05, Math.min(1, r.appeal + (Math.random() - .5)*.06));
       towns().forEach(n=>{
+        if((window.__noRelig && window.__noRelig(n))) return;                                             // LN-diaperpigs: no religion here, ever
         const here = n.pop.filter(q=>q && q.relig === r.id).length;
         n.pop.forEach(q=>{
           if(!q) return;
@@ -25207,12 +25212,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
           if(here > 0 && Math.random() < r.appeal*.05*(q.relig ? .4 : 1)) q.relig = r.id;
         });
         if(here >= 2 && Math.random() < r.appeal*.035){                       // missionaries visit another town
-          const o = rnd(towns().filter(m=>m !== n)); if(o){ const q = rnd(o.pop); if(q && q.relig !== r.id){ q.relig = r.id;
+          const o = rnd(towns().filter(m=>m !== n && !(window.__noRelig && window.__noRelig(m)))); if(o){ const q = rnd(o.pop); if(q && q.relig !== r.id){ q.relig = r.id;
             if(!r.towns || r.towns.indexOf(o.name) < 0){ r.towns = (r.towns || []).concat(o.name); news('NEWS: ' + r.name + ' has reached ' + o.name + '!'); } } }
         }
       });
     });
-    const {c, tw} = counts(), all = towns();
+    const {c, tw} = counts(), all = towns().filter(m=>!(window.__noRelig && window.__noRelig(m)));
     active.forEach(r=>{
       const k = c[r.id] || 0; r.peak = Math.max(r.peak || 1, k); r.followers = k; r.townN = (tw[r.id] || []).length;
       if(k === 0){ r.status = 'flopped'; news('NEWS: ' + r.name + ' has FLOPPED. Nobody follows "' + r.rule + '" any more.'); return; }
@@ -25973,7 +25978,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function mainView(){
     const n = town; pB.innerHTML = '';
     pT.textContent = 'Introduce something to ' + n.name;
-    pS.textContent = (n.animal ? 'A ' + n.animal + ' town' : 'A town') + ' with ' + n.pop.length + ' residents' + (n.colonyOf ? ', a colony right now' : '') + (n.jewel ? ', famous for Tripod Gem jewelry' : '') + '. Pick what to bring them.';
+    pS.textContent = (n.animal ? 'A ' + n.animal + ' town' : 'A town') + ' with ' + n.pop.length + ' residents' + (n.colonyOf ? ', a colony right now' : '') + (n.jewel ? ', famous for Tripod Gem jewelry' : '') + ((window.__noRelig && window.__noRelig(n)) ? '. Religion: none (they do not want one)' : '') + '. Pick what to bring them.';
     btn('Independence', ()=>{
       if(n.colonyOf && S.independence){ S.independence(n, true); toast('You helped ' + n.name + ' become independent!'); }
       else { news('NEWS: ' + n.name + ' declared independence from... nobody. They were already free. They had a parade anyway.', true); toast(n.name + ' was already free, so they just had a big parade.'); try{ (window.__wars || {}).setMood && window.__wars.setMood(n, 'Happy', 'loved the parade.'); }catch(e){} }
@@ -29311,6 +29316,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const Z0 = -49000, Z1 = -36000, ZMIN = -88000;   /* LN-flip: one more row */   /* LN-moon: the Moon sits in its own row south of them */           // they sit south of Novaria, still inside the Next Universe
   // [name, hardness, value, base colour, speck colours, glow]
   const L = (n, h, v, base, sp, glow)=>({name:n, th:4, h, v, base, amp:20, sp, p:.35, glow:glow || 0});
+  const EB = (n, fb)=>{ const b = BLOCKS.find(q=>q.name === n) || BLOCKS.find(q=>q.name === fb) || BLOCKS[0]; return Object.assign({}, b, {th:4}); };   /* LN-diaperpigs: Server T is made of blocks that already exist */
   const PL = [
     {k:'sugar', name:'Planet Sugarnova', x0:40000, x1:46250, fl:'canopy', grav:1, sky:[[1, .62, .85], [.62, .9, 1]], cloud:[1, .85, .95], fog:.0,
       blurb:'A planet made of candy: candy cane forests, gumdrop hills and chocolate swamps.',
@@ -29472,7 +29478,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       biomes:[{k:'pillars', name:'Root Forest'}, {k:'domes', name:'Bubble Hills'}, {k:'pits', name:'Sky Puddles'}, {k:'spikes', name:'Stalactite Fields'}, {k:'floats', name:'Falling Islands'}, {k:'hills', name:'Ceiling Meadows'}],
       animals:{flipcow:{name:'Upside-Down Cow', hp:90, r:.8, yo:.7, speed:1.2, reward:1200, quips:['It moos. The moo comes out the wrong way up.', 'The Upside-Down Cow thinks YOU are the upside-down one.']},
                groundbat:{name:'Ground Bat', hp:40, r:.5, yo:.4, speed:2.4, hop:true, reward:800, quips:['It hangs from the floor. Somehow.', 'The Ground Bat flaps along the ground and bumps into a root.']}},
-      core:'YOU REACHED THE BOTTOM CORE! The other half of the Center Core. It hums back at the top half. The Janitor has never been here. You have.'}
+      core:'YOU REACHED THE BOTTOM CORE! The other half of the Center Core. It hums back at the top half. The Janitor has never been here. You have.'},
+    {k:'srvt', srv:1, name:'SERVER T', x0:46250, x1:52500, z0:-88000, z1:-75000, fl:'canopy', grav:1, sky:[[.42, .62, 1], [.85, .7, 1]], cloud:[1, .95, 1], fog:0,   /* LN-diaperpigs */
+      blurb:'A server full of rare diaper pigs: golden, diamond, rainbow and void.',
+      layers:['Soil', 'Dirt', 'Clay', 'Rock', 'Hard Rock', 'Bedrock'].map(q=>EB(q, 'Rock')),
+      ores:[['Gold Ore',1,[255,210,60],[1,2,3],.05,.3], ['Diamond Ore',1,[120,230,255],[3,4],.035,.5], ['Amethyst Crystal',1,[180,100,255],[4,5],.025,.6]],
+      surf:{top:EB('Grass', 'Grass'), trunk:EB('Scaffold Plank', 'Dirt'), canopy:EB('Mossy Stone', 'Grass'), dome:EB('Hill Loam', 'Dirt'), pit:EB('River Sand', 'Clay'), spike:EB('Mountain Granite', 'Rock')},
+      biomes:[{k:'hills', name:'Spawn Plains'}, {k:'pillars', name:'Server Forest'}, {k:'domes', name:'Lag Hills'}, {k:'hills', name:'Pig Pen Meadows'}, {k:'pits', name:'Ping Ponds'}],
+      animals:{dpgold:{name:'Golden Diaper Pig', hp:110, r:.8, yo:1.2, speed:1.6, reward:2500, quips:['Oink!']}, dpdiamond:{name:'Diamond Diaper Pig', hp:75, r:.8, yo:1.2, speed:1.6, reward:8000, quips:['Oink!']},
+               dprainbow:{name:'Rainbow Diaper Pig', hp:62, r:.8, yo:1.2, speed:1.6, reward:20000, quips:['Oink!']}, dpvoid:{name:'Void Diaper Pig', hp:53, r:.8, yo:1.2, speed:1.6, reward:75000, quips:['Oink!']}},
+      core:'YOU REACHED THE BOTTOM OF SERVER T! The server is still running. Somewhere, a diaper pig oinks.'}
   ];
   PL.forEach(p=>{ p.z0 = p.z0 || Z0; p.z1 = p.z1 || Z1; p.cx = Math.round((p.x0 + p.x1)/2); p.cz = Math.round((p.z0 + p.z1)/2); });
   const inAny = (x, z)=>z >= ZMIN && z < Z1 && x >= UPPER_EDGE && x < 65000;
@@ -29729,16 +29744,16 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
 
   { const _t = toast; toast = function(msg){
-      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost' && !cur().era && !cur().flip) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
+      if(typeof msg === 'string' && cur() && cur().k !== 'moon' && cur().k !== 'lost' && !cur().era && !cur().flip && !cur().srv) msg = msg.replace(/ Press R, then visit the shopkeeper \(F\), or turn on Mine Anything \(K\)\./, ' Get a stronger animal pickaxe at the Novaria Station (PLANETS, then NEXT UNIVERSE, then H), or turn on Mine Anything (K).');
       return _t.call(this, msg); }; }
   /* ------------------------------------------------ travel, R, knock-out */
   function goPlanet(p){
-    if(p.k !== 'moon' && p.k !== 'lost' && !p.era && !p.flip && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
+    if(p.k !== 'moon' && p.k !== 'lost' && !p.era && !p.flip && !p.srv && window.__wbOpen && !window.__wbOpen()){ toast(save.toiCore ? 'Locked: beat Mister Whisker Bucks at the shop (press F next to him) to open the Next Universe and its planets.' : 'Locked: first reach the core of TOI-1853b, then beat Mister Whisker Bucks to open the Next Universe and its planets.'); return; }   /* LN-planetlock */
     P.x = p.cx + .5; P.z = p.cz + 2.5; P.y = 2; P.vx = P.vy = P.vz = 0; dirty = true;
     save.planetVisits = save.planetVisits || {}; const first = !save.planetVisits[p.k]; save.planetVisits[p.k] = (save.planetVisits[p.k] || 0) + 1; persist();
     toast('WHOOSH! Welcome to ' + p.name + '! ' + p.blurb);
     blip(240, .4, .2, 'sine'); setTimeout(()=>blip(720, .4, .15, 'sine'), 200);
-    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' || p.era || p.flip ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
+    if(first) news('BREAKING: A miner landed on ' + p.name + (p.k === 'moon' || p.k === 'lost' || p.era || p.flip || p.srv ? '. ' : ' in the Next Universe. ') + rnd(['The locals are very confused.', 'Nobody there has ever seen a pickaxe.', 'Scientists say it is "extremely real".']));
   }
   const _pr = window.__planetR;
   window.__planetR = function(){
@@ -36034,7 +36049,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const grp = new THREE.Group(); grp.position.set(c.x + .5, c.G, c.z + .5); grp.rotation.y = c.r*Math.PI/2;
     const WALL = 0xcfc4a8, TRIM = 0xa89f88, WOOD = 0x5a3418, RED = 0x9a2020;
     part(grp, 2, .07, 5, RED, 0, .05, 1.2);                   // red carpet (the floor, walls and roof are real blocks: LN-relsite)
-    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({map:signTex()})); sg.position.set(0, 6.55, 6.52); grp.add(sg);
+    const sg = new THREE.Mesh(new THREE.PlaneGeometry(3.6, .9), new THREE.MeshBasicMaterial({map:signTex()})); sg.position.set(0, 7.5, 7.53); grp.add(sg);
     // inside: the judge's platform, desk, chair, gavel, flag, witness stand, a jury of rubber ducks and benches
     part(grp, 4.4, .15, 1.9, WOOD, 0, .075, -2.85);
     part(grp, 4.2, .9, .8, WOOD, 0, .45, -1.75); part(grp, 4.4, .1, 1, 0x7a4a24, 0, .95, -1.75); part(grp, 3, .1, .04, 0xffd030, 0, .7, -1.33);
@@ -36051,7 +36066,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     for(const z of [-1.2, -.4, .4]){ part(grp, .34, .3, .34, 0xffd84a, -3.4, .6, z); part(grp, .2, .2, .2, 0xffd84a, -3.4, .85, z + .06); part(grp, .12, .06, .14, 0xff8a20, -3.4, .83, z + .2); }
     for(const x of [-2.2, 2.2]) for(const z of [1.1, 2.5]){ part(grp, 2.4, .1, .55, 0x8a5a2a, x, .45, z); part(grp, 2.4, .5, .08, 0x8a5a2a, x, .75, z + .27); part(grp, .1, .4, .4, 0x5a3418, x - 1.05, .2, z); part(grp, .1, .4, .4, 0x5a3418, x + 1.05, .2, z); }
     grp.traverse(o=>{ if(o.isMesh) o.castShadow = o.receiveShadow = false; });
-    const lab = bigTag('COURT', T.k === 'b' ? 'The court of '+T.name+'. Judge: the Mayor' : 'The court of '+T.name+'. Judge: the Mayor'); lab.position.set(0, 11, 1); grp.add(lab);
+    const lab = bigTag('COURT', T.k === 'b' ? 'The court of '+T.name+'. Judge: the Mayor' : 'The court of '+T.name+'. Judge: the Mayor'); lab.position.set(0, 17.6, 0); grp.add(lab);
     NOM(grp); scene.add(grp);
     const sol = [aabb(c, 0, -1.75, 4.4, 1, 0, 1), aabb(c, 3.1, -1.4, 1.2, 1.2, 0, 1)];     // walls are real blocks now (LN-relsite)
     return {grp, sol, on:false, gav, c};
@@ -36073,7 +36088,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(s.siteT <= 0){
         s.siteT = 10; c = pickSite(T);
         if(c){ save.cdCourts[T.id] = c; persist();
-          news('NEWS: The mayor of '+T.name+' built a COURT. It has columns, a triangle roof and a jury of rubber ducks.');
+          news('NEWS: The mayor of '+T.name+' built a COURTHOUSE. It has six tall columns, gold scales of justice, a gold dome and a jury of rubber ducks.');
           if(d < 100) toast('The mayor of '+T.name+' built a COURT! Find the mayor at the judge\'s desk and press F.'); }
       }
     }
@@ -36501,7 +36516,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length - 1)); id = BLOCKS.length;
       }
       if(!id) id = k === 'G' ? (cm('lamp') || NA.ID.duck) : cm('plaster');
-    } else id = ({W:()=>cm('plaster'), R:()=>cm('roof'), L:()=>cm('glass'), O:()=>NA.ID.gold || cm('gold'), F:()=>cm('floor'), T:()=>cm('stone'), P:()=>cm('lamp')}[k] || (()=>cm('plaster')))();
+    } else id = ({K:()=>nameId('Limestone') || nameId('Chalk') || cm('plaster'), M:()=>nameId('White Marble') || cm('plaster'), C:()=>nameId('Quartz') || nameId('Quartz Block') || nameId('White Marble') || cm('plaster'), N:()=>nameId('Mountain Stone') || cm('stone'),
+      W:()=>cm('plaster'), R:()=>cm('roof'), L:()=>cm('glass'), O:()=>NA.ID.gold || cm('gold'), F:()=>cm('floor'), T:()=>cm('stone'), P:()=>cm('lamp')}[k] || (()=>cm('plaster')))();
     return (IDS[k] = id || 2);
   }
   ['S', 'G'].forEach(k=>{ if(nameId(CUST[k].name)) bid(k); });           // blocks made in an earlier game come back at once
@@ -36515,9 +36531,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   // ================= 1. THE COURT, MADE OF BLOCKS
   // local layout: front faces the town (+z), y 0 = the first block above the ground, y -1 = the floor (replaces the ground)
-  let COURT_L = null;
-  function courtList(){
-    if(COURT_L) return COURT_L;
+  let COURT_L = null, COURT_OLD = null;
+  // LN-diaperpigs: the court of Build 211 looked like a house. This is the old shape (to take old courts down) and the new COURTHOUSE
+  function courtOld(){
+    if(COURT_OLD) return COURT_OLD;
     const L = [];
     for(let x=-4;x<=4;x++) for(let z=-3;z<=3;z++) L.push([x, -1, z, 'F']);                 // wooden floor inside
     for(let x=-1;x<=1;x++) L.push([x, -1, 4, 'T']);                                         // doorstep
@@ -36532,6 +36549,41 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     for(const x of [-5, -3, 3, 5]) for(let y=0;y<=4;y++) L.push([x, y, 6, 'W']);           // columns on the porch
     for(let x=-5;x<=5;x++) for(let z=-4;z<=6;z++) L.push([x, 5, z, (Math.abs(x) === 2 && (z === -1 || z === 2)) ? 'P' : (z === 6 || Math.abs(x) === 5 ? 'O' : 'W')]);   // ceiling with lamps, gold trim
     for(let y=6;y<=8;y++){ const s = 4 - (y - 6)*2; for(let x=-s;x<=s;x++) for(let z=-4;z<=6;z++) L.push([x, y, z, z === 6 ? 'W' : 'R']); }   // triangle roof
+    return (COURT_OLD = L);
+  }
+  // front faces the town (+z). A wide marble plaza and a big step up to a row of six tall white columns, a triangle pediment with gold
+  // scales of justice, a flat-roofed hall behind with tall windows, and a gold dome on top. Keys: K cream stone walls, M marble, C white column,
+  // N grey stone trim, O gold, L glass, P lamp, F wood floor
+  function courtList(){
+    if(COURT_L) return COURT_L;
+    const L = [], at = {};
+    const add = (x, y, z, k)=>{ const key = x + ',' + y + ',' + z; if(at[key] != null){ L[at[key]][3] = k; return; } at[key] = L.length; L.push([x, y, z, k]); };
+    for(let x=-5;x<=5;x++) for(let z=-3;z<=3;z++) add(x, -1, z, 'F');                     // wooden floor inside the hall
+    for(let x=-7;x<=7;x++) for(let z=4;z<=8;z++) add(x, -1, z, z === 8 ? 'N' : 'M');        // marble plaza in front
+    for(let x=-7;x<=7;x++) for(let z=5;z<=7;z++) add(x, 0, z, Math.abs(x) === 7 || z === 7 ? 'N' : 'M');   // the big front step the columns stand on
+    for(let y=0;y<=6;y++){
+      for(let x=-6;x<=6;x++){
+        const cor = Math.abs(x) === 6;
+        add(x, y, -4, cor || y === 6 ? 'N' : 'K');                                           // back wall
+        const door = Math.abs(x) <= 1 && y <= 3, win = Math.abs(x) === 4 && y >= 2 && y <= 4;
+        if(!door) add(x, y, 4, cor || y === 6 ? 'N' : win ? 'L' : (Math.abs(x) <= 1 && y === 4 ? 'O' : 'K'));   // front wall: a tall door with a gold top, two windows
+      }
+      for(let z=-3;z<=3;z++) for(const x of [-6, 6]) add(x, y, z, y === 6 ? 'N' : (y >= 2 && y <= 4 && (z === -2 || z === 0 || z === 2)) ? 'L' : 'K');   // tall side windows
+    }
+    for(const x of [-6, -4, -2, 2, 4, 6]){ add(x, 1, 6, 'N'); for(let y=2;y<=5;y++) add(x, y, 6, 'C'); add(x, 6, 6, 'N'); }   // SIX TALL COLUMNS
+    for(const x of [-7, 7]){ add(x, 1, 7, 'N'); add(x, 2, 7, 'P'); }                        // two lanterns on the step
+    for(let x=-6;x<=6;x++) for(let z=-4;z<=3;z++) add(x, 7, z, Math.abs(x) === 6 || z === -4 ? 'N' : ((Math.abs(x) === 3 && (z === -2 || z === 1)) ? 'P' : 'K'));   // flat roof with lamps in the ceiling
+    for(let x=-7;x<=7;x++) for(let z=4;z<=7;z++) add(x, 7, z, 'N');                         // the beam over the columns (the COURT sign goes on its front)
+    const PED = [6, 4, 2, 0];                                                                // the triangle pediment
+    PED.forEach((w, i)=>{ const y = 8 + i; for(let x=-w;x<=w;x++) for(let z=4;z<=7;z++) add(x, y, z, z < 7 ? 'N' : (Math.abs(x) === w ? 'N' : 'M')); });
+    // gold scales of justice on the pediment: the beam, the post, two pans
+    for(let x=-2;x<=2;x++) add(x, 10, 7, 'O');
+    add(0, 11, 7, 'O'); add(0, 9, 7, 'O'); add(0, 8, 7, 'O'); add(-3, 9, 7, 'O'); add(3, 9, 7, 'O');
+    for(const x of [-4, -3, -2, 2, 3, 4]) add(x, 8, 7, 'O');
+    // the dome on the hall: a round drum with windows, then a gold dome and a light on top
+    for(let y=8;y<=10;y++) for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++){ const r = Math.hypot(x, z + .5); if(r > 1.7 && r <= 2.9) add(x, y, z, y === 9 && (x === 0 || z === 0 || z === -1) ? 'L' : y === 10 ? 'N' : 'M'); }
+    for(let y=11;y<=13;y++) for(let x=-3;x<=3;x++) for(let z=-3;z<=3;z++){ const r = Math.hypot(x, z + .5, (y - 10.6)*1.15); if(r > 1.6 && r <= 2.95) add(x, y, z, 'O'); }
+    add(0, 13, 0, 'O'); add(0, 13, -1, 'O'); add(0, 14, 0, 'P'); add(0, 15, 0, 'O');
     return (COURT_L = L);
   }
   save.rsCourts = save.rsCourts || {};          // id -> {x, z, G, r} of the courts we built from blocks
@@ -36545,7 +36597,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(y >= 0 && (get(x, d, z) || inPlayer(x, c.G + y, z))) return;
       put(x, d, z, bid(k)); n++;
     });
-    c.blk = 1; save.rsCourts[id] = {x:c.x, z:c.z, G:c.G, r:c.r}; persist();
+    c.blk = 1; save.rsCourts[id] = {x:c.x, z:c.z, G:c.G, r:c.r, v:window.__courtV || 2}; persist();
     return n;
   }
   function demolishCourt(id){
@@ -36554,10 +36606,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     delete save.rsCourts[id]; persist();
   }
   const sameCourt = (a, b)=>a && b && a.x === b.x && a.z === b.z && a.G === b.G && a.r === b.r;
+  // LN-diaperpigs: an old house-shaped court (no version) comes down block by block, then the courthouse goes up in its place
+  const oldBid = k=>k === 'W' ? cm('plaster') : bid(k);
+  function demolishOld(id){
+    const c = save.rsCourts[id]; if(!c) return;
+    for(const q of courtOld()){ if(q[1] < 0) continue; const [dx, dz] = rotXZ(c.r, q[0], q[2]), x = c.x + dx, z = c.z + dz, d = -(c.G + q[1] + 1); if(get(x, d, z) === oldBid(q[3])) put(x, d, z, 0); }
+    delete save.rsCourts[id]; persist();
+  }
   const MST = {};
   function courtTick(){
     if(realm !== 0) return;
     const C = save.cdCourts || {};
+    for(const id in save.rsCourts){ const o = save.rsCourts[id]; if(o && (o.v || 0) < (window.__courtV || 2)){ demolishOld(id); if(C[id]) C[id].blk = 0; } }
     for(const id in save.rsCourts) if(!sameCourt(save.rsCourts[id], C[id])) demolishCourt(id);       // the court moved: take the old one down
     for(const id in C){
       const c = C[id]; if(!c) continue;
@@ -36580,7 +36640,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
   }
   function courtAt(x, y, z){
-    for(const id in save.rsCourts){ const c = save.rsCourts[id]; if(Math.abs(x - c.x) <= 6 && Math.abs(z - c.z) <= 6 && y >= c.G - 1 && y <= c.G + 9) return id; }
+    for(const id in save.rsCourts){ const c = save.rsCourts[id]; if(Math.abs(x - c.x) <= 8 && Math.abs(z - c.z) <= 8 && y >= c.G - 1 && y <= c.G + 16) return id; }
     return null;
   }
 
@@ -36691,6 +36751,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   function tryTown(n, force){
     if(realm !== 0) return null;
+    if((window.__noRelig && window.__noRelig(n))) return null;                                        // LN-diaperpigs: a town with no religion builds no temples
     const mine = S.filter(s=>s.t === n.id);
     if(mine.length >= 3) return null;
     if(!force && mine.some(s=>!s.done)) return null;                          // one at a time
@@ -36753,7 +36814,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const RR = window.__rich; if(!RR || !RR.found) return;
     const T = towns(); if(!T.length) return;
     const R0 = R(); if((R0.list || []).some(r=>r.status !== 'flopped')) return;
-    T.slice().sort((a, b)=>Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z)).slice(0, 2).forEach(n=>{ try{ RR.found(n); }catch(e){} });
+    T.filter(n=>!(window.__noRelig && window.__noRelig(n))).sort((a, b)=>Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z)).slice(0, 2).forEach(n=>{ try{ RR.found(n); }catch(e){} });
   }
   // ---- the ticks
   let sT = 0, bT = 0, tagT = 0;
@@ -36831,9 +36892,316 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       siteTick(dt);
     }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-relsite', e); } }
   })(last);
-  window.__relsite = {S, KINDS, KORDER, listOf, wants, tryTown, startSite, findSpot, placeNext, buildNow, cell, blockOf, bid, siteAt, courtAt, courtList, buildCourtBlocks, demolishCourt, cellsOfCourt, courtTick, seed, tagFor, TAGS};
+  window.__relsite = {courtOld, demolishOld, S, KINDS, KORDER, listOf, wants, tryTown, startSite, findSpot, placeNext, buildNow, cell, blockOf, bid, siteAt, courtAt, courtList, buildCourtBlocks, demolishCourt, cellsOfCourt, courtTick, seed, tagFor, TAGS};
 })();
 /* LN-relsite end */
+/* LN-diaperpigs start: some towns have NO religion, the court looks like a real courthouse, RARE DIAPER PIGS (golden, diamond, rainbow, void) with diaper blocks you can craft, and SERVER T full of them (Irfan 2026-11-08 "some country have no religion and also court is not a house and add rare diaper pig there diaper are golden,diamond,rainbow,void gold is the most common but rare but void is rarest and spawn me a server called t to spawn so many of them and they can craft block like golden diaper block diamond diaper block void diaper block rainbow diaper block") */
+(function(){
+  const pick = q=>q[Math.floor(Math.random()*q.length)];
+  const news = t=>{ try{ const Q = window.__newsQ = window.__newsQ || []; Q.unshift(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const hs = s=>{ let h = 2166136261; s = String(s); for(let i=0;i<s.length;i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); h ^= h >>> 13; h = Math.imul(h, 1274126177); return ((h >>> 0) % 10000)/10000; };
+
+  // ================= 1. TOWNS WITH NO RELIGION
+  // each town is decided once (from its id) and kept in the save. The first town always gets to have religions, and once there are a few, at least one town has none.
+  save.noRelig = save.noRelig || {};
+  const NR_LINES = ['They say they are too busy napping.', 'They are happy just the way they are.', 'They would rather have a pizza party.', 'They said "no thank you" very politely.', 'They prefer to just look at clouds.'];
+  function noRelig(n){
+    if(!n || n.id == null) return false;
+    const M = save.noRelig, k = String(n.id);
+    if(M[k] == null){
+      const vals = Object.keys(M).map(q=>M[q]), rel = vals.filter(v=>!v).length, none = vals.length - rel;
+      const sites = (save.religSites || []).some(s=>s.t === n.id);
+      let v = !sites && hs('norelig' + k) < .45;
+      if(v && rel === 0) v = false;                               // keep at least one town that can have religions
+      if(!v && !sites && none === 0 && rel >= 2) v = true;         // and make sure some towns have none
+      M[k] = v ? 1 : 0;
+      try{ persist(); }catch(e){}
+    }
+    return M[k] === 1;
+  }
+  window.__noRelig = noRelig;
+  const told = new Set();
+  function religTick(){
+    if(realm !== 0) return;
+    for(const n of save.nations || []){
+      if(!n || !n.pop || !n.pop.length || !noRelig(n)) continue;
+      n.pop.forEach(q=>{ if(q && q.relig) q.relig = 0; });                 // nobody here follows a religion, even after moving in
+      if(!told.has(n.id) && Math.hypot(n.x - P.x, n.z - P.z) < 35 && P.y > -6){ told.add(n.id); toast(n.name + ' has no religion. ' + pick(NR_LINES)); }
+    }
+  }
+
+  // ================= 2. THE COURTHOUSE: old house-shaped courts from Build 211 come down and go back up in the new shape (see LN-relsite)
+  // (the shape itself lives in LN-relsite's courtList; this just keeps the version number in one place)
+  window.__courtV = 2;
+
+  // ================= 3. RARE DIAPER PIGS
+  const KINDS = [
+    {k:'dpgold', name:'Golden Diaper Pig', item:'Golden Diaper', block:'Golden Diaper Block', ab:'GD', w:60, sw:50, reward:2500, v:1200, col:'#ffd84a', rgb:[255,206,50], c1:[255,206,50], c2:[200,140,20], glow:.25,
+      quips:['It shines like a trophy. Oink!', 'A golden oink. Very fancy.', 'The Golden Diaper Pig sparkles one last time.'],
+      hi:'A GOLDEN DIAPER PIG appeared! It shines like treasure.'},
+    {k:'dpdiamond', name:'Diamond Diaper Pig', item:'Diamond Diaper', block:'Diamond Diaper Block', ab:'DD', w:25, sw:27, reward:8000, v:4000, col:'#7ae8ff', rgb:[120,230,255], c1:[130,232,255], c2:[60,170,220], glow:.3,
+      quips:['Shiny! Like, really really shiny.', 'A diamond diaper. Nobody knows how.', 'Oink. Sparkle. Oink.'],
+      hi:'A DIAMOND DIAPER PIG appeared! Its diaper is made of diamond!'},
+    {k:'dprainbow', name:'Rainbow Diaper Pig', item:'Rainbow Diaper', block:'Rainbow Diaper Block', ab:'RD', w:12, sw:16, reward:20000, v:10000, col:'#ff7ae0', rgb:[255,120,200], c1:[255,90,90], c2:[90,140,255], glow:.35,
+      quips:['Every colour at once! Oink!', 'The rainbow goes all the way round its diaper.', 'Double rainbow oink.'],
+      hi:'WOW! A RAINBOW DIAPER PIG appeared! Super rare!'},
+    {k:'dpvoid', name:'Void Diaper Pig', item:'Void Diaper', block:'Void Diaper Block', ab:'VD', w:3, sw:7, reward:75000, v:40000, col:'#c08aff', rgb:[70,20,120], c1:[22,8,40], c2:[150,80,255], glow:.5,
+      quips:['The void oinks back.', 'Its diaper is full of tiny stars.', 'It came from the space between spaces. It still needs a diaper.'],
+      hi:'!!! A VOID DIAPER PIG appeared !!! The rarest pig there is. Its diaper is full of stars!'}
+  ];
+  const RK = {}, DI = {}; KINDS.forEach(K=>{ RK[K.k] = K; DI[K.item] = K; });
+  KINDS.forEach(K=>{
+    AD[K.k] = Object.assign(AD[K.k] || {}, {name:K.name, hp:50 + K.w, r:.8, yo:1.2, speed:1.6, reward:K.reward, quips:K.quips, planet:AD[K.k] && AD[K.k].planet || 'srvt', rarePig:1});
+    ANIMAL_DROP[K.k] = K.item;
+    try{ ITEM_COL[K.item] = K.rgb; ITEM_COL[K.block] = K.c1; }catch(e){}
+    try{ LOOT[K.item] = K.ab; }catch(e){}            // two letters, no emoji
+  });
+  const roll = key=>{ const t = KINDS.reduce((s, K)=>s + K[key], 0); let r = Math.random()*t; for(const K of KINDS){ r -= K[key]; if(r < 0) return K; } return KINDS[0]; };
+  const RARE_P = .03;                                   // 3 in 100 diaper pigs on Earth are rare
+
+  // ---- textures
+  function cvTex(w, h, draw){ const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; return t; }
+  const RB = ['#ff4040', '#ff9a30', '#ffe040', '#50e050', '#40a0ff', '#a060ff'];
+  function stars(g, w, h, n, seed){ for(let i=0;i<n;i++){ const x = Math.floor(hs(seed + 'x' + i)*w), y = Math.floor(hs(seed + 'y' + i)*h); g.fillStyle = hs(seed + 'c' + i) < .5 ? '#ffffff' : '#d8b0ff'; g.fillRect(x, y, 1, 1); } }
+  const TEX = {};
+  function diaperTex(k){
+    if(TEX[k]) return TEX[k];
+    return (TEX[k] = cvTex(32, 16, (g, w, h)=>{
+      if(k === 'dprainbow'){ for(let x=0;x<w;x++){ g.fillStyle = RB[Math.floor(x/(w/12)) % 6]; g.fillRect(x, 0, 1, h); } }
+      else if(k === 'dpvoid'){ g.fillStyle = '#12061f'; g.fillRect(0, 0, w, h); g.fillStyle = '#2a0c48'; for(let i=0;i<10;i++) g.fillRect(Math.floor(hs('vb' + i)*w), Math.floor(hs('vc' + i)*h), 3, 2); stars(g, w, h, 26, 'vs'); }
+      else if(k === 'dpgold'){ g.fillStyle = '#ffcc33'; g.fillRect(0, 0, w, h); g.fillStyle = '#e8a820'; for(let x=0;x<w;x+=4) g.fillRect(x, 0, 1, h); g.fillStyle = '#fff4b0'; for(let i=0;i<5;i++) g.fillRect(4 + i*6, 3 + (i%2)*6, 2, 1); }
+      else { g.fillStyle = '#8af0ff'; g.fillRect(0, 0, w, h); g.fillStyle = '#5ac8f0'; for(let i=0;i<w+h;i+=5){ for(let j=0;j<h;j++){ const x = i - j; if(x >= 0 && x < w) g.fillRect(x, j, 1, 1); } } g.fillStyle = '#ffffff'; for(let i=0;i<6;i++) g.fillRect(2 + i*5, 2 + (i*3)%11, 1, 1); }
+    }));
+  }
+  diaperTex('dprainbow').wrapS = THREE.RepeatWrapping;
+  // the same looks for the blocks you craft (16 x 16), drawn by makeCustomTex
+  window.__dpTex = function(g, pat, sp){
+    const px = (x, y, c)=>{ g.fillStyle = c; g.fillRect(x, y, 1, 1); };
+    if(pat === 'dprainbow'){ for(let y=0;y<16;y++){ g.fillStyle = RB[Math.floor(y/16*6)]; g.fillRect(0, y, 16, 1); } }
+    else if(pat === 'dpvoid'){ g.fillStyle = '#100519'; g.fillRect(0, 0, 16, 16); g.fillStyle = '#2a0c48'; for(let i=0;i<6;i++) g.fillRect(Math.floor(hs('bv' + i)*14), Math.floor(hs('bw' + i)*14), 3, 2); stars(g, 16, 16, 14, 'bs'); px(7, 7, '#ffffff'); px(6, 7, '#c08aff'); px(8, 7, '#c08aff'); px(7, 6, '#c08aff'); px(7, 8, '#c08aff'); }
+    else if(pat === 'dpgold'){ for(let y=0;y<16;y++) for(let x=0;x<16;x++){ const n = (hs('g' + x + '_' + y) - .5)*30; g.fillStyle = 'rgb(' + Math.min(255, 255 + n|0) + ',' + Math.min(255, 200 + n|0) + ',' + Math.max(0, 50 + n|0) + ')'; g.fillRect(x, y, 1, 1); }
+      for(let i=0;i<5;i++) px(3 + i, 2 + i, '#fff6c0'); for(let i=0;i<3;i++) px(10 + i, 9 + i, '#fff6c0'); }
+    else { g.fillStyle = 'rgb(' + sp.c1.join(',') + ')'; g.fillRect(0, 0, 16, 16); g.fillStyle = 'rgb(' + sp.c2.join(',') + ')';
+      for(let i=0;i<32;i+=4) for(let j=0;j<16;j++){ const x = i - j; if(x >= 0 && x < 16) g.fillRect(x, j, 1, 1); }
+      ['3,3', '11,5', '6,11', '13,13', '1,9'].forEach(q=>{ const [x, y] = q.split(',').map(Number); px(x, y, '#ffffff'); }); }
+    // the diaper tabs and the safety pin, like the plain Diaper block
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(0, 3, 2, 4); g.fillRect(14, 3, 2, 4);
+    g.fillStyle = pat === 'dpvoid' ? '#c08aff' : '#ffffff'; g.fillRect(6, 11, 4, 1); g.fillRect(7, 10, 2, 3);
+  };
+
+  // ---- the pig model: a normal diaper pig with a fancy diaper, sparkles, a halo for the void one, and a name tag
+  function nameTag(K){
+    const t = cvTex(320, 56, (x)=>{
+      x.font = 'bold 28px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 6; x.strokeStyle = 'rgba(0,0,0,.85)'; x.strokeText(K.name, 160, 28);
+      if(K.k === 'dprainbow'){ const gr = x.createLinearGradient(30, 0, 290, 0); RB.forEach((c, i)=>gr.addColorStop(i/5, c)); x.fillStyle = gr; } else x.fillStyle = K.col;
+      x.fillText(K.name, 160, 28);
+    });
+    t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter;
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:t, transparent:true, depthWrite:false}));
+    sp.scale.set(2.8, .5, 1); sp.position.y = 3.05; return sp;
+  }
+  const near = (a, b)=>Math.abs(a - b) < .02;
+  function dress(g, K){
+    let dia = null, pin = null;
+    g.traverse(m=>{ if(!m.isMesh || !m.geometry || !m.geometry.parameters) return; const q = m.geometry.parameters;
+      if(!dia && near(q.width, 1) && near(q.height, .42) && near(q.depth, .62)) dia = m;
+      else if(!pin && near(q.width, .12) && near(q.height, .12) && near(q.depth, .05)) pin = m; });
+    const U = g.userData.dp = {K, sp:[], halo:null, t:Math.random()*6};
+    const mt = K.k === 'dpgold' ? new THREE.MeshLambertMaterial({color:0xffd040, map:diaperTex(K.k), emissive:0x6a4a00})
+      : K.k === 'dpdiamond' ? new THREE.MeshLambertMaterial({color:0xffffff, map:diaperTex(K.k), emissive:0x1a5a6a, transparent:true, opacity:.92})
+      : K.k === 'dprainbow' ? new THREE.MeshLambertMaterial({color:0xffffff, map:diaperTex(K.k), emissive:0xffffff, emissiveMap:diaperTex(K.k), emissiveIntensity:.35})
+      : new THREE.MeshLambertMaterial({color:0xffffff, map:diaperTex(K.k), emissive:0xffffff, emissiveMap:diaperTex(K.k), emissiveIntensity:.9});
+    if(dia){ dia.material = mt; dia.scale.set(1.04, 1.08, 1.04); }
+    if(pin) pin.material = new THREE.MeshBasicMaterial({color:K.k === 'dpvoid' ? 0xc08aff : K.k === 'dpgold' ? 0xffffff : 0xffe040});
+    const cy = dia ? dia.position.y : .8, par = dia ? dia.parent : g;
+    const spc = K.k === 'dpgold' ? 0xfff2a0 : K.k === 'dpdiamond' ? 0xe0ffff : K.k === 'dprainbow' ? 0xffffff : 0xd8b0ff;
+    const nS = K.k === 'dpvoid' ? 10 : 6;
+    for(let i=0;i<nS;i++){
+      const s = new THREE.Mesh(new THREE.BoxGeometry(.07, .07, .07), new THREE.MeshBasicMaterial({color:K.k === 'dprainbow' ? new THREE.Color(RB[i % 6]).getHex() : spc}));
+      const a = i/nS*6.283; s.userData.a = a; s.userData.r = .62 + (i % 2)*.12; s.userData.y = cy - .1 + (i % 3)*.12;
+      s.position.set(Math.cos(a)*s.userData.r, s.userData.y, Math.sin(a)*s.userData.r); par.add(s); U.sp.push(s);
+    }
+    if(K.k === 'dpvoid'){
+      const h = new THREE.Mesh(new THREE.TorusGeometry(.75, .045, 6, 28), new THREE.MeshBasicMaterial({color:0x9a50ff, transparent:true, opacity:.85}));
+      h.rotation.x = Math.PI/2; h.position.y = cy + .05; par.add(h); U.halo = h;
+      const h2 = new THREE.Mesh(new THREE.TorusGeometry(.28, .04, 6, 20), new THREE.MeshBasicMaterial({color:0x2a0050})); h2.rotation.x = Math.PI/2; h2.position.y = 2.75; g.add(h2);
+    }
+    if(K.k === 'dpgold' || K.k === 'dpdiamond'){             // a tiny crown
+      const cc = K.k === 'dpgold' ? 0xffd030 : 0x9af4ff;
+      const cr = new THREE.Mesh(new THREE.BoxGeometry(.42, .1, .42), new THREE.MeshLambertMaterial({color:cc, emissive:K.k === 'dpgold' ? 0x4a3000 : 0x104050})); cr.position.set(0, 2.42, 0); g.add(cr);
+      [[-.16,-.16],[.16,-.16],[-.16,.16],[.16,.16]].forEach(q=>{ const p = new THREE.Mesh(new THREE.BoxGeometry(.08, .14, .08), cr.material); p.position.set(q[0], 2.53, q[1]); g.add(p); });
+    }
+    g.add(nameTag(K));
+  }
+  const _bA = buildAnimal;
+  buildAnimal = function(type){
+    const K = RK[type]; if(!K) return _bA.apply(this, arguments);
+    const g = _bA('diaperpig'); try{ dress(g, K); }catch(e){ console.warn('LN-diaperpigs dress', e); } return g;
+  };
+
+  // ---- spawning: 3 in 100 diaper pigs are rare on Earth; on Server T every pig is a rare one
+  const MP = window.__morePlanets;
+  const SRV = MP && MP.PL.find(p=>p.k === 'srvt');
+  const onSrv = (x, z)=>!!(SRV && realm === 0 && x >= SRV.x0 && x < SRV.x1 && z >= SRV.z0 && z < SRV.z1);
+  let mine = false, srvToastT = 0, srvAuto = false;
+  function srvSpawn(x, z, K){
+    K = K || roll('sw');
+    const d = AD[K.k], g = buildAnimal(K.k), gy = groundTop(Math.floor(x), 3, Math.floor(z));
+    const a = {type:K.k, d, g, pos:new THREE.Vector3(x, gy, z), vy:0, hp:d.hp, max:d.hp, t:Math.random()*10, dir:Math.random()*6.283, wanderT:Math.random()*3, fleeT:0, moving:false, ang:0, rarePig:1};
+    g.position.copy(a.pos); scene.add(g); animals.push(a);
+    if(K.k === 'dpvoid' && srvToastT <= 0){ srvToastT = 25; toast('A VOID DIAPER PIG spawned on Server T! The rarest one! Find the glowing purple ring.'); blip(220, .3, .12, 'sine'); setTimeout(()=>blip(110, .4, .12, 'sine'), 180); }
+    return a;
+  }
+  const _sA = spawnAnimal;
+  spawnAnimal = function(type, x, z){
+    if(mine) return _sA.apply(this, arguments);
+    try{
+      if(srvAuto && onSrv(x, z)) return srvSpawn(x, z);                 // the normal animal spawner on Server T only makes rare pigs
+      if(RK[type]) type = 'diaperpig';                                  // rare pigs only come from the roll below
+      if(type === 'diaperpig' && !CHAOS && realm === 0 && Math.random() < RARE_P){
+        const K = roll('w'); mine = true; let a;
+        try{ a = _sA.call(this, K.k, x, z); } finally { mine = false; }
+        if(a && RK[a.type]){ a.rarePig = 1; if(Math.hypot(x - P.x, z - P.z) < 90){ toast(K.hi); blip(880, .15, .1, 'triangle'); setTimeout(()=>blip(1320, .2, .1, 'triangle'), 140); }
+          if(K.k === 'dpvoid' || K.k === 'dprainbow') news('NEWS: Somebody saw a ' + K.name + '! Scientists say it is ' + (K.k === 'dpvoid' ? 'the rarest pig in the universe.' : 'very, very rare.')); }
+        return a;
+      }
+    }catch(e){ console.warn('LN-diaperpigs spawn', e); }
+    return _sA.call(this, type, x, z);
+  };
+  const _uA = updateAnimals;
+  updateAnimals = function(){ srvAuto = true; try{ return _uA.apply(this, arguments); } finally { srvAuto = false; } };
+  // first time you get each diaper: how to craft it
+  save.dpTip = save.dpTip || {};
+  const _kA = killAnimal;
+  killAnimal = function(a){
+    const K = a && RK[a.type];
+    const r = _kA.apply(this, arguments);
+    if(K){
+      save.dpKills = save.dpKills || {}; save.dpKills[K.k] = (save.dpKills[K.k] || 0) + 1;
+      if(!save.dpTip[K.k]){ save.dpTip[K.k] = 1; setTimeout(()=>toast('You got a ' + K.item + '! Open your bag (I), put it in a crafting slot and press Craft to make a ' + K.block + '.'), 1600); }
+      try{ persist(); }catch(e){}
+    }
+    return r;
+  };
+
+  // ================= 4. DIAPER BLOCKS: put rare diapers in the crafting slots, one diaper makes one block
+  function dBlockId(K){
+    let id = blockIdOf(K.block); if(id) return id;
+    const o = specToBlock({name:K.block, c1:K.c1.slice(), c2:K.c2.slice(), pattern:K.k, glow:K.glow, h:8, v:K.v, power:5});
+    save.blkSnap = save.blkSnap || {}; save.extraBlocks = save.extraBlocks || [];
+    save.blkSnap[K.block] = JSON.parse(JSON.stringify(o));
+    id = blockIdOf(K.block);                                          // LN-blockfix registers it, and brings it back every time the game loads
+    if(!id && window.__blockfix){ id = window.__blockfix.regBlock(save.blkSnap[K.block]); if(save.extraBlocks.indexOf(K.block) < 0) save.extraBlocks.push(K.block); }
+    try{ _blockIds = null; }catch(e){}
+    return id;
+  }
+  function dPreview(){
+    const refs = craftSlots.filter(Boolean); if(!refs.length) return null;
+    const infos = refs.map(refInfo); if(infos.some(i=>!i || i.kind !== 'item' || !DI[i.name])) return null;
+    if(new Set(infos.map(i=>i.name)).size !== 1) return null;
+    const w = (craftWant || '').trim().toLowerCase(); if(w && !/block|brick|cube|build/.test(w)) return null;
+    const K = DI[infos[0].name];
+    return {kind:'dblock', K, count:refs.length, name:refs.length + ' x ' + K.block, power:5};
+  }
+  const _cp = craftPreview;
+  craftPreview = function(){ try{ const d = dPreview(); if(d) return d; }catch(e){ console.warn(e); } return _cp.apply(this, arguments); };
+  const _ph = previewHTML;
+  previewHTML = function(pv){
+    if(pv && pv.kind === 'dblock') return 'Makes: <b>' + pv.name + '</b> (building block) &middot; one ' + pv.K.item + ' makes one block. Right-click to place it.';
+    return _ph.apply(this, arguments);
+  };
+  const _cg = craftGo;
+  craftGo = function(){
+    const pv = craftPreview();
+    if(!pv || pv.kind !== 'dblock') return _cg.apply(this, arguments);
+    const need = {}; craftSlots.filter(Boolean).forEach(r=>{ need[r] = (need[r] || 0) + 1; });
+    for(const r in need){ const i = refInfo(r); if(!i || i.n < need[r]){ toast('You do not have enough ' + (i ? i.name : 'diapers') + '.'); return; } }
+    const id = dBlockId(pv.K); if(!id){ toast('The ' + pv.K.block + ' could not be made. Try again later.'); return; }
+    for(const r in need) consumeRef(r, need[r]);
+    craftSlots = [null, null, null]; activeSlot = 0;
+    save.crafted = (save.crafted || 0) + 1;
+    addItem(pv.K.block, pv.count);
+    try{ hotAuto('i:' + pv.K.block); }catch(e){}
+    toast('You made ' + pv.count + ' ' + pv.K.block + (pv.count > 1 ? 's' : '') + '! Right-click to build with it.');
+    blip(700, .12, .12, 'triangle'); setTimeout(()=>blip(1000, .2, .12, 'triangle'), 110); persist();
+    try{ award('crafter'); if(save.crafted >= 25) award('craft25'); }catch(e){}
+  };
+
+  // ================= 5. SERVER T: a whole world of rare diaper pigs, right from the Planets menu (O)
+  let ban = null;
+  function banner(){
+    if(!ban){
+      ban = document.createElement('div');
+      ban.style.cssText = 'position:fixed;left:50%;top:18%;transform:translateX(-50%);z-index:60;background:rgba(20,8,40,.92);border:3px solid #c08aff;border-radius:14px;padding:16px 54px 16px 24px;color:#fff;font:900 16px system-ui,sans-serif;text-align:center;max-width:88vw;box-shadow:0 0 30px rgba(160,90,255,.6);pointer-events:auto';
+      ban.innerHTML = '<button style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+        '<div style="font-size:42px;letter-spacing:6px;color:#ffd84a;text-shadow:0 0 12px #c08aff">SERVER T</div>' +
+        '<div style="margin-top:6px">Welcome! This server is full of RARE DIAPER PIGS.</div>' +
+        '<div style="margin-top:6px;font-size:14px;font-weight:700"><span style="color:#ffd84a">Golden</span> (most common) - <span style="color:#7ae8ff">Diamond</span> - <span style="color:#ff7ae0">Rainbow</span> - <span style="color:#c08aff">Void</span> (rarest)</div>' +
+        '<div style="margin-top:6px;font-size:13px;opacity:.85">Collect their diapers and craft them into diaper blocks. Players online: 1 (you).</div>';
+      ban.querySelector('button').onclick = e=>{ e.stopPropagation(); ban.style.display = 'none'; };
+      document.body.appendChild(ban);
+    }
+    ban.style.display = 'block'; clearTimeout(banner.t); banner.t = setTimeout(()=>{ if(ban) ban.style.display = 'none'; }, 9000);
+  }
+  function goSrv(){
+    if(!SRV || !MP) return;
+    try{ const pn = document.getElementById('mrsB'); const panel = pn && (pn.closest('div[style*="inset:0"]') || pn.parentNode.parentNode); if(panel) panel.style.display = 'none'; }catch(e){}
+    MP.goPlanet(SRV);
+    try{ renderer.domElement.requestPointerLock(); }catch(e){}
+  }
+  // the button in the Planets chooser
+  try{
+    const bt = SRV && document.getElementById('mrsP' + MP.PL.indexOf(SRV));
+    if(bt){
+      bt.textContent = 'T   SERVER T: tons of rare diaper pigs!'; bt.style.background = '#6a2ab0'; bt.style.color = '#ffffff'; bt.style.border = '2px solid #ffd84a'; bt.style.display = 'block';
+      bt.title = 'A server full of golden, diamond, rainbow and void diaper pigs.';
+      bt.onclick = e=>{ e.stopPropagation(); goSrv(); };
+      const box = bt.parentNode, first = box.querySelector('[id^="mrsP"]');
+      if(first && first !== bt) box.insertBefore(bt, first);                   // near the top, so it is easy to find
+      addEventListener('keydown', e=>{
+        if(e.code !== 'KeyT') return; const pn = bt.closest('div[style*="inset:0"]') || bt.parentNode.parentNode;
+        if(!pn || pn.style.display !== 'flex') return;
+        if(document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+        e.preventDefault(); e.stopImmediatePropagation(); goSrv();
+      }, true);
+    }
+  }catch(e){ console.warn('LN-diaperpigs button', e); }
+
+  setInterval(()=>{ try{ if(!won) religTick(); }catch(e){ console.warn('LN-diaperpigs relig', e); } }, 3000);
+  // ================= the loop
+  let wasSrv = false, sT = 0, last = performance.now();
+  const CAP = 40;
+  (function loop(now){
+    requestAnimationFrame(loop);
+    const dt = Math.min(.1, (now - last)/1000); last = now;
+    if(startEl.style.display === 'flex' || won) return;
+    try{
+      if(srvToastT > 0) srvToastT -= dt;
+      const here = onSrv(P.x, P.z);
+      if(here && !wasSrv){ banner(); toast('SERVER T! So many rare diaper pigs! Golden is the most common, Void is the rarest.'); news('BREAKING: A miner joined SERVER T. The diaper pigs are very excited.');
+        save.srvT = (save.srvT || 0) + 1; persist(); sT = 1;
+        for(let i=0;i<20;i++){ const ang = Math.random()*6.283, r = 9 + Math.random()*30; srvSpawn(P.x + Math.cos(ang)*r, P.z + Math.sin(ang)*r); } }   // a big crowd right away
+      wasSrv = here;
+      if(here && P.y > -3){
+        sT -= dt;
+        if(sT <= 0){ sT = .35;
+          let n = 0; for(const a of animals) if(RK[a.type] && Math.hypot(a.pos.x - P.x, a.pos.z - P.z) < 80) n++;
+          for(let i=0;i<3 && n < CAP;i++, n++){ const ang = Math.random()*6.283, r = 9 + Math.random()*34; srvSpawn(P.x + Math.cos(ang)*r, P.z + Math.sin(ang)*r); }
+        }
+      }
+      // sparkles twinkle, the void halo spins, rainbow diapers scroll
+      for(const a of animals){ const U = a.g && a.g.userData.dp; if(!U) continue;
+        if(Math.abs(a.pos.x - P.x) > 60 || Math.abs(a.pos.z - P.z) > 60) continue;
+        U.t += dt;
+        U.sp.forEach((s, i)=>{ const q = s.userData.a + U.t*(U.K.k === 'dpvoid' ? 1.6 : .9); s.position.x = Math.cos(q)*s.userData.r; s.position.z = Math.sin(q)*s.userData.r; s.position.y = s.userData.y + Math.sin(U.t*3 + i)*.08; s.visible = Math.sin(U.t*5 + i*1.7) > -.6; });
+        if(U.halo) U.halo.rotation.z += dt*2;
+      }
+      if(TEX.dprainbow) TEX.dprainbow.offset.x = (TEX.dprainbow.offset.x + dt*.25) % 1;
+    }catch(e){ if(!loop.w){ loop.w = 1; console.warn('LN-diaperpigs', e); } }
+  })(last);
+  window.__diaperpigs = {KINDS, RK, DI, roll, srvSpawn, goSrv, dBlockId, dPreview, noRelig, SRV, banner};
+})();
+/* LN-diaperpigs end */
 
 
 
