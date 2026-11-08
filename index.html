@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 213 (Oct 31)';
+  window.__BUILD = 'Build 214 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -21202,7 +21202,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     held = w; save.meleeEq = w ? w.id : null; showModel(w);
     if(!held && !curGun) pickGroup.visible = true;
     updateGunHud(); persist();
-    if(w) toast(w.name+' ready!  Hold click to hit.  G to switch weapons.');
+    if(w) toast(w.name+' ready!  Click to hit (one swing per click).  G to switch weapons.');
   }
   const _eg = equipGun;
   equipGun = function(g){ if(g && held){ held = null; save.meleeEq = null; showModel(null); } return _eg.apply(this, arguments); };
@@ -21222,7 +21222,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const _ug = updateGunHud;
   updateGunHud = function(){
     const r = _ug.apply(this, arguments);
-    if(held && !curGun){ const el = $('gunhud'); el.style.display = 'block'; el.innerHTML = '<b>'+held.name+'</b><br><span style="font-size:12px">MELEE &middot; '+KINDS[held.k].nm+'</span><br><span style="font-size:20px;font-weight:800">'+held.dps+'</span> <span style="opacity:.7">damage per second</span><br><span style="font-size:10px;opacity:.6">Hold click to hit &middot; G switch</span>'; }
+    if(held && !curGun){ const el = $('gunhud'); el.style.display = 'block'; el.innerHTML = '<b>'+held.name+'</b><br><span style="font-size:12px">MELEE &middot; '+KINDS[held.k].nm+'</span><br><span style="font-size:20px;font-weight:800">'+held.dps+'</span> <span style="opacity:.7">damage per second</span><br><span style="font-size:10px;opacity:.6">Click to hit, one swing per click &middot; G switch</span>'; }
     return r;
   };
   // hitting things uses the weapon's damage instead of the pickaxe's
@@ -34312,7 +34312,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     requestAnimationFrame(loop);
     const dt = Math.min(.1, (now - last)/1000); last = now;
     try{
-      if(chamberSeen && !wasSeen){ wasSeen = true; if(!door) door = buildDoor(); door.visible = true; door.position.set(heart.position.x + 13, CH_TOP, heart.position.z); if(st() === 2) setSign('OPEN. WIPE YOUR FEET.'); }
+      if(chamberSeen && !wasSeen && (function(){ try{ return localStorage.getItem('digcore_stairs') === '1'; }catch(e){ return false; } })()){ wasSeen = true; if(!door) door = buildDoor(); door.visible = true; door.position.set(heart.position.x + 13, CH_TOP, heart.position.z); if(st() === 2) setSign('OPEN. WIPE YOUR FEET.'); }
       if(!chamberSeen && wasSeen && !inBase()){ wasSeen = false; if(door) door.visible = false; }
       if(door && door.visible){
         if(st() === 1){ const left = Math.max(0, WAIT - (Date.now() - (save.doorT || 0))); const sec = Math.ceil(left/1000); if(sec !== lastSec){ lastSec = sec; setSign(left <= 0 ? 'OPENING...' : 'BACK IN ' + Math.floor(sec/60) + ':' + (sec%60 < 10 ? '0' : '') + sec%60); } if(left <= 0) openDoor(); }
@@ -37792,6 +37792,42 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__glasswool = {COLS, DEF, glassName, paneName, woolName, colourIn, ensure, gwPreview, openGW, closeGW, dressSheep, setBald, townGlass, houseGlass, retrofit, paneO, fixPanes, PANES, TR, noSites, symOf};
 })();
 /* LN-glasswool end */
+/* LN-atkcd start: attacking with a weapon or pickaxe is ONE swing per click with a short cooldown. Holding the button no longer hits again and again. Mining is unchanged (Irfan 2026-11-08) */
+(function(){
+  const CD = .5, HIT = .6;
+  let cdT = 0, armed = true, animT = 0, last = performance.now();
+  addEventListener('mouseup', e=>{ if(e.button === 0) armed = true; });
+  addEventListener('touchend', ()=>{ armed = true; });
+  const dirV = new THREE.Vector3(), bo = new THREE.Vector3();
+  function probe(){
+    camera.getWorldDirection(dirV);
+    try{ if(window.__wbAuto && window.__wbAuto(camera.position, dirV)) return true; }catch(e){}
+    const list = fightTargets().concat(corpses.map(c=>({k:'c', c:c.c, r:c.r})));
+    for(const t of list){
+      bo.copy(t.c).sub(camera.position); const tca = bo.dot(dirV);
+      if(tca < 0 || tca > (mineAny ? 11 : ((t.k === 'n' || t.wb) ? 9 : 6.4)) || bo.lengthSq() - tca*tca > t.r*t.r) continue;
+      const bh = castRay(); if(bh && bh.t < tca - .5 && !t.wb) continue;
+      return true;
+    }
+    return false;
+  }
+  const _fa = fightAttack;
+  fightAttack = function(dt){
+    const now = performance.now(); cdT -= Math.min(1, (now - last)/1000); last = now; animT -= dt;
+    if(!mouseDown){ armed = true; return _fa.apply(this, arguments); }
+    if(armed && cdT <= 0){
+      const r = _fa.call(this, HIT);
+      if(r){ armed = false; cdT = CD; animT = .24; swingT = 0; }
+      return r;
+    }
+    if(!probe()) return false;
+    hlEdges.visible = crack.visible = false; barwrap.style.display = 'none';
+    if(animT <= 0) swingT = -dt;
+    return true;
+  };
+  window.__atkcd = {CD, HIT, state:()=>({cdT, armed, animT})};
+})();
+/* LN-atkcd end */
 
 
 
