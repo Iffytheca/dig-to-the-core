@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 220 (Oct 31)';
+  window.__BUILD = 'Build 221 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -37887,6 +37887,772 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__perfRb = {stats:()=>({lastRb, lastIn, meshes:meshes.length, shown:meshes.filter(m=>m.visible).length})};
 })();
 /* LN-perf end */
+/* LN-foodtrade start: COUNTRY FOOD AND TRADE. Every animal country has its national food plus 3 to 5 local dishes, a market stall in town where you buy (and sell) them, countries trade dishes with each other (allies more often, never in a war), picnic baskets in towns, residents who give and swap food, restaurants that serve the country's food hot (plus today's imported special), travelling merchants of 16 different types (food sellers AND non-food sellers: tools, junk, gems, furniture, clothes, herbs, scrolls, pets), and a Foods page that counts the dishes you tried (Irfan 2026-11-09 "add this feature you can buy country local cuisine and national food and country or people can trade or food from another country can be found on that country and merchant have different type", "some merchant dont sell food", "also in restaurant") */
+(function(){
+  const NA = window.__nations; if(!NA) return;
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const news = (t, front)=>{ try{ const Q = window.__newsQ = window.__newsQ || []; if(front) Q.unshift(t); else Q.push(t); if(Q.length > 6) Q.length = 6; }catch(e){} };
+  const hs = (seed, tag)=>{ let h = 2166136261; const s = seed + '|' + tag; for(let i=0;i<s.length;i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); h ^= h >>> 13; h = Math.imul(h, 1274126177); h ^= h >>> 16; return (h >>> 0)/4294967296; };
+  const pk = (seed, tag, a)=>a[Math.floor(hs(seed, tag)*a.length)];
+  const esc = s=>String(s == null ? '' : s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const bad = n=>{ try{ return !!(window.__nameBad && window.__nameBad(n)); }catch(e){ return false; } };
+  const plural = s=>/[sy]$/.test(s) ? s : s + 's';
+  const alive = a=>!!a && animals.indexOf(a) >= 0 && !a.dead;
+  const onEarth = ()=>realm === 0 && !won && P.x < UPPER_EDGE;
+  const F = save.ft = save.ft || {};
+  F.tried = F.tried || {}; F.done = F.done || {}; F.known = F.known || {}; F.fus = F.fus || {}; F.mi = F.mi || 0; F.trades = F.trades || 0;
+  const towns = ()=>(save.nations || []).filter(n=>n && n.natl && n.natl.food);
+  const byId = id=>(save.nations || []).find(n=>n && n.id === id);
+
+  // ================= word lists for the made-up dishes (biome ingredients, animals, silly words)
+  const BI = {
+    plains:['Corn','Wheat','Meadow','Clover','Haystack','Potato'], forest:['Acorn','Berry','Mushroom','Pinecone','Maple','Leafy'],
+    desert:['Cactus','Sandy','Date','Dune','Sunbaked','Prickly Pear'], snow:['Snow','Icicle','Frosty','Igloo','Snowball','Polar'],
+    mountain:['Rocky','Pebble','Goat Cheese','Cloudy','Cliffside','Avalanche'], hills:['Hilltop','Clover','Woolly','Rolling','Grassy','Shepherd'],
+    valley:['Honey','Flower','Blossom','Sunny','Garden','Daisy'], river:['River Fish','Pebble','Splashy','Reed','Otter','Bubbly'],
+    lake:['Lake Fish','Lily','Splashy','Ripple','Duckweed','Pearl'], swamp:['Mud','Swamp','Frog Spawn','Lily Pad','Bog','Slimy'],
+    volcano:['Lava','Fire','Chili','Smoky','Magma','Toasty'], beach:['Coconut','Seaweed','Sandy','Seashell','Crab','Pineapple']
+  };
+  const ADJ = ['Crunchy','Wobbly','Giggly','Super','Grandma\'s','Midnight','Bouncy','Sizzling','Fluffy','Mega','Tiny','Royal','Sneaky','Happy','Squishy','Spicy','Sticky','Cheesy'];
+  const DISH = ['Pie','Tacos','Pudding','Soup','Stew','Noodles','Pancakes','Dumplings','Pizza','Burger','Curry','Cake','Sandwich','Waffles','Smoothie','Muffins','Kebab','Jelly','Omelette','Nuggets','Cookies','Crumble'];
+  const TAIL = ['Supreme','Surprise','Special','Deluxe','Party Plate'];
+  const KCOL = {Curry:[230,170,40], Pie:[196,132,70], Soup:[236,140,60], Stew:[168,96,52], Pancakes:[240,200,120], Tacos:[240,190,80], Pizza:[232,92,60], Sandwich:[222,192,140], Dumplings:[245,235,210], Cake:[250,180,210], Noodles:[245,215,120], Burger:[170,110,60], Smoothie:[200,120,220], Omelette:[250,220,90], Waffles:[230,180,90], Kebab:[180,90,60], Pudding:[200,120,80], Jelly:[255,90,140], Muffins:[190,120,70], Nuggets:[230,170,70], Cookies:[200,150,90], Crumble:[210,160,100]};
+  function colOf(nm){
+    const w = String(nm).split(' ');
+    for(let i=w.length-1;i>=0;i--) if(KCOL[w[i]]) return KCOL[w[i]].slice();
+    const h = hs(nm, 'col'), h2 = hs(nm, 'c2');
+    return [150 + Math.floor(h*100), 90 + Math.floor(h2*130), 60 + Math.floor(hs(nm, 'c3')*120)];
+  }
+  const abOf = nm=>{ const w = String(nm).replace(/[^A-Za-z ]/g, ' ').split(' ').filter(Boolean); return ((w.length > 1 ? w[0][0] + w[1][0] : (w[0] || 'FD').slice(0, 2)) || 'FD').toUpperCase(); };
+  function baseOf(n){ try{ const c = BIOME.col(Math.floor(n.x), Math.floor(n.z)); const b = c && c.b && (c.b.base || c.b.k); return BI[b] ? b : 'plains'; }catch(e){ return 'plains'; } }
+
+  // ================= the menus: national food (from LN-national) + 3 to 5 local dishes, picked once per country from its id
+  const D = {};                                   // dish name -> {nm, home, hn, nat, price, pw, col, ab}
+  function makeMenu(n){
+    if(n.ftMenu && n.ftMenu.length) return n.ftMenu;
+    const base = n.ftB = baseOf(n), ING = BI[base], an = (String(n.animal || 'Animal').replace(/[^A-Za-z ]/g, '').trim().split(' ').pop()) || 'Animal';
+    const taken = {}; towns().forEach(o=>{ if(o !== n) (o.ftMenu || []).concat([o.natl.food]).forEach(x=>{ taken[x] = 1; }); }); taken[n.natl.food] = 1;
+    const k = 3 + Math.floor(hs(n.id, 'k')*3), out = [], usedDish = {};
+    for(let t=0; out.length < k && t < 60; t++){
+      const s = n.id + '|' + t, tp = t === 0 ? 0 : Math.floor(hs(s, 'tp')*5);
+      const ing = pk(s, 'ing', ING), dish = pk(s, 'dish', DISH), adj = pk(s, 'adj', ADJ);
+      if(usedDish[dish] && t < 40) continue;
+      let nm = tp === 0 ? ing + ' ' + dish + ' Supreme' : tp === 1 ? adj + ' ' + ing + ' ' + dish : tp === 2 ? ing + ' ' + dish : tp === 3 ? an + '\'s Favourite ' + dish : ing + ' ' + dish + ' ' + pk(s, 'tl', TAIL);
+      if(nm.length > 30) nm = ing + ' ' + dish;
+      if(taken[nm] || out.indexOf(nm) >= 0 || bad(nm) || (save.foodPower && save.foodPower[nm] && !F.known[nm])) continue;
+      out.push(nm); usedDish[dish] = 1;
+    }
+    n.ftMenu = out; return out;
+  }
+  function reg(nm, n, nat){
+    if(!nm) return;
+    const pw = nat ? 7 : Math.round((4.5 + hs(nm, 'pw')*3.5)*10)/10;
+    const price = nat ? 30 + Math.floor(hs(nm, 'pr')*16) : 12 + Math.floor(hs(nm, 'pr')*34);
+    const d = D[nm] = {nm, home:n.id, hn:n.name, nat:!!nat, price, pw, col:colOf(nm), ab:abOf(nm)};
+    look(nm, d.col, d.ab);
+    if(F.known[nm] !== n.name){ F.known[nm] = n.name; const ks = Object.keys(F.known); if(ks.length > 400) delete F.known[ks[0]]; }
+    return d;
+  }
+  function look(nm, col, ab){ try{ ITEM_COL[nm] = col; if(!LOOT[nm] && !RARE[nm]) LOOT[nm] = ab; }catch(e){} }
+  let sig = '';
+  function rebuild(force){
+    const T = towns(), s = T.map(n=>n.id + ':' + n.natl.food + ':' + (n.ftMenu || []).length).join(',');
+    if(s === sig && !force) return; sig = s;
+    for(const k in D) delete D[k];
+    T.forEach(n=>{ reg(n.natl.food, n, true); makeMenu(n).forEach(nm=>reg(nm, n, false)); });
+  }
+  const homeOf = nm=>D[nm] ? byId(D[nm].home) : null;
+  const menuOf = n=>[n.natl.food].concat(makeMenu(n));
+
+  // ================= things the travelling merchants sell (fixed lists, two-letter icons, no emoji)
+  const GOODS = {
+    spice:[['Sneezy Pepper',3,14],['Rainbow Salt',3,12],['Giggle Ginger',4,18],['Dragon Chili',5,24],['Moon Cinnamon',4,20],['Tickle Paprika',3,15]],
+    fruit:[['Mega Melon',4,16],['Bouncy Berries',3,10],['Giggle Grapes',3,11],['Rainbow Carrot',3,9],['Cheeky Cherries',3,12],['Spotty Banana',3,8],['Crunchy Cucumber',3,9]],
+    fish:[['Grumpy Cod',5,22],['Rainbow Trout',5,24],['Sneaky Sardines',4,16],['Fish Fingers',5,20],['Bubble Salmon',6,30],['Squeaky Shrimp',4,18]],
+    baker:[['Fresh Bread',4,15],['Sticky Bun',4,14],['Moon Muffin',4,16],['Cloud Cake',6,28],['Bob Bagel',4,12],['Giant Pretzel',5,18]],
+    sweet:[['Fizzy Fudge',3,12],['Wobble Jelly Beans',3,10],['Rainbow Lollipop',3,9],['Choco Volcano',5,22],['Bubblegum Cloud',3,11],['Unicorn Candy Floss',4,16]],
+    exotic:[['Galaxy Gummies',8,60],['Volcano Popcorn',7,48],['Glow Noodles',8,55],['Thunder Toffee',7,45]],
+    chef:[['Chef\'s Special Stew',7,38],['Mystery Soup',6,25]]
+  };
+  const GCOL = {spice:[214,90,40], fruit:[120,200,70], fish:[110,170,220], baker:[214,170,110], sweet:[255,140,200], exotic:[150,90,230], chef:[230,200,140]};
+  const G = {};
+  for(const t in GOODS) GOODS[t].forEach(([nm, pw, price], i)=>{ const c = GCOL[t].slice(); c[0] = Math.max(0, Math.min(255, c[0] + (i*23 % 50) - 25)); c[1] = Math.max(0, Math.min(255, c[1] + (i*37 % 50) - 25)); G[nm] = {nm, pw, price, col:c, ab:abOf(nm), t}; look(nm, c, G[nm].ab); });
+  for(const nm in F.known) if(!G[nm]) look(nm, colOf(nm), abOf(nm));
+  for(const nm in F.fus) look(nm, [255, 200, 90], 'FU');
+  function infoOf(nm){
+    if(D[nm]) return D[nm];
+    if(G[nm]) return G[nm];
+    if(F.fus[nm]) return {nm, pw:F.fus[nm], price:Math.round(20 + F.fus[nm]*5), fus:1};
+    if(F.known[nm]) return {nm, pw:5, price:20, gone:1, hn:F.known[nm]};
+    return null;
+  }
+  // every way you get a dish goes through here, so it is always edible after a reload
+  function give(nm, k, silent){
+    const d = infoOf(nm); save.foodPower = save.foodPower || {};
+    if(d && !save.foodPower[nm]) save.foodPower[nm] = d.pw;
+    addItem(nm, k || 1, silent);
+  }
+  const has = nm=>(save.inv && save.inv[nm]) || 0;
+  const take = (nm, k)=>{ if(has(nm) < k) return false; save.inv[nm] -= k; if(save.inv[nm] <= 0) delete save.inv[nm]; return true; };
+
+  // ================= prices and money (LN-national gives each country its money)
+  const curName = n=>n && n.natl ? plural(n.natl.cur) : 'coins';
+  const inCur = (n, usd)=>n && n.natl ? Math.max(1, Math.round(usd*n.natl.rate)).toLocaleString() + ' ' + curName(n) : '';
+  const priceTxt = (n, usd)=>'$' + usd + (n && n.natl ? ' (' + inCur(n, usd) + ')' : '');
+  function stock(n){
+    const L = [{nm:n.natl.food, src:'nat'}];
+    makeMenu(n).forEach(nm=>L.push({nm, src:'local'}));
+    (n.ftImp || []).forEach(q=>{ if(D[q.nm] && D[q.nm].home !== n.id) L.push({nm:q.nm, src:'imp', from:q.fn}); });
+    return L.map(o=>{ const d = infoOf(o.nm); return Object.assign(o, {price:Math.round((d ? d.price : 20)*(o.src === 'imp' ? 1.4 : 1))}); });
+  }
+  function sellPrice(n, nm){
+    const d = infoOf(nm); if(!d) return 0;
+    let f = .5;
+    if(D[nm] && n){ if(D[nm].home === n.id) f = .3; else if((n.ftImp || []).some(q=>q.nm === nm)) f = .55; else f = .8; }
+    return Math.max(2, Math.round(d.price*f));
+  }
+  function addImport(n, nm, from){
+    n.ftImp = n.ftImp || [];
+    if(n.ftImp.some(q=>q.nm === nm) || (D[nm] && D[nm].home === n.id)) return false;
+    n.ftImp.push({nm, from:from.id, fn:from.name}); if(n.ftImp.length > 4) n.ftImp.shift();
+    return true;
+  }
+
+  // ================= shared boxes (one geometry, cached materials, nobody can mine them)
+  const BOXG = new THREE.BoxGeometry(1, 1, 1), MATS = {};
+  const mat = c=>MATS[c] || (MATS[c] = new THREE.MeshLambertMaterial({color:c}));
+  function bx(par, w, h, d, c, x, y, z){ const m = new THREE.Mesh(BOXG, mat(c)); m.scale.set(w, h, d); m.position.set(x, y, z); par.add(m); return m; }
+  const NOM = o=>{ o.traverse(m=>{ m.userData.gone = true; m.userData.noMine = true; }); return o; };
+  const rgbHex = c=>(c[0] << 16) | (c[1] << 8) | c[2];
+  function signSprite(top, sub, col, w){
+    const cv = document.createElement('canvas'); cv.width = 640; cv.height = sub ? 128 : 72; const x = cv.getContext('2d');
+    x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = 'rgba(0,0,0,.85)';
+    let fs = 44; x.font = 'bold 44px Arial'; while(x.measureText(top).width > 620 && fs > 16){ fs--; x.font = 'bold ' + fs + 'px Arial'; }
+    x.strokeText(top, 320, sub ? 40 : 36); x.fillStyle = col || '#ffd84a'; x.fillText(top, 320, sub ? 40 : 36);
+    if(sub){ fs = 28; x.font = 'bold 28px Arial'; while(x.measureText(sub).width > 620 && fs > 12){ fs--; x.font = 'bold ' + fs + 'px Arial'; } x.strokeText(sub, 320, 94); x.fillStyle = '#ffffff'; x.fillText(sub, 320, 94); }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
+    w = w || 5; sp.scale.set(w, w*cv.height/640, 1); return sp;
+  }
+  const AWN = [0xe03a3a, 0x3a8ae0, 0x3ab04a, 0xe0a020, 0xa040d0, 0xe05aa0, 0x20b0b0, 0xff7a20];
+
+  // ================= the MARKET STALL in every country
+  function stallModel(n){
+    const g = new THREE.Group(), ac = AWN[Math.floor(hs(n.id, 'awn')*AWN.length)];
+    bx(g, 2.8, .9, .9, 0x8a5a2a, 0, .45, .3); bx(g, 3, .1, 1.05, 0xc89050, 0, .95, .3);
+    [[-1.4,-.7],[1.4,-.7],[-1.4,.75],[1.4,.75]].forEach(([x, z])=>bx(g, .12, 2.5, .12, 0x6a4a2a, x, 1.25, z));
+    for(let i=0;i<6;i++){ const s = bx(g, .52, .08, 1.9, i % 2 ? 0xffffff : ac, -1.3 + i*.52, 2.55, .05); s.rotation.x = -.12; }
+    bx(g, 3.1, .12, .1, ac, 0, 2.42, 1.02);
+    makeMenu(n).concat([n.natl.food]).slice(0, 6).forEach((nm, i)=>{ const c = rgbHex(colOf(nm)); bx(g, .34, .06, .34, 0xf4f4f0, -1.15 + i*.46, 1.03, .3); bx(g, .24, .16, .24, c, -1.15 + i*.46, 1.13, .3); });
+    bx(g, .8, .5, .05, 0x2a2018, 1.0, 1.75, -.72);                                      // a little menu board at the back
+    const sp = signSprite(n.name + ' Market', 'Local food and imports', '#ffd84a', 5); sp.position.set(0, 3.4, .1); g.add(sp);
+    return NOM(g);
+  }
+  const SM = {};                                  // country id -> {g, a}
+  function siteNear(x, z, r){ for(const n of towns()) if(n.ftM && Math.abs(n.ftM.x - x) <= r + 2 && Math.abs(n.ftM.z - z) <= r + 2) return n; return null; }
+  const _so = NA.siteOk;
+  NA.siteOk = function(x, z, r){ if(siteNear(x, z, (r || 0) + 1)) return null; return _so.apply(this, arguments); };   // nobody builds a house on the market
+  function findSpot(n, rr){
+    rr = rr || 2;
+    const CLm = window.__cityLife;
+    for(let t=0;t<30;t++){
+      const ang = Math.random()*6.283, d = 7 + Math.random()*15, x = Math.floor(n.x + Math.cos(ang)*d), z = Math.floor(n.z + Math.sin(ang)*d);
+      if(Math.hypot(x - P.x, z - P.z) < rr + 2) continue;
+      if(n.stall && Math.hypot(n.stall.x - x, n.stall.z - z) < 6) continue;
+      if((n.farms || []).concat(n.mach || []).some(o=>o && Math.hypot(o.x - x, o.z - z) < rr + 4)) continue;
+      if(n.fx != null && Math.hypot(n.fx - x, n.fz - z) < rr + 3) continue;
+      if(siteNear(x, z, rr + 4)) continue;
+      if((save.religSites || []).some(s=>Math.abs(s.x - x) <= (s.r || 3) + rr + 2 && Math.abs(s.z - z) <= (s.r || 3) + rr + 2)) continue;
+      let clash = false;
+      for(const id in save.cdCourts || {}){ const c = save.cdCourts[id]; if(c && Math.hypot(c.x - x, c.z - z) < 9 + rr) clash = true; }
+      if(!clash && CLm && CLm.CL && CLm.CL.b) for(const b of CLm.CL.b){ let R2 = 6; try{ R2 = CLm.planOf(b).R || 6; }catch(e){} if(Math.hypot(b.x - x, b.z - z) < R2 + rr + 3){ clash = true; break; } }
+      if(!clash) for(const tr of trees) if(!tr.dead && Math.abs(tr.bx - x) <= rr + 1 && Math.abs(tr.bz - z) <= rr + 1){ clash = true; break; }
+      if(clash) continue;
+      const G = NA.siteOk(x, z, rr); if(G === null) continue;
+      let full = false;
+      for(let i=-rr;i<=rr && !full;i++) for(let j=-rr;j<=rr && !full;j++) for(let y=1;y<=4;y++) if(get(x + i, -(G + y), z + j)){ full = true; break; }
+      if(full) continue;
+      try{ let deco = false; for(let i=-rr;i<=rr;i++) for(let j=-rr;j<=rr;j++) if(BIOME.decoAt(x + i, z + j)){ BIOME.gone.add((x + i) + ',' + (z + j)); deco = true; }
+        if(deco){ save.decoGone = [...BIOME.gone]; if(save.decoGone.length > 4000) save.decoGone = save.decoGone.slice(-4000); BIOME.decoRefresh(); } }catch(e){}
+      return {x, z, G, rot:Math.atan2(n.x - x, n.z - z)};
+    }
+    return null;
+  }
+  const front = m=>({x:m.x + .5 + Math.sin(m.rot)*1.5, z:m.z + .5 + Math.cos(m.rot)*1.5});
+
+  // ================= TRAVELLING MERCHANTS: 8 types, each with its own look, cart, stock and name tag
+  const MT = {
+    food:  {name:'Food Merchant',        shirt:0xe08a30, pants:0x5a3a2a, can:[0xe03a3a, 0xffffff], first:['Mango Mo','Biscuit Bea','Pickle Pat','Noodle Ned'], hat:'straw', lines:['Dishes from every country! Get them while they are hot!','I have been to every country. My tummy is very well travelled.']},
+    spice: {name:'Spice Trader',         shirt:0x8a3ac8, pants:0x3a2a5a, can:[0x8a3ac8, 0xffd040], first:['Pepper Pete','Saffron Sal','Cumin Kim','Ginger Gus'], hat:'wrap', lines:['A pinch of this makes anything exciting. Achoo!','Careful, the Dragon Chili bites back.']},
+    fruit: {name:'Fruit and Veg Seller', shirt:0x3a9a3a, pants:0x5a4a2a, can:[0x3ab04a, 0xfff0a0], first:['Farmer Flo','Cabbage Cal','Berry Ben','Melon Meg'], hat:'cap', lines:['Fresh from the field! The carrots say hello.','Eat your greens. And your reds. And your purples.']},
+    exotic:{name:'Exotic Snack Dealer',  shirt:0x20a0a0, pants:0x203a5a, can:[0x20b0b0, 0xff60c0], first:['Zara Zing','Captain Crunch','Lulu Loop','Rex Rumble'], hat:'feather', lines:['Rare dishes from the furthest countries! Very fancy.','These snacks travelled further than you ever will.']},
+    fish:  {name:'Fishmonger',           shirt:0x3a6ad0, pants:0x2a3a5a, can:[0x3a8ae0, 0xffffff], first:['Salty Sam','Fishy Fran','Captain Cod','Tuna Tim'], hat:'sou', lines:['Fresh fish! Some of them are still grumpy about it.','Smell that? That is the smell of the sea. And of fish.']},
+    baker: {name:'Baker',                shirt:0xf0f0ea, pants:0x6a5a4a, can:[0xd8a060, 0xffffff], first:['Bun Betty','Doughy Dan','Crusty Cora','Muffin Max'], hat:'puff', lines:['Warm bread, straight from my oven on wheels!','I knead you to try my buns. Get it? Knead!']},
+    sweet: {name:'Sweet Shop',           shirt:0xff70b0, pants:0x8a3a6a, can:[0xff70b0, 0xffffff], first:['Candy Cass','Lolly Lou','Fudge Fred','Toffee Tess'], hat:'candy', lines:['Sweets for everyone! Brush your teeth after.','The Choco Volcano erupts in your mouth!']},
+    chef:  {name:'Travelling Chef',      shirt:0xffffff, pants:0x2a2a2a, can:[0xe0e0e0, 0xd03030], first:['Chef Remy','Chef Pasta Paula','Chef Gordon Goose','Chef Wok Wendy'], hat:'toque', lines:['Give me two dishes and I will cook something nobody has ever tasted!','Fusion food is my speciality. Some of it is even good.']},
+    // merchants who do NOT sell food (player: "some merchant dont sell food")
+    tools: {name:'Tool Seller',          shirt:0xd08a20, pants:0x3a3a4a, can:[0x5a5a6a, 0xffc040], first:['Hammer Hank','Wrench Wendy','Bolt Bill','Shovel Sue'], hat:'hard', nf:1, lines:['Shiny tools for serious diggers!','This shovel has dug to the core and back. Twice.']},
+    junk:  {name:'Junk Collector',       shirt:0x7a6a4a, pants:0x4a3a2a, can:[0x8a7a5a, 0xa0a0a0], first:['Rusty Rick','Odd Sock Olga','Bucket Bob','Clutter Clem'], hat:'cap', nf:1, lines:['One miner\'s junk is my treasure! I buy anything.','I once found a whole sandwich in a boot. Still wearing the boot.']},
+    gems:  {name:'Gem Trader',           shirt:0x3a2a6a, pants:0x1a1a3a, can:[0x6a3ad0, 0x40e0ff], first:['Ruby Rae','Sapphire Sid','Opal Ollie','Diamond Dot'], hat:'feather', nf:1, lines:['Sparkly rocks! All real. Probably.','Gems from deep, deep down. Careful, they are shiny.']},
+    furn:  {name:'Furniture Dealer',     shirt:0x8a5a2a, pants:0x4a3a2a, can:[0xa06a3a, 0xf0e0c0], first:['Comfy Carl','Sofa Sofia','Lampy Lil','Table Ted'], hat:'straw', nf:1, lines:['Make your base cosy! Everything flat-packed. Very flat.','This chair is so comfy you will never dig again.']},
+    hats:  {name:'Hat and Clothes Seller', shirt:0xd04a8a, pants:0x2a2a5a, can:[0xd04a8a, 0xffe060], first:['Fancy Fiona','Dapper Dan','Stylish Stan','Glam Gloria'], hat:'top', nf:1, lines:['You cannot dig in style without a hat!','Every outfit gives you a little bonus. Fashion is power.']},
+    herbs: {name:'Potion and Herb Seller', shirt:0x3a7a5a, pants:0x2a3a2a, can:[0x3a8a5a, 0xc0a0ff], first:['Granny Sage','Minty Mo','Wizard Wort','Herby Hattie'], hat:'wrap', nf:1, lines:['Herbs for every trouble! Mint cures poison, Basil heals.','Smell this. No, really. Smell it.']},
+    scrolls:{name:'Map and Lore Scroll Seller', shirt:0x6a4a8a, pants:0x2a2a3a, can:[0xe0d0a0, 0x6a4a8a], first:['Old Mapsy','Scribble Sam','Professor Parchment','Inky Ivy'], hat:'top', nf:1, lines:['Maps to every country, and stories older than dirt!','Read a scroll, learn a secret. Maybe.']},
+    pets:  {name:'Pet Seller',           shirt:0xe0a040, pants:0x5a4a2a, can:[0x40b0e0, 0xffffff], first:['Pawsome Pam','Fluffy Fergus','Whisker Wally','Cuddly Clara'], hat:'cap', nf:1, lines:['Every pet needs a home! Yours, for example.','They are all very well behaved. Mostly.']}
+  };
+  const MTK = ['food','tools','spice','junk','fruit','gems','exotic','furn','fish','hats','baker','herbs','sweet','scrolls','chef','pets'];   // food and non-food merchants take turns
+  // non-food goods: tools and clothes are wearable gear, furniture is placeable, gems are real ore blocks, scrolls tell a story
+  const TOOLS = [['Turbo Shovel','dig',.35,60],['Lucky Hammer','dmg',.5,70],['Springy Pogo Stick','jump',.35,55],['Zoomy Roller Skates','speed',.3,65],['Golden Pickaxe Charm','dig',.6,120],['Sturdy Toolbelt','hp',30,80]];
+  const CLOTHES = [['Wobbly Top Hat','head','hp',20,45],['Sparkly Cape','body','speed',.2,60],['Bouncy Boots','feet','jump',.3,50],['Miner Hard Hat','head','dig',.25,55],['Puffy Winter Coat','body','hp',35,70],['Sneaky Slippers','feet','speed',.25,40]];
+  const FURN = [['Comfy Royal Chair','chair',0xa03030,35],['Wobbly Party Table','table',0x9a6a3a,40],['Cloud Bed','bed',0xe0e8ff,80],['Disco Lamp','lamp',0xff70d0,30],['Giant Fluffy Rug','rug',0x40a0d0,35],['Squishy Sofa','sofa',0x5a7ad0,70],['Tall Wobbly Shelf','shelf',0x8a5a2a,45],['Golden Duck Statue','statue',0xffd040,90],['Treasure Crate','crate',0xa07a40,25]];
+  const JUNK = ['Scrap','Banana Peel','Squeaky Toy','Clown Nose','Cloth Scrap','Copper Scrap','Stone Chunk','Duck Feather'];
+  const SCROLLS = [
+    ['Scroll of Baba Caka','Long ago, Baba Caka lost a game of hide and seek. He is still looking for the winner. That is why he comes out every night.'],
+    ['Scroll of the First Bob','The very first Bob fell out of a cloud and landed on a pancake. He has been sticky ever since.'],
+    ['Scroll of the Core','At the centre of the world there is a giant hot potato. The deeper you dig, the warmer it gets. Do not lick it.'],
+    ['Scroll of the Great Snack War','Two countries once argued over the last cookie for 100 days. Then a duck ate it. They became best friends.'],
+    ['Scroll of the Sleepy Volcano','The volcano only erupts when it sneezes. Never tickle a volcano.'],
+    ['Scroll of Newton','Isaac Newton once dropped an apple on his own head on purpose, just to make sure gravity still worked.']];
+  const HERBN = ['Mint','Basil','Lavender','Sage','Clover','Glowcap','Fire Flower','Moonleaf'];
+  try{ SCROLLS.forEach(s=>{ ITEM_COL[s[0]] = [230, 210, 160]; if(!RARE[s[0]]) RARE[s[0]] = 'SC'; }); ITEM_COL['Town Map'] = [200, 220, 160]; LOOT['Town Map'] = 'MP'; }catch(e){}
+  const petPool = ()=>Object.keys(AD).filter(k=>{ const d = AD[k]; return d && d.name && !d.boss && !d.foe && !d.mad && !d.chaos && !d.fly && /^[A-Za-z ]+$/.test(d.name); });
+  const PETN = ['Sprinkles','Nugget','Biscuit','Waffles','Pickles','Bubbles','Muffin','Noodle','Peanut','Pudding'];
+  function personModel(ty){
+    const S = MT[ty], v = new THREE.Group();
+    const lL = new THREE.Group(), lR = new THREE.Group(); lL.position.set(-.12, .6, 0); lR.position.set(.12, .6, 0); v.add(lL, lR);
+    bx(lL, .18, .6, .18, S.pants, 0, -.3, 0); bx(lR, .18, .6, .18, S.pants, 0, -.3, 0);
+    bx(v, .5, .7, .3, S.shirt, 0, 1.0, 0); bx(v, .14, .55, .14, S.shirt, -.32, 1.05, 0); bx(v, .14, .55, .14, S.shirt, .32, 1.05, 0);
+    bx(v, .4, .4, .4, 0xe0b48a, 0, 1.6, 0); bx(v, .07, .07, .03, 0x111111, -.1, 1.65, .21); bx(v, .07, .07, .03, 0x111111, .1, 1.65, .21); bx(v, .16, .04, .03, 0x6b3a22, 0, 1.52, .21);
+    bx(v, .52, .5, .04, 0xf4f0e0, 0, .95, .17);                                    // apron
+    const h = S.hat;
+    if(h === 'straw'){ bx(v, .8, .05, .8, 0xe8d080, 0, 1.83, 0); bx(v, .42, .18, .42, 0xe8d080, 0, 1.93, 0); bx(v, .44, .05, .44, 0xd03030, 0, 1.88, 0); }
+    else if(h === 'wrap'){ bx(v, .48, .26, .48, 0xffd040, 0, 1.92, 0); bx(v, .14, .14, .14, 0xd03030, 0, 1.95, .22); }
+    else if(h === 'cap'){ bx(v, .46, .12, .46, 0x3a7a3a, 0, 1.86, 0); bx(v, .46, .04, .22, 0x3a7a3a, 0, 1.82, .3); }
+    else if(h === 'feather'){ bx(v, .44, .38, .44, 0x204a6a, 0, 2.0, 0); bx(v, .6, .04, .6, 0x204a6a, 0, 1.82, 0); bx(v, .06, .5, .12, 0xff60c0, .2, 2.3, 0); }
+    else if(h === 'sou'){ bx(v, .5, .2, .5, 0xffd030, 0, 1.9, 0); bx(v, .64, .04, .7, 0xffd030, 0, 1.81, -.05); }
+    else if(h === 'puff'){ bx(v, .44, .14, .44, 0xffffff, 0, 1.86, 0); bx(v, .58, .26, .58, 0xffffff, 0, 2.04, 0); }
+    else if(h === 'candy'){ for(let i=0;i<4;i++) bx(v, .42 - i*.06, .1, .42 - i*.06, i % 2 ? 0xffffff : 0xff3a8a, 0, 1.86 + i*.1, 0); bx(v, .12, .12, .12, 0xff3a8a, 0, 2.3, 0); }
+    else if(h === 'hard'){ bx(v, .5, .2, .5, 0xffc020, 0, 1.88, 0); bx(v, .58, .04, .62, 0xffc020, 0, 1.8, .02); bx(v, .1, .08, .03, 0xffffff, 0, 1.9, .26); }
+    else if(h === 'top'){ bx(v, .62, .05, .62, 0x1a1a1a, 0, 1.82, 0); bx(v, .4, .46, .4, 0x1a1a1a, 0, 2.06, 0); bx(v, .42, .08, .42, S.can[0], 0, 1.9, 0); }
+    else if(h === 'toque'){ bx(v, .44, .5, .44, 0xffffff, 0, 2.05, 0); bx(v, .54, .16, .54, 0xffffff, 0, 2.34, 0); }
+    v.userData.legs = [lL, lR];
+    return v;
+  }
+  function cartModel(ty, col1, col2){
+    const g = new THREE.Group();
+    bx(g, 1.6, .12, 1, 0x8a5a2a, 0, .55, 0); bx(g, 1.6, .4, .06, 0x6a4a2a, 0, .8, .5); bx(g, 1.6, .4, .06, 0x6a4a2a, 0, .8, -.5); bx(g, .06, .4, 1, 0x6a4a2a, .8, .8, 0);
+    [[-.5, .56], [.5, .56], [-.5, -.56], [.5, -.56]].forEach(([x, z])=>bx(g, .44, .44, .08, 0x2a2a2a, x, .25, z));
+    [[-.75, .45], [.75, .45], [-.75, -.45], [.75, -.45]].forEach(([x, z])=>bx(g, .06, 1.2, .06, 0x6a4a2a, x, 1.2, z));
+    for(let i=0;i<4;i++) bx(g, .42, .06, 1.2, i % 2 ? col2 : col1, -.63 + i*.42, 1.82, 0);
+    bx(g, .9, .06, .06, 0x6a4a2a, -1.2, .6, .3); bx(g, .9, .06, .06, 0x6a4a2a, -1.2, .6, -.3);       // handles
+    const goods = ty === 'fish' ? [0x9ac8e8, 0x6a8aa8, 0xc0c8d0] : ty === 'fruit' ? [0x40c040, 0xff4040, 0xffd040] : ty === 'baker' ? [0xd8a060, 0xb07a40, 0xe8c080]
+      : ty === 'sweet' ? [0xff70b0, 0x70d0ff, 0xffe060] : ty === 'spice' ? [0xd06020, 0xe0b030, 0x8a3a1a] : ty === 'chef' ? [0x2a2a2a, 0x8a8a90, 0xd03030] : [0xe08a30, 0xd04040, 0xf0d070];
+    for(let i=0;i<5;i++) bx(g, .26, .22, .26, goods[i % 3], -.55 + i*.27, .74, (i % 2 ? .18 : -.18));
+    if(ty === 'chef'){ bx(g, .4, .4, .4, 0x2a2a2a, .4, .85, 0); bx(g, .3, .2, .3, 0x9a9aa0, .4, 1.15, 0); }
+    return g;
+  }
+  let M = null;                                   // the merchant who is visiting now
+  let mNext = 50;
+  function merchantStock(ty){
+    const T = towns(), all = []; T.forEach(n=>menuOf(n).forEach(nm=>{ if(D[nm]) all.push(nm); }));
+    const shuffled = a=>a.map(x=>[Math.random(), x]).sort((p, q)=>p[0] - q[0]).map(p=>p[1]);
+    let L = [];
+    if(ty === 'food'){ const byC = {}; shuffled(all).forEach(nm=>{ const h = D[nm].home; if(!byC[h]) byC[h] = []; byC[h].push(nm); }); const ks = Object.keys(byC); for(let r=0;L.length < 7 && r < 3;r++) ks.forEach(k=>{ if(L.length < 7 && byC[k][r]) L.push(byC[k][r]); }); L = L.map(nm=>({nm, price:Math.round(D[nm].price*1.2)})); }
+    else if(ty === 'exotic'){
+      const far = T.slice().sort((a, b)=>Math.hypot(b.x - P.x, b.z - P.z) - Math.hypot(a.x - P.x, a.z - P.z)).slice(0, 3);
+      far.forEach(n=>{ const m = menuOf(n); L.push({nm:m[Math.floor(Math.random()*m.length)], price:0, far:1}); });
+      L = L.filter(o=>D[o.nm]).map(o=>({nm:o.nm, price:D[o.nm].price*2}));
+      shuffled(GOODS.exotic).slice(0, 3).forEach(g=>L.push({nm:g[0], price:g[2]}));
+    }
+    else if(ty === 'fish'){ shuffled(GOODS.fish).slice(0, 5).forEach(g=>L.push({nm:g[0], price:g[2]})); all.filter(nm=>/Fish|Seaweed|Crab|Shell|Pearl|Otter/.test(nm)).slice(0, 2).forEach(nm=>L.push({nm, price:Math.round(D[nm].price*1.2)})); }
+    else if(ty === 'chef'){ GOODS.chef.forEach(g=>L.push({nm:g[0], price:g[2]})); shuffled(all).slice(0, 2).forEach(nm=>L.push({nm, price:Math.round(D[nm].price*1.3)})); }
+    else if(ty === 'tools') shuffled(TOOLS).slice(0, 5).forEach(t=>L.push({nm:t[0], price:t[3], k:'gear', slot:'charm', st:t[1], v:t[2]}));
+    else if(ty === 'hats') shuffled(CLOTHES).slice(0, 5).forEach(t=>L.push({nm:t[0], price:t[4], k:'gear', slot:t[1], st:t[2], v:t[3]}));
+    else if(ty === 'furn') shuffled(FURN).slice(0, 6).forEach(t=>L.push({nm:t[0], price:t[3], k:'furn', kind:t[1], col:t[2]}));
+    else if(ty === 'junk') shuffled(JUNK).slice(0, 5).forEach(nm=>L.push({nm, price:3 + Math.floor(Math.random()*6), k:'item'}));
+    else if(ty === 'herbs') shuffled(HERBN).slice(0, 6).forEach(nm=>L.push({nm, price:12 + Math.floor(Math.random()*10), k:'item'}));
+    else if(ty === 'scrolls'){ L.push({nm:'Town Map', price:15, k:'map'}); shuffled(SCROLLS).slice(0, 4).forEach(s=>L.push({nm:s[0], price:20, k:'scroll', txt:s[1]})); }
+    else if(ty === 'gems'){
+      let gem = []; try{ gem = BLOCKS.filter(B=>B && B.ore && !B.custom && B.name && (B.cat === 'crystal' || B.cat === 'treasure' || /gem|ruby|emerald|sapphire|diamond|amethyst|topaz|opal|crystal|gold/i.test(B.name))); }catch(e){}
+      if(!gem.length) try{ gem = BLOCKS.filter(B=>B && B.ore && !B.custom && B.name); }catch(e){}
+      gem = gem.filter((B, i)=>gem.findIndex(q=>q.name === B.name) === i);
+      shuffled(gem).slice(0, 5).forEach(B=>L.push({nm:B.name, price:Math.round(25 + Math.min(175, Math.log10((B.v || 5) + 1)*45)), k:'item'}));
+      L.push({nm:'Crystal Shard', price:18, k:'item'}); L.push({nm:'Gold Dust', price:22, k:'item'});
+    }
+    else if(ty === 'pets'){ const pool = petPool(); shuffled(pool).slice(0, 4).forEach(t=>L.push({nm:pick(PETN) + ' the ' + AD[t].name, price:60 + Math.floor(Math.random()*60), k:'pet', type:t})); }
+    else shuffled(GOODS[ty]).slice(0, 6).forEach(g=>L.push({nm:g[0], price:g[2]}));
+    return L;
+  }
+  function spawnMerchant(ty, at){
+    if(M) despawnMerchant(true);
+    if(!ty){ for(let k=0;k<MTK.length;k++){ ty = MTK[F.mi++ % MTK.length]; if(!(/food|exotic/.test(ty) && towns().length < 1)) break; } }
+    const S = MT[ty]; let x, z, G0 = null;
+    if(at){ x = at.x; z = at.z; G0 = BIOME.surfH(Math.floor(x), Math.floor(z)); }
+    else for(let t=0;t<60;t++){
+      const a = Math.random()*6.283, d = (t < 30 ? 12 : 6) + Math.random()*(t < 30 ? 10 : 30); x = P.x + Math.cos(a)*d; z = P.z + Math.sin(a)*d;
+      const c = BIOME.col(Math.floor(x), Math.floor(z)); if(c && c.liq) continue;
+      const g = BIOME.surfH(Math.floor(x), Math.floor(z)); if(get(Math.floor(x), -(g + 1), Math.floor(z)) || !get(Math.floor(x), -g, Math.floor(z))) continue;
+      G0 = g; break;
+    }
+    if(G0 === null) return null;
+    const g = new THREE.Group(), v = personModel(ty), cart = cartModel(ty, S.can[0], S.can[1]);
+    v.position.set(0, 0, 0); cart.position.set(1.3, 0, 0); g.add(v, cart);
+    const nm = pick(S.first) + ' the ' + S.name;
+    const tg = signSprite(nm, 'F: shop', '#ffe14a', 3.6); tg.position.set(.6, 2.9, 0); g.add(tg);
+    NOM(g); g.position.set(x, G0, z); scene.add(g);
+    M = {ty, nm, g, v, x, z, ox:x, oz:z, G:G0, cx:Math.floor(x), cz:Math.floor(z), head:Math.random()*6.283, walkT:3, mv:false, t:0, life:300, stock:merchantStock(ty)};
+    news('NEWS: ' + nm + ' is travelling around with a cart full of ' + ({chef:'pots and pans', fish:'fish', sweet:'sweets', baker:'warm bread', spice:'spices', fruit:'fruit and veg', tools:'tools', junk:'junk (and some treasure)', gems:'sparkly gems', furn:'furniture', hats:'hats and clothes', herbs:'herbs', scrolls:'maps and old scrolls', pets:'cute pets'}[ty] || 'food from far away') + '.');
+    if(locked) toast(nm + ' has arrived nearby with a cart! Walk up and press F to shop.');
+    ensureLoop();
+    return M;
+  }
+  function despawnMerchant(quiet){ if(!M) return; scene.remove(M.g); if(!quiet && Math.hypot(M.x - P.x, M.z - P.z) < 40) toast(M.nm + ' packed up the cart and went to the next town.'); M = null; }
+
+  // ================= TRADE CARTS (max 2, only near you) and PICNIC BASKETS
+  const carts = [];
+  function spawnCart(A, B, dish){
+    if(carts.length >= 2 || !onEarth()) return;
+    if(Math.min(Math.hypot(A.x - P.x, A.z - P.z), Math.hypot(B.x - P.x, B.z - P.z)) > 160) return;
+    const g = new THREE.Group(), c = cartModel('food', 0xe0a020, 0xffffff); g.add(c);
+    const tg = signSprite('Trade Cart', A.name + ' to ' + B.name, '#a0ffa0', 3.2); tg.position.set(0, 2.6, 0); g.add(tg);
+    NOM(g); scene.add(g);
+    const d = Math.hypot(B.x - A.x, B.z - A.z);
+    carts.push({g, ax:A.x + 2, az:A.z + 2, bx:B.x + 2, bz:B.z + 2, t:0, T:Math.max(20, Math.min(90, d/2.5)), cx:null, cz:null, y:A.G || 0});
+    ensureLoop();
+  }
+  const baskets = [];
+  function basketModel(){
+    const g = new THREE.Group();
+    bx(g, .9, .45, .6, 0xb0783a, 0, .23, 0); bx(g, .94, .06, .64, 0x8a5a2a, 0, .47, 0);
+    for(let i=0;i<4;i++) for(let j=0;j<3;j++) bx(g, .23, .03, .21, (i + j) % 2 ? 0xffffff : 0xe03a3a, -.34 + i*.23, .51, -.21 + j*.21);
+    bx(g, .06, .4, .06, 0x8a5a2a, -.3, .7, 0); bx(g, .06, .4, .06, 0x8a5a2a, .3, .7, 0); bx(g, .66, .06, .06, 0x8a5a2a, 0, .9, 0);
+    const tg = signSprite('Picnic Basket', 'F: open', '#ffe0a0', 2.2); tg.position.set(0, 1.5, 0); g.add(tg);
+    return NOM(g);
+  }
+  function spawnBasket(n){
+    if(baskets.length >= 3 || baskets.some(b=>b.n === n.id)) return null;
+    for(let t=0;t<25;t++){
+      const a = Math.random()*6.283, d = 5 + Math.random()*12, x = Math.floor(n.x + Math.cos(a)*d), z = Math.floor(n.z + Math.sin(a)*d);
+      if(Math.hypot(x - P.x, z - P.z) < 3) continue;
+      const G = NA.siteOk(x, z, 0); if(G === null || get(x, -(G + 1), z)) continue;
+      const g = basketModel(); g.position.set(x + .5, G, z + .5); g.rotation.y = Math.random()*6.283; scene.add(g);
+      const b = {n:n.id, g, x:x + .5, z:z + .5, G, life:480}; baskets.push(b); return b;
+    }
+    return null;
+  }
+  function openBasket(b){
+    const n = byId(b.n); scene.remove(b.g); baskets.splice(baskets.indexOf(b), 1);
+    if(!n){ toast('The basket was empty. A squirrel got there first.'); return; }
+    const m = menuOf(n), got = [];
+    for(let k=0;k<2;k++){ const nm = m[Math.floor(Math.random()*m.length)]; give(nm, 1, true); got.push(nm); }
+    toast('You opened a picnic basket from ' + n.name + '! Inside: ' + got.join(' and ') + '. Press E to eat.'); blip(760, .1, .08, 'triangle'); persist();
+  }
+
+  // ================= COUNTRIES TRADE FOOD
+  const W = ()=>window.__wars, AL = ()=>window.__alliance;
+  function warIn(n){
+    if(n.war) return true;
+    const w = W() && W().war; if(!w) return false;
+    if(w.A === n || w.B === n) return true;
+    return !!(w.allies && ((w.allies.A || []).indexOf(n.id) >= 0 || (w.allies.B || []).indexOf(n.id) >= 0));
+  }
+  const allied = (a, b)=>{ try{ const A = AL(); if(!A) return false; const x = A.allyOf(a); return !!x && x === A.allyOf(b); }catch(e){ return false; } };
+  const DEALS = ['Snack Deal','Lunchbox Treaty','Pudding Pact','Sandwich Swap','Noodle Agreement','Great Food Swap','Cake Friendship Deal'];
+  function tradeOnce(A, B){
+    if(!A || !B){
+      const T = towns().filter(n=>!warIn(n) && makeMenu(n).length); if(T.length < 2) return null;
+      const pairs = []; let tot = 0;
+      for(let i=0;i<T.length;i++) for(let j=i+1;j<T.length;j++){ const w = allied(T[i], T[j]) ? 3 : 1; pairs.push([T[i], T[j], w]); tot += w; }
+      let r = Math.random()*tot; for(const p of pairs){ r -= p[2]; if(r <= 0){ A = p[0]; B = p[1]; break; } }
+      if(!A){ A = pairs[0][0]; B = pairs[0][1]; }
+    }
+    if(warIn(A) || warIn(B)) return null;
+    const pickFrom = (src, dst)=>{ const L = menuOf(src).filter(nm=>!(dst.ftImp || []).some(q=>q.nm === nm)); return L.length ? L[Math.floor(Math.random()*L.length)] : menuOf(src)[0]; };
+    const dA = pickFrom(A, B), dB = pickFrom(B, A);
+    addImport(B, dA, A); addImport(A, dB, B);
+    F.trades++;
+    const deal = pick(DEALS), al = allied(A, B);
+    news('NEWS: ' + A.name + ' and ' + B.name + ' signed a ' + deal + '! ' + A.name + ' sends ' + dA + ' and gets ' + dB + '.' + (al ? ' Allies share the best snacks.' : ''));
+    if(onEarth() && (Math.hypot(A.x - P.x, A.z - P.z) < 120 || Math.hypot(B.x - P.x, B.z - P.z) < 120)) toast('FOOD TRADE: ' + A.name + ' and ' + B.name + ' signed a ' + deal + '. Their markets now sell each other\'s food!');
+    spawnCart(A, B, dA);
+    persist();
+    return {A:A.name, B:B.name, dA, dB, deal};
+  }
+
+  // ================= the panel (market, merchant, resident trade). Every page has a close X.
+  let pan = null, pBox = null, pMode = null, pTab = 'buy', pN = null, pRes = null, pMsg = '', pB = null;
+  function ensurePan(){
+    if(pan) return;
+    pan = document.createElement('div');
+    pan.style.cssText = 'position:fixed;inset:0;z-index:72;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center';
+    pan.innerHTML = '<div style="position:relative;width:min(640px,94vw);max-height:86vh;overflow:auto;background:#2a1d12;border:3px solid #ffb040;border-radius:14px;padding:14px 16px;color:#fff;font:14px system-ui,sans-serif;box-sizing:border-box"></div>';
+    pBox = pan.firstChild;
+    pan.addEventListener('keydown', e=>{ if(e.code !== 'Escape') e.stopPropagation(); });
+    pan.addEventListener('click', e=>{
+      e.stopPropagation(); const t = e.target.closest('button');
+      if(e.target === pan || (t && t.dataset.ft === 'x')){ closePan(); return; }
+      if(!t) return;
+      if(t.dataset.ftt){ pTab = t.dataset.ftt; render(); return; }
+      const a = t.dataset.ft, nm = t.dataset.nm;
+      if(a === 'buy') buy(nm, +t.dataset.pr);
+      else if(a === 'sell') sell(nm);
+      else if(a === 'cook') cook();
+      else if(a === 'swap') resSwap();
+      else if(a === 'mbuy') buyMerchant(+t.dataset.i);
+      else if(a === 'jsell') sellJunk(nm);
+      else if(a === 'reat') restMeal(nm, +t.dataset.pr, true);
+      else if(a === 'rtake') restMeal(nm, +t.dataset.pr, false);
+      else if(a === 'no'){ closePan(); toast('No problem! Maybe next time.'); }
+    });
+    document.body.appendChild(pan);
+  }
+  function openPan(mode, n){
+    ensurePan(); pMode = mode; pN = n || null; pTab = mode === 'res' ? 'res' : 'buy'; pMsg = '';
+    $('prompt') && ($('prompt').style.display = 'none');
+    shopOpen = true; render(); pan.style.display = 'flex'; startEl.style.display = 'none';
+    try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+  }
+  function closePan(){ if(!pan || pan.style.display === 'none') return; pan.style.display = 'none'; shopOpen = false; pMode = null; startEl.style.display = 'flex'; }
+  const _cs = closeShop;
+  closeShop = function(){ if(pan && pan.style.display === 'flex'){ closePan(); return; } return _cs.apply(this, arguments); };   // Esc and F also close it
+  const isOpen = ()=>!!pan && pan.style.display === 'flex';
+  const swatch = nm=>{ const c = (ITEM_COL[nm] || [200, 160, 100]); return '<span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:7px;font:800 12px system-ui;color:#fff;text-shadow:0 1px 2px #000;margin-right:8px;vertical-align:middle;background:rgb(' + c.join(',') + ')">' + esc((LOOT[nm] || RARE[nm] || abOf(nm)).length <= 3 ? (LOOT[nm] || RARE[nm] || abOf(nm)) : abOf(nm)) + '</span>'; };
+  const btnH = (a, nm, txt, dis, col, pr)=>'<button data-ft="' + a + '" data-nm="' + esc(nm) + '"' + (pr != null ? ' data-pr="' + pr + '"' : '') + (dis ? ' disabled' : '') + ' style="padding:6px 12px;border:0;border-radius:7px;background:' + (col || '#e08a20') + ';color:#fff;font-weight:800;cursor:pointer;' + (dis ? 'opacity:.45;cursor:default' : '') + '">' + txt + '</button>';
+  const row = (left, right)=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;margin:3px 0;border-radius:8px;background:rgba(255,255,255,.06)"><div style="flex:1;min-width:0">' + left + '</div><div style="white-space:nowrap">' + right + '</div></div>';
+  function tabs(list){ return '<div style="display:flex;gap:6px;margin:8px 0">' + list.map(([k, l])=>'<button data-ftt="' + k + '" style="flex:1;padding:8px 4px;border:1px solid #6a4a2a;border-radius:8px;background:' + (pTab === k ? '#ffb040' : '#3a2a1a') + ';color:' + (pTab === k ? '#2a1808' : '#f0d8b0') + ';font-weight:800;cursor:pointer">' + l + '</button>').join('') + '</div>'; }
+  function myFoods(){ return Object.keys(save.inv || {}).filter(nm=>save.inv[nm] > 0 && infoOf(nm)); }
+  function render(){
+    if(!pBox) return;
+    let h = '<button data-ft="x" title="Close" style="position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;border-radius:8px;background:#a03030;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>';
+    const coins = Math.floor(save.coins || 0);
+    if(pMode === 'market'){
+      const n = pN, N = n.natl, al = (()=>{ try{ const a = AL() && AL().allyOf(n); return a ? a.name : ''; }catch(e){ return ''; } })();
+      h += '<h2 style="margin:0 40px 2px 0;color:#ffd84a">' + esc(n.name) + ' Market</h2>' +
+        '<div style="opacity:.85;font-size:13px">Money here: ' + esc(curName(n)) + ' (1 coin = ' + esc(N.rate.toLocaleString()) + ')  |  National animal: ' + esc(N.animal) + (al ? '  |  Alliance: ' + esc(al) : '') + (warIn(n) ? '  |  <b style="color:#ff8080">AT WAR: no trading</b>' : '') + '</div>' +
+        '<div style="margin-top:4px">You have <b style="color:#ffd54a">$' + coins + '</b> (' + esc(inCur(n, coins)) + ')</div>' + tabs([['buy', 'Buy food'], ['sell', 'Sell food'], ['foods', 'Foods tried']]);
+      if(pTab === 'buy'){
+        stock(n).forEach(o=>{
+          const tag = o.src === 'nat' ? '<span style="color:#ffd84a">NATIONAL FOOD of ' + esc(n.name) + '</span>' : o.src === 'imp' ? '<span style="color:#80d0ff">Imported from ' + esc(o.from) + '</span>' : '<span style="color:#a0ffa0">Local dish</span>';
+          h += row(swatch(o.nm) + '<b>' + esc(o.nm) + '</b>' + (F.tried[o.nm] ? ' <span style="font-size:11px;background:#3a7a3a;border-radius:5px;padding:1px 5px">Tried</span>' : '') + '<div style="font-size:12px;margin-left:38px;opacity:.9">' + tag + '</div>', '<span style="margin-right:8px">' + esc(priceTxt(n, o.price)) + '</span>' + btnH('buy', o.nm, 'Buy', coins < o.price, null, o.price));
+        });
+        h += '<div style="opacity:.7;font-size:12px;margin-top:6px">Each country cooks its own dishes. Food from other countries only comes here by trade. Put food in a carry slot and press E to eat it.</div>';
+      } else if(pTab === 'sell') h += sellList(n);
+      else h += foodsPage();
+    } else if(pMode === 'merchant' && M){
+      const S = MT[M.ty];
+      h += '<h2 style="margin:0 40px 2px 0;color:#ffd84a">' + esc(M.nm) + '</h2><div style="opacity:.85;font-style:italic">"' + esc(pick(S.lines)) + '"</div>' +
+        '<div style="margin-top:4px">You have <b style="color:#ffd54a">$' + coins + '</b></div>' + tabs(S.nf ? (M.ty === 'junk' ? [['buy', 'Buy'], ['sell', 'Sell junk']] : [['buy', 'Buy']]) : [['buy', 'Buy'], M.ty === 'chef' ? ['cook', 'Cook a fusion'] : ['sell', 'Sell food'], ['foods', 'Foods tried']]);
+      if(pMsg) h += '<div style="margin:6px 0;padding:8px 10px;border-radius:8px;background:#3a2a50;border:1px solid #8a6ac0">' + esc(pMsg) + '</div>';
+      const what = o=>o.k === 'gear' ? 'Wear it: ' + o.slot + ' slot, ' + statText({[o.st]:o.v}) : o.k === 'furn' ? 'Furniture: place it in your base' : o.k === 'pet' ? 'A pet that follows you around' : o.k === 'scroll' ? 'An old story scroll' : o.k === 'map' ? 'Shows where every country is' : o.k === 'item' ? (blockIdOf(o.nm) ? 'A real gem block' : M.ty === 'herbs' ? 'A herb: eat it for its power' : 'Junk. Lovely junk.') : '';
+      if(pTab === 'buy') M.stock.forEach((o, i)=>{ const d = D[o.nm]; h += row(swatch(o.nm) + '<b>' + esc(o.nm) + '</b>' + (F.tried[o.nm] ? ' <span style="font-size:11px;background:#3a7a3a;border-radius:5px;padding:1px 5px">Tried</span>' : '') + '<div style="font-size:12px;margin-left:38px;opacity:.9">' + (d ? 'From <span style="color:#80d0ff">' + esc(d.hn) + '</span>' + (d.nat ? ' (national food)' : '') : o.k ? esc(what(o)) : 'A ' + esc(S.name) + ' special') + '</div>', '<span style="margin-right:8px">$' + o.price + '</span>' + '<button data-ft="mbuy" data-i="' + i + '"' + (coins < o.price ? ' disabled' : '') + ' style="padding:6px 12px;border:0;border-radius:7px;background:#e08a20;color:#fff;font-weight:800;cursor:pointer;' + (coins < o.price ? 'opacity:.45' : '') + '">Buy</button>'); });
+      else if(pTab === 'sell' && M.ty === 'junk') h += junkList();
+      else if(pTab === 'cook'){
+        const L = Object.keys(save.inv || {}).filter(nm=>save.inv[nm] > 0 && save.foodPower && save.foodPower[nm]);
+        const opt = sel=>'<select data-ftc="' + sel + '" style="width:100%;padding:6px;border-radius:6px;background:#1a120a;color:#fff;border:1px solid #6a4a2a">' + L.map((nm, i)=>'<option' + (i === (sel === 'a' ? 0 : Math.min(1, L.length - 1)) ? ' selected' : '') + '>' + esc(nm) + '</option>').join('') + '</select>';
+        h += '<div style="opacity:.85;margin:4px 0 8px">Pick two of your foods. The chef mixes them into a brand new FUSION dish that is stronger than both. Costs $10.</div>' +
+          (L.length >= 1 ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + opt('a') + opt('b') + '</div><div style="margin-top:10px;text-align:center">' + btnH('cook', '', 'Cook it! ($10)', coins < 10 || L.length < 1, '#3a9a3a') + '</div>' : '<div style="opacity:.7">You have no food yet. Buy some at a country market first!</div>');
+        const fu = Object.keys(F.fus); if(fu.length) h += '<div style="margin-top:10px;opacity:.85">Fusion dishes you invented: ' + fu.slice(-8).map(esc).join(', ') + '</div>';
+      } else if(pTab === 'sell') h += sellList(null);
+      else h += foodsPage();
+    } else if(pMode === 'res' && pRes){
+      const R = pRes;
+      h += '<h2 style="margin:0 40px 6px 0;color:#ffd84a">Offer a trade</h2>' + row(swatch(R.mine) + swatch(R.theirs) + ' <b>' + esc(R.who) + '</b> from ' + esc(R.n.name) + ' says: "I have never tasted <b>' + esc(R.mine) + '</b>! I will swap you <b>2 ' + esc(R.theirs) + '</b> for it."', '') +
+        '<div style="display:flex;gap:10px;justify-content:center;margin-top:10px">' + btnH('swap', '', 'Swap!', !has(R.mine), '#3a9a3a') + btnH('no', '', 'No thanks', false, '#6a5a4a') + '</div>';
+    } else if(pMode === 'rest' && pN){
+      const n = pN;
+      h += '<h2 style="margin:0 40px 2px 0;color:#ffd84a">Restaurant of ' + esc(n.name) + '</h2><div style="opacity:.85;font-style:italic">"' + esc(pick(['Hot meals, fresh from the kitchen!', 'Table for one? Right this way.', 'Our chef says today is extra tasty.', 'Please do not feed the soup to the ' + n.natl.animal + '.'])) + '"</div>' +
+        '<div style="margin-top:4px">You have <b style="color:#ffd54a">$' + coins + '</b> (' + esc(inCur(n, coins)) + ')</div>' + tabs([['buy', 'Menu'], ['foods', 'Foods tried']]);
+      if(pMsg) h += '<div style="margin:6px 0;padding:8px 10px;border-radius:8px;background:#2a4a2a;border:1px solid #6ac06a">' + esc(pMsg) + '</div>';
+      if(pTab === 'buy'){
+        restMenu(n).forEach(o=>{
+          const tag = o.src === 'nat' ? '<span style="color:#ffd84a">National food, served hot</span>' : o.src === 'imp' ? '<span style="color:#80d0ff">Today\'s special from ' + esc(o.from) + '</span>' : '<span style="color:#a0ffa0">Local dish, served hot</span>';
+          h += row(swatch(o.nm) + '<b>Hot ' + esc(o.nm) + '</b>' + (F.tried[o.nm] ? ' <span style="font-size:11px;background:#3a7a3a;border-radius:5px;padding:1px 5px">Tried</span>' : '') + '<div style="font-size:12px;margin-left:38px;opacity:.9">' + tag + '</div>',
+            '<span style="margin-right:8px">' + esc(priceTxt(n, o.price)) + '</span>' + btnH('reat', o.nm, 'Eat here', coins < o.price, '#3a9a3a', o.price) + ' ' + btnH('rtake', o.nm, 'Take away', coins < o.price, null, o.price));
+        });
+        h += '<div style="opacity:.7;font-size:12px;margin-top:6px">Eat here: hunger +60, health +30 and a 60 second boost. Take away: you get the dish to eat later.</div>';
+      } else h += foodsPage();
+    } else if(pMode === 'foods') h += '<h2 style="margin:0 40px 6px 0;color:#ffd84a">Foods of the world</h2>' + foodsPage();
+    pBox.innerHTML = h;
+  }
+  const junkOk = nm=>save.inv[nm] > 0 && !infoOf(nm) && !(save.foodPower && save.foodPower[nm]) && !(save.furnItems && save.furnItems[nm]) && !RARE[nm];
+  const junkPrice = nm=>{ let p = 2; try{ p = Math.round(itemPower(nm)*3); }catch(e){} return Math.max(2, Math.min(150, p)); };
+  function junkList(){
+    const L = Object.keys(save.inv || {}).filter(junkOk).slice(0, 40);
+    let h = '<div style="opacity:.85;margin:4px 0">The Junk Collector buys almost anything (not food, furniture or rare finds).</div>';
+    if(!L.length) return h + '<div style="opacity:.7">You have no junk to sell.</div>';
+    L.forEach(nm=>{ h += row(swatch(nm) + '<b>' + esc(nm) + '</b> x' + save.inv[nm], '<span style="margin-right:8px">$' + junkPrice(nm) + '</span>' + btnH('jsell', nm, 'Sell 1', false, '#3a7ad0')); });
+    return h;
+  }
+  function sellJunk(nm){
+    if(!nm || !save.inv[nm] || !junkOk(nm)) return;
+    const p = junkPrice(nm); take(nm, 1); save.coins = (save.coins || 0) + p;
+    toast('The Junk Collector bought your ' + nm + ' for $' + p + '. "Ooh, lovely!"'); blip(520, .08, .06, 'triangle'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); render();
+  }
+  const dirTo = (x, z)=>{ const dx = x - P.x, dz = z - P.z, a = []; if(Math.abs(dz) > Math.abs(dx)*.4) a.push(dz < 0 ? 'north' : 'south'); if(Math.abs(dx) > Math.abs(dz)*.4) a.push(dx > 0 ? 'east' : 'west'); return a.join('-'); };
+  function buyMerchant(i){
+    if(!M) return; const o = M.stock[i]; if(!o) return;
+    if((save.coins || 0) < o.price){ toast('That costs $' + o.price + '. You need more coins!'); return; }
+    if(o.k === 'pet' && save.pet){ toast(M.nm + ': "You already have a pet, ' + save.pet.nm + '! One pet at a time, please."'); return; }
+    save.coins -= o.price; pMsg = '';
+    if(!o.k) give(o.nm, 1);
+    else if(o.k === 'gear'){ save.gear = save.gear || []; save.gearId = (save.gearId || 0) + 1; save.gear.push({id:save.gearId, name:o.nm, slot:o.slot, stats:{[o.st]:o.v}, power:4}); pMsg = 'You bought ' + o.nm + '! Open your inventory (I) and wear it on your ' + o.slot + ' slot for ' + statText({[o.st]:o.v}) + '.'; }
+    else if(o.k === 'furn'){ save.furnItems = save.furnItems || {}; save.furnItems[o.nm] = {kind:o.kind, col:o.col}; addItem(o.nm, 1); pMsg = o.nm + ' is in your bag. Put it in a carry slot and place it in your base.'; }
+    else if(o.k === 'item') addItem(o.nm, 1);
+    else if(o.k === 'scroll'){ addItem(o.nm, 1); pMsg = o.nm + ': "' + o.txt + '"'; }
+    else if(o.k === 'map'){ const T = towns().slice().sort((a, b)=>Math.hypot(a.x - P.x, a.z - P.z) - Math.hypot(b.x - P.x, b.z - P.z)).slice(0, 5);
+      pMsg = T.length ? 'TOWN MAP: ' + T.map(n=>n.name + ' is ' + Math.round(Math.hypot(n.x - P.x, n.z - P.z)) + ' blocks ' + dirTo(n.x, n.z) + ' (food: ' + n.natl.food + ')').join('.  ') + '.' : 'TOWN MAP: There are no countries yet. The map is very empty.'; }
+    else if(o.k === 'pet'){ const pn = o.nm.split(' the ')[0]; save.pet = {type:o.type, nm:pn, from:M.nm}; M.stock.splice(i, 1); pMsg = pn + ' is your pet now and will follow you around. Be kind!'; news('NEWS: ' + pn + ' the ' + AD[o.type].name + ' found a new home with a miner. ' + pn + ' already loves digging.'); }
+    toast(pMsg || ('You bought ' + o.nm + ' for $' + o.price + '.')); blip(660, .08, .06, 'triangle'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); render();
+  }
+  function restMenu(n){ return stock(n).map(o=>Object.assign({}, o, {price:Math.round(o.price*1.3) + 4})); }
+  function restMeal(nm, price, here){
+    const n = pN; if(!n || !nm || !(price > 0)) return;
+    if((save.coins || 0) < price){ toast('That meal costs $' + price + '. You need more coins!'); return; }
+    save.coins -= price;
+    if(here){
+      const first = !F.tried[nm]; F.tried[nm] = 1; F.meals = (F.meals || 0) + 1;
+      save.hunger = Math.min(100, (save.hunger == null ? 100 : save.hunger) + 60); hp = Math.min(hpMax, hp + 30);
+      const k = ['speed', 'jump', 'dig', 'dmg'][Math.floor(hs(nm, 'bf')*4)]; buffs.push({k, v:.18, t:60}); recalcGear();
+      save.eatenKinds = save.eatenKinds || {}; save.eatenKinds[nm] = 1; save.eaten = (save.eaten || 0) + 1;
+      pMsg = (first ? 'NEW DISH! ' : '') + 'You ate a hot plate of ' + nm + ' at the restaurant of ' + n.name + '. Hunger +60, health +30, ' + k + ' boost for 60s.';
+      if(first) checkChamp();
+    } else { give(nm, 1); pMsg = 'Your ' + nm + ' is wrapped up to take away. It is in your bag.'; }
+    toast(pMsg); blip(780, .1, .08, 'triangle'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); render();
+  }
+  function restAt(){
+    const CLm = window.__cityLife; if(!CLm || !CLm.CL || !onEarth()) return null;
+    for(const b of CLm.CL.b){
+      if(b.kind !== 'restaurant' || !b.done || Math.abs(b.x - P.x) > 20 || Math.abs(b.z - P.z) > 20) continue;
+      const n = byId(b.nid); if(!n || !n.natl) continue;
+      let ok = false; try{ ok = CLm.inside(b, P.x, P.z, .5); if(!ok){ const d = CLm.door(b); ok = Math.hypot(d.x + .5 - P.x, d.z + .5 - P.z) < 2.6; } }catch(e){}
+      if(ok) return {b, n};
+    }
+    return null;
+  }
+  function sellList(n){
+    const L = myFoods(); let h = '<div style="opacity:.85;margin:4px 0">' + (n ? esc(n.name) + ' pays MORE for food from other countries, and less for its own.' : 'The merchant buys any food at half price.') + '</div>';
+    if(!L.length) return h + '<div style="opacity:.7">You have no dishes to sell.</div>';
+    L.forEach(nm=>{ const d = infoOf(nm), p = n ? sellPrice(n, nm) : Math.max(2, Math.round(d.price*.5)), own = n && D[nm] && D[nm].home === n.id;
+      h += row(swatch(nm) + '<b>' + esc(nm) + '</b> x' + save.inv[nm] + '<div style="font-size:12px;margin-left:38px;opacity:.85">' + (D[nm] ? 'From ' + esc(D[nm].hn) + (own ? ' (they make this here)' : n ? ' <span style="color:#a0ffa0">(foreign food: good price!)</span>' : '') : d.fus ? 'Your own fusion dish' : d.hn ? 'From ' + esc(d.hn) : 'Merchant food') + '</div>', '<span style="margin-right:8px">' + esc(n ? priceTxt(n, p) : '$' + p) + '</span>' + btnH('sell', nm, 'Sell 1', false, '#3a7ad0')); });
+    return h;
+  }
+  function counts(){
+    let tot = 0, got = 0; towns().forEach(n=>menuOf(n).forEach(nm=>{ tot++; if(F.tried[nm]) got++; }));
+    return {tot, got};
+  }
+  function foodsPage(){
+    const c = counts();
+    let h = '<div style="font-size:18px;font-weight:800;margin:6px 0">Tried ' + c.got + ' of ' + c.tot + ' dishes</div><div style="opacity:.75;font-size:12px;margin-bottom:6px">Try every dish of a country to become its Taste Champion ($150 reward). Trades: ' + F.trades + '. Fusion dishes invented: ' + Object.keys(F.fus).length + '.</div>';
+    towns().forEach(n=>{
+      const m = menuOf(n), k = m.filter(nm=>F.tried[nm]).length;
+      h += '<div style="margin:8px 0 2px;font-weight:800;color:' + (F.done[n.id] ? '#a0ffa0' : '#ffd84a') + '">' + esc(n.name) + '  <span style="opacity:.8;font-weight:600">' + k + '/' + m.length + (F.done[n.id] ? '  Taste Champion!' : '') + '</span></div>';
+      h += '<div style="display:flex;flex-wrap:wrap;gap:4px">' + m.map((nm, i)=>'<span style="font-size:12px;padding:3px 7px;border-radius:6px;background:' + (F.tried[nm] ? '#2f6a2f' : 'rgba(255,255,255,.08)') + ';opacity:' + (F.tried[nm] ? 1 : .75) + '">' + (i === 0 ? '[National] ' : '') + esc(nm) + (F.tried[nm] ? ' - tried' : '') + '</span>').join('') + '</div>';
+    });
+    if(!towns().length) h += '<div style="opacity:.7">No countries yet. When animals start a country, its food shows up here.</div>';
+    return h;
+  }
+  function buy(nm, price){
+    if(!nm || !(price > 0)) return;
+    if((save.coins || 0) < price){ toast('That costs $' + price + '. You need more coins!'); return; }
+    save.coins -= price; give(nm, 1);
+    const n = pMode === 'market' ? pN : null;
+    toast('You bought ' + nm + ' for ' + (n ? priceTxt(n, price) : '$' + price) + '. ' + pick(['Yum!', 'Enjoy!', 'Smells amazing.', 'Eat it while it is warm!']) + ' (carry slot + E to eat)');
+    blip(660, .08, .06, 'triangle'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); render();
+  }
+  function sell(nm){
+    const n = pMode === 'market' ? pN : null, d = infoOf(nm); if(!d || !take(nm, 1)) return;
+    const p = n ? sellPrice(n, nm) : Math.max(2, Math.round(d.price*.5));
+    save.coins = (save.coins || 0) + p;
+    let extra = '';
+    if(n && D[nm] && D[nm].home !== n.id && addImport(n, nm, byId(D[nm].home) || {id:D[nm].home, name:D[nm].hn})) extra = ' ' + n.name + ' liked it so much that its market sells ' + nm + ' now!';
+    toast('You sold ' + nm + ' for $' + p + '.' + extra); blip(520, .08, .06, 'triangle'); persist(); if(typeof refreshShopIfOpen === 'function') refreshShopIfOpen(); render();
+  }
+  function fusionName(a, b){
+    const wa = a.replace(/'s Favourite/, '').split(' ').filter(Boolean), wb = b.split(' ').filter(w=>!/^(Supreme|Surprise|Special|Deluxe|Party|Plate)$/.test(w));
+    let nm = (wa[0] + ' ' + (wb[wb.length - 1] || 'Mix') + ' Fusion').replace(/\s+/g, ' ');
+    if(nm.length > 30 || bad(nm)) nm = 'Fusion Feast ' + (Object.keys(F.fus).length + 1);
+    return nm;
+  }
+  function cook(a, b){
+    if(a == null){ const s = pBox.querySelectorAll('select[data-ftc]'); if(s.length < 2) return; a = s[0].value; b = s[1].value; }
+    if(!a || !b) return null;
+    if((save.coins || 0) < 10){ toast('The chef charges $10 for cooking.'); return null; }
+    if(a === b ? has(a) < 2 : (has(a) < 1 || has(b) < 1)){ toast('You need both foods in your bag' + (a === b ? ' (two of them!)' : '') + '.'); return null; }
+    const pa = (save.foodPower && save.foodPower[a]) || 4, pb = (save.foodPower && save.foodPower[b]) || 4;
+    take(a, 1); take(b, 1); save.coins -= 10;
+    const nm = fusionName(a, b), pw = Math.min(14, Math.round(((pa + pb)*.7 + 2)*10)/10);
+    const isNew = !F.fus[nm]; F.fus[nm] = Math.max(F.fus[nm] || 0, pw); const ks = Object.keys(F.fus); if(ks.length > 60) delete F.fus[ks[0]];
+    look(nm, [255, 200, 90], 'FU'); save.foodPower = save.foodPower || {}; save.foodPower[nm] = F.fus[nm]; addItem(nm, 1);
+    toast((M ? M.nm : 'The chef') + ' mixed ' + a + ' and ' + b + ' into ' + nm + '! ' + (isNew ? 'A brand new dish!' : 'A classic.') + ' Eat it for a big boost.');
+    blip(880, .12, .08, 'triangle'); persist(); if(pMode) render(); return nm;
+  }
+  function resSwap(){
+    const R = pRes; if(!R || !take(R.mine, 1)) { closePan(); return; }
+    give(R.theirs, 2, true);
+    toast('You swapped ' + R.mine + ' for 2 ' + R.theirs + ' with ' + R.who + '. ' + R.who + ' says: "' + pick(['Delicious! Thank you!', 'This is the best day ever!', 'I will tell everyone about it!']) + '"');
+    const from = D[R.mine] ? byId(D[R.mine].home) : null; if(from) addImport(R.n, R.mine, from);
+    blip(700, .1, .08, 'triangle'); persist(); closePan();
+  }
+
+  // ================= eating: remember what you tried, a fun buff, Taste Champion rewards
+  const _er = eatRef;
+  eatRef = function(ref){
+    let nm = null; try{ const i = refInfo(ref); nm = i && i.kind === 'item' ? i.name : null; }catch(e){}
+    const before = nm ? has(nm) : 0;
+    const r = _er.apply(this, arguments);
+    try{
+      if(nm && has(nm) < before){
+        const d = infoOf(nm); if(!d) return r;
+        const first = !F.tried[nm]; F.tried[nm] = 1;
+        const k = ['speed', 'jump', 'dig', 'dmg'][Math.floor(hs(nm, 'bf')*4)];
+        buffs.push({k, v:.12, t:40}); recalcGear();
+        const where = D[nm] ? D[nm].hn : d.hn;
+        setTimeout(()=>toast((first ? 'NEW DISH! ' : '') + nm + (where ? ' tastes just like ' + where + '!' : d.fus ? ' is a fusion masterpiece!' : ' is yummy!') + ' (' + k + ' boost for 40s)'), 900);
+        if(first) checkChamp();
+        persist();
+      }
+    }catch(e){ console.warn('LN-foodtrade eat', e); }
+    return r;
+  };
+  function checkChamp(){
+    towns().forEach(n=>{
+      if(F.done[n.id]) return;
+      const m = menuOf(n); if(!m.length || !m.every(nm=>F.tried[nm])) return;
+      F.done[n.id] = 1; save.coins = (save.coins || 0) + 150;
+      setTimeout(()=>toast('TASTE CHAMPION of ' + n.name + '! You tried all ' + m.length + ' of its dishes. +$150'), 2600);
+      news('FOOD NEWS: A miner tasted every single dish of ' + n.name + '. The cooks of ' + n.name + ' are very proud.');
+      blip(990, .2, .1, 'triangle');
+    });
+  }
+
+  // ================= residents give dishes and offer swaps (the city F key)
+  const _ct = window.__cityTalk;
+  window.__cityTalk = function(a, talk){
+    if(near && !isOpen()){ useNear(); return; }
+    try{ const q0 = a && a.popRef, CLm = window.__cityLife; if(q0 && q0.work && a.clDuty && CLm){ const b = CLm.CL.b.find(o=>o.id === q0.work); const n = b && b.kind === 'restaurant' && byId(b.nid); if(n && n.natl && (q0.rel || 0) >= 0){ near = {k:'r', n, b}; useNear(); return; } } }catch(e){}
+    const r = _ct ? _ct.apply(this, arguments) : talk(a);
+    try{
+      const q = a && a.popRef, n = a && a.cityN;
+      if(q && n && n.natl && !a.pet && !q.mayor && (q.rel || 0) >= 0 && !a.suspect && performance.now() - (q.ftT || -1e9) > 90000){
+        const m = menuOf(n), mine = myFoods().filter(nm=>D[nm] && D[nm].home !== n.id);
+        if(mine.length && Math.random() < .45){
+          q.ftT = performance.now();
+          pRes = {who:q.nm, n, mine:pick(mine), theirs:m[Math.floor(Math.random()*m.length)]};
+          setTimeout(()=>{ if(!shopOpen && locked) openPan('res', n); }, 1200);
+        } else if(Math.random() < ((q.rel || 0) >= 3 ? .5 : .2)){
+          q.ftT = performance.now(); const nm = m[Math.floor(Math.random()*m.length)]; give(nm, 1, true);
+          setTimeout(()=>toast(q.nm + ' gave you a plate of ' + nm + '! It is a dish from ' + n.name + '. Press E to eat.'), 1600);
+          persist();
+        }
+      }
+    }catch(e){ console.warn('LN-foodtrade talk', e); }
+    return r;
+  };
+
+  // ================= near things: hint and F key
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:absolute;left:50%;bottom:295px;transform:translateX(-50%);z-index:18;padding:5px 12px;border-radius:8px;background:rgba(80,40,0,.8);color:#ffe0a0;font:600 14px system-ui,sans-serif;display:none;pointer-events:none';
+  document.body.appendChild(hint);
+  let near = null;
+  function findNear(){
+    if(!onEarth()) return null;
+    let best = null, bd = 1e9;
+    for(const n of towns()){ if(!n.ftM) continue; const f = front(n.ftM), d = Math.min(Math.hypot(f.x - P.x, f.z - P.z), Math.hypot(n.ftM.x + .5 - P.x, n.ftM.z + .5 - P.z)); if(d < 2.8 && d < bd && Math.abs(P.y - n.ftM.G) < 3){ bd = d; best = {k:'m', n}; } }
+    if(M){ const d = Math.hypot(M.x - P.x, M.z - P.z); if(d < 3.4 && d < bd){ bd = d; best = {k:'w'}; } }
+    for(const b of baskets){ const d = Math.hypot(b.x - P.x, b.z - P.z); if(d < 2.2 && d < bd){ bd = d; best = {k:'b', b}; } }
+    if(!best){ const r = restAt(); if(r) best = {k:'r', n:r.n, b:r.b}; }
+    return best;
+  }
+  const nearText = o=>o.k === 'r' ? 'F: eat at the Restaurant of ' + o.n.name + ' (hot ' + o.n.natl.food + ' and more)' : o.k === 'm' ? 'F: shop at the ' + o.n.name + ' Market (local food and imports)' : o.k === 'w' ? 'F: shop with ' + M.nm : 'F: open the picnic basket';
+  function useNear(){
+    const o = near; if(!o) return;
+    if(o.k === 'm') openPan('market', o.n);
+    else if(o.k === 'w' && M){ M.mv = false; openPan('merchant'); }
+    else if(o.k === 'b' && baskets.indexOf(o.b) >= 0) openBasket(o.b);
+    else if(o.k === 'r'){ pB = o.b; openPan('rest', o.n); }
+    near = null; hint.style.display = 'none';
+  }
+  const _chn = window.__cityHint;
+  window.__cityHint = function(a){ if(near) return nearText(near);
+    try{ const q0 = a && a.popRef, CLm = window.__cityLife; if(q0 && q0.work && a.clDuty && CLm){ const b = CLm.CL.b.find(o=>o.id === q0.work); const n = b && b.kind === 'restaurant' && byId(b.nid); if(n && n.natl && (q0.rel || 0) >= 0) return 'F: see the restaurant menu with ' + q0.nm + ' (food of ' + n.name + ')'; } }catch(e){}
+    return _chn ? _chn.apply(this, arguments) : null; };
+  addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !locked || shopOpen || won || act || (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) return;
+    near = findNear(); if(!near) return;
+    e.stopImmediatePropagation(); e.preventDefault(); useNear();
+  }, true);
+
+  // ================= the slow ticks (2 per second): markets, vendors, merchants, trade timers. Nothing heavy runs every frame.
+  let tradeT = 70, bT = 40, sec = 0, lastS = performance.now();
+  function tick(){
+    const now = performance.now(), dt = Math.min(2, (now - lastS)/1000); lastS = now;
+    if(startEl.style.display === 'flex' && !shopOpen) { hint.style.display = 'none'; return; }
+    rebuild();
+    const earth = onEarth();
+    // markets: find a spot when you come near a town, show the stall, keep its vendor in place
+    for(const n of towns()){
+      const d = Math.hypot(n.x - P.x, n.z - P.z);
+      if(!n.ftM && earth && d < 120 && (n.pop || []).length >= 1 && now - (n.ftTry || 0) > 3000){ n.ftTry = now; const s = findSpot(n); if(s){ n.ftM = s; news('NEWS: ' + n.name + ' opened a food market! It sells ' + n.natl.food + ' and other local dishes.'); persist(); } }
+      if(!n.ftM) continue;
+      const m = n.ftM, dm = Math.hypot(m.x - P.x, m.z - P.z);
+      let sm = SM[n.id];
+      if(!sm && earth && dm < 120){ sm = SM[n.id] = {g:stallModel(n)}; sm.g.position.set(m.x + .5, m.G, m.z + .5); sm.g.rotation.y = m.rot; scene.add(sm.g); }
+      if(!sm) continue;
+      sm.g.visible = earth && dm < 130;
+      if(sm.g.visible && dm < 60 && n.type && AD[n.type] && (!sm.a || !alive(sm.a))){ try{ sm.a = spawnAnimal(n.type, m.x + .5 - Math.sin(m.rot)*.7, m.z + .5 - Math.cos(m.rot)*.7); sm.a.merchant = 1; sm.a.ftVendor = 1; }catch(e){} }
+      if(sm.a && alive(sm.a)){ const a = sm.a; a.pos.x = m.x + .5 - Math.sin(m.rot)*.7; a.pos.z = m.z + .5 - Math.cos(m.rot)*.7; a.dir = null; a.wanderT = 5; a.fleeT = 0; a.ang = m.rot; }
+    }
+    // near things
+    near = locked && !act && !shopOpen ? findNear() : null;
+    if(near){ hint.textContent = nearText(near); hint.style.display = 'block'; } else hint.style.display = 'none';
+    sec += dt; if(sec < 1) return; sec = 0;
+    // once a second: trade, merchants, picnic baskets
+    tradeT -= 1; if(tradeT <= 0){ tradeT = 120 + Math.random()*120; try{ tradeOnce(); }catch(e){ console.warn('LN-foodtrade trade', e); } }
+    if(M){ M.life -= 1; const d = Math.hypot(M.x - P.x, M.z - P.z); if((M.life <= 0 && d > 8 && !isOpen()) || d > 110 || !earth) despawnMerchant(M.life > 0); }
+    else if(earth && P.y > -3 && !(W() && W().war)){ mNext -= 1; if(mNext <= 0){ mNext = 90 + Math.random()*90; spawnMerchant(); } }
+    for(let i=baskets.length-1;i>=0;i--){ const b = baskets[i]; b.life -= 1; b.g.visible = earth; if(b.life <= 0 || !byId(b.n)){ scene.remove(b.g); baskets.splice(i, 1); } }
+    bT -= 1; if(bT <= 0 && earth){ bT = 60; const T = towns().filter(n=>Math.hypot(n.x - P.x, n.z - P.z) < 45); if(T.length && Math.random() < .3){ const b = spawnBasket(pick(T)); if(b) toast('Someone left a picnic basket in ' + byId(b.n).name + '. Find it and press F!'); } }
+  }
+  setInterval(()=>{ try{ tick(); }catch(e){ console.warn('LN-foodtrade', e); } }, 500);
+
+  // ================= the only per-frame bit: moving the merchant and trade carts (at most 3 objects, stops when there are none)
+  let looping = false, lastF = 0;
+  function ensureLoop(){ if(looping) return; looping = true; lastF = performance.now(); requestAnimationFrame(frame); }
+  function yAt(o, x, z){ const cx = Math.floor(x), cz = Math.floor(z); if(cx !== o.cx || cz !== o.cz){ o.cx = cx; o.cz = cz; o.y = BIOME.surfH(cx, cz); } return o.y; }
+  function frame(now){
+    const dt = Math.min(.1, (now - lastF)/1000); lastF = now;
+    if(!M && !carts.length){ looping = false; return; }
+    requestAnimationFrame(frame);
+    try{
+      if(M && !isOpen()){
+        const m = M, dp = Math.hypot(P.x - m.x, P.z - m.z);
+        m.t += dt; m.walkT -= dt;
+        if(dp < 5){ m.mv = false; m.g.rotation.y = Math.atan2(P.x - m.x, P.z - m.z); }
+        else if(m.walkT <= 0){ m.walkT = 3 + Math.random()*6; m.mv = Math.random() < .6; m.head = Math.hypot(m.x - m.ox, m.z - m.oz) > 18 ? Math.atan2(m.ox - m.x, m.oz - m.z) : Math.random()*6.283; }
+        if(m.mv){
+          const nx = m.x + Math.sin(m.head)*dt*1.1, nz = m.z + Math.cos(m.head)*dt*1.1, cx = Math.floor(nx), cz = Math.floor(nz);
+          let ok = true;
+          if(cx !== m.cx || cz !== m.cz){ const c = BIOME.col(cx, cz), g = BIOME.surfH(cx, cz); if((c && c.liq) || Math.abs(g - m.G) > 1 || get(cx, -(g + 1), cz)) ok = false; else { m.G = g; m.cx = cx; m.cz = cz; } }
+          if(ok){ m.x = nx; m.z = nz; m.g.rotation.y = m.head; } else { m.mv = false; m.walkT = .5; }
+        }
+        m.g.position.set(m.x, m.G, m.z);
+        const sw = m.mv ? Math.sin(m.t*8)*.5 : 0; m.v.userData.legs[0].rotation.x = sw; m.v.userData.legs[1].rotation.x = -sw;
+      }
+      for(let i=carts.length-1;i>=0;i--){
+        const c = carts[i]; c.t += dt;
+        const k = Math.min(1, c.t/c.T), x = c.ax + (c.bx - c.ax)*k, z = c.az + (c.bz - c.az)*k;
+        c.g.position.set(x, yAt(c, x, z), z); c.g.rotation.y = Math.atan2(c.bx - c.ax, c.bz - c.az) - Math.PI/2;
+        c.g.visible = onEarth() && Math.hypot(x - P.x, z - P.z) < 140;
+        if(k >= 1){ scene.remove(c.g); carts.splice(i, 1); }
+      }
+    }catch(e){ console.warn('LN-foodtrade frame', e); }
+  }
+
+  rebuild(true);
+  window.__foodtrade = {D, G, MT, F, towns, makeMenu, menuOf, stock, sellPrice, tradeOnce, addImport, give, infoOf, spawnMerchant, despawnMerchant, get merchant(){ return M; }, carts, baskets, spawnBasket, openBasket, findSpot, SM, rebuild, counts,
+    openMarket:n=>openPan('market', n), openRest:n=>openPan('rest', n), restAt, restMeal, buyMerchant, sellJunk, MTK, openMerchant:()=>M && openPan('merchant'), openFoods:()=>openPan('foods'), closePan, setTab:t=>{ pTab = t; render(); }, buy, sell, cook, get panel(){ return pan; }, tick, priceTxt, inCur, warIn,
+    resOffer:(who, n, mine, theirs)=>{ pRes = {who, n, mine, theirs}; openPan('res', n); }, resSwap, get near(){ return near; }};
+})();
+/* LN-foodtrade end */
 /* LN-bossdrops start: every custom boss drops its OWN named things when beaten: a discovery, a loot item, a material and a placeable block (Irfan 2026-11-09 "bosses drop their unique discovery loot material block stuff") */
 (function(){
   const CO3 = [[224,58,58], [255,138,32], [255,208,48], [138,226,58], [48,160,64], [48,200,208], [58,90,224], [138,58,198], [255,128,192], [138,90,48], [240,240,240], [42,42,48]];   // the same 12 colours the bosses use
