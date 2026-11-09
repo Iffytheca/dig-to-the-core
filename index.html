@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 218 (Oct 31)';
+  window.__BUILD = 'Build 219 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -37853,6 +37853,40 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__picklimit = {LIM};
 })();
 /* LN-picklimit end */
+/* LN-perf start: the game is much less laggy. Redrawing the world after a block changes now sends only the blocks that are really there to the graphics card (it used to send room for 12,000 of every block type, hundreds of megabytes, every time), block types with nothing to show are skipped, and while something builds itself (a lair, a court, a temple, water flowing) the world is redrawn at most 10 times a second instead of every frame. Your own digging and placing still shows up at once (Irfan 2026-11-09 "the game is so laggy") */
+(function(){
+  let lastRb = -1e9, lastIn = -1e9;
+  const poke = ()=>{ lastIn = performance.now(); };
+  addEventListener('mousedown', poke, true); addEventListener('mouseup', poke, true); addEventListener('keydown', poke, true); addEventListener('keyup', poke, true);
+  addEventListener('touchstart', poke, {capture:true, passive:true}); addEventListener('touchend', poke, {capture:true, passive:true});
+  const _rbPerf = rebuild;
+  let v0 = [], c0 = [];
+  rebuild = function(){
+    const now = performance.now();
+    // a block you dug, placed or blew up shows at once; blocks that build themselves are drawn in batches, 10 times a second
+    if(now - lastRb < 100 && now - lastIn > 400 && !mouseDown){ dirty = true; return; }
+    lastRb = now;
+    const n = meshes.length;
+    for(let i=0;i<n;i++){ const m = meshes[i]; v0[i] = m.instanceMatrix.version; c0[i] = m.instanceColor ? m.instanceColor.version : -1; }
+    const r = _rbPerf.apply(this, arguments);
+    for(let i=0;i<meshes.length;i++){
+      const m = meshes[i], im = m.instanceMatrix, ic = m.instanceColor, cnt = m.count, was = m.userData.pfN | 0;
+      if(i < n && im.version !== v0[i]){
+        if(cnt === 0 && was === 0){ im.version = v0[i]; if(ic && c0[i] >= 0) ic.version = c0[i]; }            // nothing there before or now: nothing to send
+        else {
+          const k = Math.max(cnt, 1);
+          im.updateRange.offset = 0; im.updateRange.count = k*16;                                               // only the blocks really drawn
+          if(ic){ ic.updateRange.offset = 0; ic.updateRange.count = k*3; }
+        }
+        m.userData.pfN = cnt;
+      } else if(i >= n){ m.userData.pfN = cnt; }
+      m.visible = cnt > 0;                                                                                       // a block type with nothing to show is skipped when drawing
+    }
+    return r;
+  };
+  window.__perfRb = {stats:()=>({lastRb, lastIn, meshes:meshes.length, shown:meshes.filter(m=>m.visible).length})};
+})();
+/* LN-perf end */
 /* LN-bossdrops start: every custom boss drops its OWN named things when beaten: a discovery, a loot item, a material and a placeable block (Irfan 2026-11-09 "bosses drop their unique discovery loot material block stuff") */
 (function(){
   const CO3 = [[224,58,58], [255,138,32], [255,208,48], [138,226,58], [48,160,64], [48,200,208], [58,90,224], [138,58,198], [255,128,192], [138,90,48], [240,240,240], [42,42,48]];   // the same 12 colours the bosses use
@@ -38343,7 +38377,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       default: return T + ' ' + F + ' ' + S + ' the ' + A;
     }
   }
-  const SH = ['Blob', 'Robot', 'Toaster', 'Snowman', 'Noodle', 'Party Cone', 'Octopus', 'Duck', 'Sandwich', 'Biped', 'Four Legs', 'Worm', 'Floating Head', 'Teapot', 'Giant Sock', 'Two Heads', 'Spider', 'Winged'];
+  const SH = ['Blob', 'Robot', 'Toaster', 'Snowman', 'Noodle', 'Party Cone', 'Octopus', 'Duck', 'Sandwich', 'Biped', 'Four Legs', 'Worm', 'Floating Head', 'Teapot', 'Giant Sock', 'Two Heads', 'Spider', 'Winged', 'Bob'];
+  const SH_OLD = 18;   /* LN-bossbob: the old random roll still covers only the first 18 body plans */
+  const PANTS = ['None', 'Shorts', 'Long trousers', 'Jeans', 'Overalls', 'Striped pyjama pants', 'Tutu', 'Baggy clown pants', 'Kilt', 'Underpants only', 'Ripped jeans', 'Pants on head'];
+  const PN_PLANS = ['Biped', 'Bob', 'Four Legs', 'Robot', 'Duck', 'Snowman', 'Blob', 'Two Heads', 'Winged'];
   const CO = [['Red', 0xe03a3a], ['Orange', 0xff8a20], ['Yellow', 0xffd030], ['Lime', 0x8ae23a], ['Green', 0x30a040], ['Cyan', 0x30c8d0], ['Blue', 0x3a5ae0], ['Purple', 0x8a3ac6], ['Pink', 0xff80c0], ['Brown', 0x8a5a30], ['White', 0xf0f0f0], ['Black', 0x2a2a30]];
   const CO_WOOL = [2, 3, 4, 5, 6, 7, 9, 10, 12, 13, 1, 15];
   const AT = [['shots', 'Shoots snacks'], ['slam', 'Belly-flop slam'], ['charge', 'Charges at you'], ['summon', 'Calls mini-me helpers'], ['rain', 'Makes it rain pudding'], ['spin', 'Spins and sneezes'], ['tele', 'Teleports behind you']];
@@ -38357,9 +38394,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   try{ TROPHY.forEach(t=>{ ITEM_COL[t] = [255, 210, 60]; LOOT[t] = 'TR'; }); }catch(e){}
   function specOf(seed, over){
     const r = rng(seed*31 + 7);
-    const s = {seed, n:genName(seed), sh:Math.floor(r()*SH.length), co:Math.floor(r()*CO.length), c2:Math.floor(r()*CO.length), sz:Math.min(3, Math.floor(r()*r()*4 + r()*.9)), ht:Math.floor(r()*HT.length), at:[], ey:Math.floor(r()*6), mo:Math.floor(r()*7), hn:Math.floor(r()*7), am:1 + Math.floor(r()*5), tl:Math.floor(r()*5), ac:Math.floor(r()*7), pt:Math.floor(r()*5)};
+    const s = {seed, n:genName(seed), sh:Math.floor(r()*SH_OLD), co:Math.floor(r()*CO.length), c2:Math.floor(r()*CO.length), sz:Math.min(3, Math.floor(r()*r()*4 + r()*.9)), ht:Math.floor(r()*HT.length), at:[], ey:Math.floor(r()*6), mo:Math.floor(r()*7), hn:Math.floor(r()*7), am:1 + Math.floor(r()*5), tl:Math.floor(r()*5), ac:Math.floor(r()*7), pt:Math.floor(r()*5)};
     const a = AT.map(q=>q[0]); while(s.at.length < 2){ const q = rp(r, a); if(s.at.indexOf(q) < 0) s.at.push(q); } if(r() < .35){ const q = rp(r, a); if(s.at.indexOf(q) < 0) s.at.push(q); }
     if(s.c2 === s.co) s.c2 = (s.co + 5) % CO.length;
+    { const r2 = rng(seed*104729 + 977);   /* LN-bossbob: separate rng so no old part changes */
+      if(r2() < .08) s.sh = SH.indexOf('Bob');
+      s.pn = r2() < .22 ? 0 : 1 + Math.floor(r2()*(PANTS.length - 1)); }
     if(over) Object.assign(s, over);
     return s;
   }
@@ -38381,6 +38421,100 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     else if(ht === 3){ const c = new THREE.Mesh(new THREE.ConeGeometry(.35, .8, 10), mat(c2)); c.position.set(x, y + .4, 0); g.add(c); sbox(.14, .14, .14, 0xffffff, x, y + .84, 0, g); }
     else if(ht === 4){ sbox(.6, .2, .6, 0x3a5ae0, x, y + .1, 0, g); sbox(.06, .2, .06, 0x888888, x, y + .3, 0, g); const p = sbox(1, .04, .14, 0xff3a3a, x, y + .42, 0, g); g.userData.prop = p; }
     else if(ht === 5){ sbox(.55, .3, .55, 0xffffff, x, y + .15, 0, g); const t = new THREE.Mesh(new THREE.SphereGeometry(.42, 10, 8), mat(0xffffff)); t.position.set(x, y + .5, 0); t.scale.y = .7; g.add(t); }
+  }
+  // ---- LN-bossbob: PANTS for custom bosses (and the Bob body plan). Pants colour is a third seeded colour.
+  const pantsShown = s=>{ const n = s.pn|0; return n > 0 && n < PANTS.length && (n === 11 || PN_PLANS.indexOf(SH[s.sh]) >= 0); };
+  const pantsTxt = s=>pantsShown(s) ? (s.pn === 11 ? ', pants on its head' : ', ' + PANTS[s.pn].toLowerCase()) : '';
+  // where the hips, legs and chest are on each body plan that wears pants
+  function pantFrame(nm, LG){
+    const gl = (lw, ld)=>LG.map(g=>({g, x:g.position.x, z:g.position.z, top:g.position.y, h:g.position.y, w:lw, d:ld}));
+    switch(nm){
+      case 'Biped': return {rd:1, cy:.8, hw:1, hd:1, hh:.34, lg:gl(.26, .26), bib:{y:1.5, w:.55, h:.7, z:.6, tilt:-.28, top:2, zt:.18, sx:.22}};
+      case 'Bob': return {rd:0, cy:1.2, hw:1.07, hd:.67, hh:.4, lg:gl(.32, .32), bib:{y:1.7, w:.62, h:.8, z:.3, tilt:0, top:2.17, zt:.3, sx:.2}};
+      case 'Four Legs': return {rd:0, cy:.98, cz:-.5, hw:1.1, hd:.9, hh:.6, lg:gl(.26, .26)};
+      case 'Robot': return {rd:0, cy:.65, hw:1.34, hd:1.04, hh:.3, lg:[-.35, .35].map(x=>({x, z:0, top:.5, h:.5, w:.3, d:.3})), bib:{y:.92, w:1, h:.24, z:.53, tilt:0, top:1.71, zt:.53, sx:.5}};
+      case 'Duck': return {rd:0, cy:.45, cz:-.3, hw:1.36, hd:1, hh:.4, lg:[-.3, .3].map(x=>({x, z:.2, top:.3, h:.3, w:.12, d:.12}))};
+      case 'Snowman': return {rd:1, cy:.5, hw:1.5, hd:1.5, hh:.55, low:.05, rb:.7, lg:[], bib:{y:1.65, w:.5, h:.5, z:.5, tilt:0, top:2.05, zt:.5, sx:.2}};
+      case 'Blob': return {rd:1, cy:.5, hw:1.5, hd:1.5, hh:.5, low:.12, rb:.7, lg:[]};
+      case 'Two Heads': return {rd:1, cy:.55, hw:1.5, hd:1.5, hh:.55, low:.2, rb:.7, lg:[]};
+      case 'Winged': return {rd:1, cy:.78, hw:.9, hd:.9, hh:.3, lg:gl(.26, .26), bib:{y:1.5, w:.5, h:.55, z:.58, tilt:-.2, top:1.92, zt:.2, sx:.18}};
+    }
+    return null;
+  }
+  function pantsBuild(body, kind, F, pc, c2){
+    const B = (w, h, d, c, x, y, z, p)=>sbox(w, h, d, c, x, y, z, p || body);
+    const CY = (rt, rb, h, c, x, y, z)=>{ const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 16), mat(c)); m.position.set(x, y, z); m.castShadow = true; body.add(m); return m; };
+    const SP = (r, c, x, y, z, p)=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), mat(c)); m.position.set(x, y, z); (p || body).add(m); return m; };
+    const LG = F.lg, cx = F.cx || 0, cz = F.cz || 0, hasL = LG.length > 0, top = F.cy + F.hh/2, fullH = hasL ? F.hh : top - (F.low || 0), zf = F.hd/2 + .02;
+    const hip = (c, h, wm, rbm)=>{ h = h || F.hh; wm = wm || 1; const w = F.hw*wm, d = F.hd*wm, y = top - h/2; return F.rd ? CY(w/2, w/2*(rbm || F.rb || .92), h, c, cx, y, cz) : B(w, h, d, c, cx, y, cz); };
+    const tube = (frac, wAdd, c, dAdd)=>LG.map((l, i)=>{ const len = l.h*frac, w = l.w + wAdd, d = l.d + (dAdd == null ? wAdd : dAdd), y = (l.g ? 0 : l.top) - len/2 + .05, px = l.g ? 0 : l.x, pz = l.g ? 0 : l.z, p = l.g || body;
+      return {m:B(w, len, d, c, px, y, pz, p), l, len, w, d, y, i, px, pz, p}; });
+    const onT = (t, w, h, d, c, dx, dy, dz)=>B(w, h, d, c, t.px + dx, t.y + dy, t.pz + dz, t.p);
+    const belt = (c, bc)=>{ if(F.rd) CY(F.hw/2 + .02, F.hw/2 + .02, .07, c, cx, top - .035, cz); else B(F.hw + .04, .07, F.hd + .04, c, cx, top - .035, cz); if(bc) B(.14, .1, .04, bc, cx, top - .05, cz + zf + .02); };
+    if(kind === 1){ hip(pc); tube(.45, .08, pc); }
+    else if(kind === 2){ hip(pc, fullH, 1, hasL ? 0 : .7); tube(.97, .08, pc); }
+    else if(kind === 3){            // jeans: blue with a yellow stitch line
+      const den = 0x3558b0, st = 0xf0d070;
+      hip(den, fullH, 1, hasL ? 0 : .7); belt(0x3a2a1a, 0xffd030); tube(.97, .08, den).forEach(t=>onT(t, .035, t.len, .035, st, (t.l.x < 0 ? -1 : 1)*(t.w/2 + .01), 0, 0));
+      B(.03, F.hh*.8, .03, st, cx, top - F.hh*.5, cz + zf); B(.22, .03, .03, st, cx + F.hw*.25, top - .22, cz + zf);
+    }
+    else if(kind === 4){            // overalls with straps
+      hip(pc, fullH, 1, hasL ? 0 : .7); tube(.97, .08, pc);
+      const bb = F.bib; if(bb){
+        const bz = bb.z, by = bb.y, ct = Math.cos(bb.tilt), stt = Math.sin(bb.tilt), ty0 = by + bb.h/2*ct, tz0 = bz + bb.h/2*stt;
+        if(bb.w > .3) B(bb.w, bb.h, .08, pc, cx, by, bz).rotation.x = bb.tilt;
+        [-1, 1].forEach(k=>{ const dy = bb.top - ty0, dz = bb.zt - tz0, L = Math.hypot(dy, dz), s = B(.1, L, .07, pc, cx + k*bb.sx, ty0 + dy/2, tz0 + dz/2); s.rotation.x = Math.atan2(dz, dy); B(.1, .1, .05, 0xffd030, cx + k*bb.sx, ty0 - .04, tz0 + .06); });
+        if(bb.w > .3) B(bb.w*.4, bb.h*.28, .05, new THREE.Color(pc).multiplyScalar(.75).getHex(), cx, by - bb.h*.12, bz + .05).rotation.x = bb.tilt;
+      }
+    }
+    else if(kind === 5){            // striped pyjama pants
+      const base = 0xf2f2ff; hip(base, fullH, 1, hasL ? 0 : .7);
+      const nb = Math.max(2, Math.round(fullH/.2));
+      for(let k=0;k<nb;k+=2){ const y = top - (k + .5)*fullH/nb, w = F.hw*(F.rd ? 1.02 : 1.02); F.rd ? CY(w/2, w/2*(F.rb && !hasL ? (1 - (1 - F.rb)*(k + .5)/nb) : .92), fullH/nb*.9, pc, cx, y, cz) : B(w, fullH/nb*.9, F.hd*1.02, pc, cx, y, cz); }
+      tube(.97, .08, base).forEach(t=>{ const n = Math.max(2, Math.round(t.len/.2)); for(let k=1;k<n;k+=2) B(t.w + .02, t.len/n*.9, t.d + .02, pc, t.px, t.y + t.len/2 - (k + .5)*t.len/n, t.pz, t.p); });
+    }
+    else if(kind === 6){            // tutu
+      const lite = new THREE.Color(pc).lerp(new THREE.Color(0xffffff), .45).getHex();
+      belt(pc); const R = Math.max(F.hw, F.hd)/2;
+      CY(R*1.05, R*1.65, .36, pc, cx, top - .22, cz); CY(R*1.65, R*1.95, .1, lite, cx, top - .45, cz);
+      const tr = new THREE.Mesh(new THREE.TorusGeometry(R*1.95, .05, 5, 20), mat(0xffffff)); tr.rotation.x = Math.PI/2; tr.position.set(cx, top - .5, cz); body.add(tr);
+    }
+    else if(kind === 7){            // baggy clown pants: huge, spotty, with big cuffs
+      hip(pc, fullH, 1.18, hasL ? 0 : .8); belt(0xff3030);
+      const wa = (hasL ? LG[0].w : .3)*1.2 + .1;
+      tube(.85, wa, pc, wa).forEach(t=>{ [[-.3, .2], [.25, -.1], [0, -.35]].forEach(q=>SP(.08, 0xffe040, t.px + q[0]*t.w*.6, t.y + q[1]*t.len*.5, t.pz + t.d/2 + .01, t.p)); onT(t, t.w + .08, .1, t.d + .08, 0xffe040, 0, -t.len/2 + .05, 0); });
+      if(!hasL) [[-.4, 0], [.3, .1], [0, -.2]].forEach(q=>SP(.1, 0xffe040, cx + q[0]*F.hw*.5, top - fullH*.5 + q[1], cz + F.hd*.6, null));
+    }
+    else if(kind === 8){            // kilt with tartan lines and a sporran
+      const h = F.hh*1.2, rt = F.hw/2*.95, rb = F.hw/2*1.12, y = top - h/2 + .02, rm = (rt + rb)/2 + .01;
+      CY(rt, rb, h, pc, cx, y, cz);
+      for(let k=0;k<12;k++){ const a = k*Math.PI/6; B(.07, h, .03, k % 2 ? 0xffffff : 0x203040, cx + Math.sin(a)*rm, y, cz + Math.cos(a)*rm).rotation.y = a; }
+      [0.25, -0.25].forEach(q=>{ const tr = new THREE.Mesh(new THREE.TorusGeometry(rm, .025, 4, 20), mat(0x203040)); tr.rotation.x = Math.PI/2; tr.position.set(cx, y + q*h, cz); body.add(tr); });
+      belt(0x3a2a1a, 0xffd030); B(.18, .22, .08, 0x6a4a2a, cx, y - .08, cz + rb + .04); B(.2, .06, .09, 0xffffff, cx, y + .05, cz + rb + .04);
+    }
+    else if(kind === 9){            // underpants only: white with hearts, a coloured waistband
+      hip(0xffffff, F.hh*.85); belt(pc);
+      tube(.25, .06, 0xffffff).forEach(t=>onT(t, t.w, .04, t.d, pc, 0, -t.len/2 + .03, 0));
+      const hy = top - F.hh*.5; B(.1, .1, .04, 0xff3050, cx, hy, cz + zf + .01).rotation.z = Math.PI/4; SP(.045, 0xff3050, cx - .035, hy + .06, cz + zf + .01); SP(.045, 0xff3050, cx + .035, hy + .06, cz + zf + .01);
+      if(F.hw > 1.2) [-1, 1].forEach(k=>SP(.04, 0xff3050, cx + k*F.hw*.3, hy, cz + zf + .01));
+    }
+    else if(kind === 10){           // ripped jeans: a hole at the knee, one torn-off leg with a fringe, a patch
+      const den = 0x4a70c0, skin = 0xf0c8a0, st = 0xf0d070;
+      hip(den, fullH, 1, hasL ? 0 : .7); belt(0x3a2a1a, 0xffd030);
+      if(hasL) tube(.97, .08, den).forEach(t=>{
+        if(t.i % 2 === 0){ onT(t, t.w*.6, t.len*.22, .03, skin, 0, t.len*.05, t.d/2 + .005); onT(t, t.w*.7, .03, .03, 0xffffff, 0, t.len*.17, t.d/2 + .01); onT(t, t.w*.7, .03, .03, 0xffffff, 0, -t.len*.07, t.d/2 + .01); }
+        else { t.m.scale.y = .55; t.m.position.y += t.len*.225; for(let k=0;k<5;k++) B(t.w*.14, .1 + (k % 2)*.07, t.d*.14, den, t.px + (k - 2)*t.w*.22, t.y + t.len*.225 - t.len*.275 - .07, t.pz + (k % 2 ? .02 : -.02), t.p); }
+      });
+      else B(F.hw*.4, .22, .04, skin, cx - F.hw*.2, top - fullH*.5, cz + F.hd*.46);
+      const px = cx + F.hw*.25, py = top - Math.min(.3, fullH*.4); B(.24, .2, .04, 0xffb040, px, py, cz + zf + .01); [[-.1, -.08], [.1, -.08], [-.1, .08], [.1, .08]].forEach(q=>B(.04, .03, .05, st, px + q[0], py + q[1], cz + zf + .02));
+    }
+  }
+  // pants worn as a hat: the seat on top of the head, one leg hanging down each side
+  function headPants(body, h, pc){
+    const r = h.r, ty = h.y + r*(h.flat ? 1 : .92), x = h.x, B = (w, hh, d, c, px, py, pz)=>sbox(w, hh, d, c, px, py, pz, body), den = new THREE.Color(pc).multiplyScalar(.7).getHex();
+    B(r*2.1, r*.45, r*1.9, pc, x, ty + r*.1, 0); B(r*2.14, r*.12, r*1.94, den, x, ty + r*.34, 0); B(r*.35, r*.2, .05, 0xffd030, x, ty + r*.34, r*.97);
+    [-1, 1].forEach(k=>{ const lg = B(r*.55, r*1.5, r*1.7, pc, x + k*r*1.1, ty - r*.55, 0); lg.rotation.z = k*.12; B(r*.62, r*.16, r*1.76, den, x + k*r*1.14, ty - r*1.3, 0).rotation.z = k*.12; });
+    B(r*.4, r*.4, .04, den, x + r*.95, ty + r*.1, r*.88);
   }
   function buildBoss(s){
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body); g.userData.noMine = true;
@@ -38410,6 +38544,10 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         P = {heads:[{x:0, y:1.6, z:1.11, r:.35, flat:1, beak:1}], arms:[[-.7, .9], [.7, .9]], tail:[.95, -.9], bc:[.7, 1.3, .9, 1.7], top:1.9}; break;
       case 'Sandwich': box(1.6, .35, 1.4, 0xd8a060, 0, .3, 0); box(1.7, .12, 1.5, 0x50c040, 0, .54, 0); box(1.65, .2, 1.45, c1, 0, .7, 0); box(1.6, .14, 1.4, 0xffd030, 0, .87, 0); box(1.6, .4, 1.4, 0xd8a060, 0, 1.15, 0);
         P = {heads:[{x:0, y:1.0, z:.71, r:.38, flat:1}], arms:[[-.95, .9], [.95, .9]], tail:[.7, -.72], bc:null, top:1.4}; break;
+      case 'Bob': { const K = 1.8, sk = 0xf0c8a0;   /* LN-bossbob: blocky little Bob, boss sized */
+        [-1, 1].forEach(sd=>{ const l = new THREE.Group(); l.position.set(sd*.12*K, .6*K, 0); body.add(l); box(.18*K, .6*K, .18*K, 0x2a3a6a, 0, -.3*K, 0, l); box(.22*K, .09*K, .3*K, 0x2a2a2a, 0, -.6*K + .045*K, .05*K, l); arms.push(l); l.userData.leg = 1; });
+        box(.5*K, .6*K, .3*K, c1, 0, .9*K, 0); box(.52*K, .05*K, .32*K, c2, 0, .62*K, 0); box(.42*K, .42*K, .4*K, sk, 0, 1.42*K, 0);
+        P = {heads:[{x:0, y:1.42*K, z:.2*K, r:.21*K, flat:1}], arms:[[-.33*K, 1.195*K], [.33*K, 1.195*K]], tail:[.7*K, -.17*K], bc:[.9*K, .5*K, .6*K, .3*K], top:2*K, bobArm:1}; break; }
       case 'Biped': legs([[-.3, 0], [.3, 0]], .7, dk); { const m = sph(.62, c1, 0, 1.3, 0); m.scale.y = 1.15; } cyl(.18, .18, .3, c1, 0, 2, 0); sph(.45, c2, 0, 2.35, 0);
         P = {heads:[{x:0, y:2.35, z:.42, r:.4}], arms:[[-.66, 1.65], [.66, 1.65]], tail:[1, -.58], bc:[1.3, 1.24, 1.4, 1.24], top:2.8}; break;
       case 'Four Legs': box(1.05, .85, 1.9, c1, 0, 1.15, 0); legs([[-.35, .6], [.35, .6], [-.35, -.6], [.35, -.6]], .75, dk); box(.75, .7, .75, c2, 0, 1.75, 1.1);
@@ -38429,6 +38567,12 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         [-1, 1].forEach(sd=>{ const w = new THREE.Group(); w.position.set(sd*.5, 1.65, -.3); body.add(w); const f = box(1.5, .08, .8, c2, sd*.75, 0, 0, w); f.rotation.z = sd*.15; box(1.2, .06, .5, 0xffffff, sd*.6, .03, -.25, w); wings.push(w); w.userData.sd = sd; });
         P = {heads:[{x:0, y:2.3, z:.45, r:.38}], arms:[], tail:[1.2, -.58], bc:[1.4, 1.24, 1.5, 1.24], top:2.75, float:.5}; }
     }
+    // LN-bossbob: pants (a third seeded colour), and Bob's own propeller cap when he has no other hat
+    const pn = pantsShown(s) ? s.pn|0 : 0, pantsHead = pn === 11;
+    { const pr = rng((s.seed || 1)*8191 + 31); let pci = Math.floor(pr()*CO.length); while(pci === s.co || pci === s.c2) pci = (pci + 1) % CO.length; const pantCol = CO[pci][1];
+      if(pn > 0 && !pantsHead){ const F = pantFrame(SH[s.sh], arms.filter(a=>a.userData.leg)); if(F) pantsBuild(body, pn, F, pantCol, c2); }
+      if(pantsHead){ P.heads.forEach(h=>headPants(body, h, pantCol)); P.top += P.heads[0].r*.8; }
+      if(SH[s.sh] === 'Bob' && !s.ht && !pantsHead){ const K = 1.8, hy = P.heads[0].y + P.heads[0].r; box(.44*K, .1*K, .42*K, 0xe03c3c, 0, hy + .05*K, 0); box(.06*K, .12*K, .06*K, 0x222222, 0, hy + .16*K, 0); body.userData.prop = box(.6*K, .03*K, .08*K, 0xffd030, 0, hy + .235*K, 0); P.top += .25*K; } }
     // patterns on the main body
     if(P.bc && s.pt){
       const [by, bw, bh, bd] = P.bc, pc = s.pt === 3 ? 0xfff4e0 : s.pt === 4 ? 0xffe040 : c2;
@@ -38469,7 +38613,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(!P.own) P.arms.forEach((q, i)=>{
       const sd = q[0] < 0 ? -1 : 1, a = new THREE.Group(); a.position.set(q[0], q[1], 0); body.add(a); arms.push(a);
       if(s.am === 0) return;
-      if(s.am === 1){ box(.14, .8, .14, 0x6a4a20, 0, -.4, 0, a); }
+      if(s.am === 1 && P.bobArm){ box(.28, 1, .28, c1, 0, -.5, 0, a); box(.28, .22, .28, 0xf0c8a0, 0, -1.08, 0, a); }
+      else if(s.am === 1){ box(.14, .8, .14, 0x6a4a20, 0, -.4, 0, a); }
       else if(s.am === 2){ box(.22, .7, .22, c1, 0, -.35, 0, a); box(.1, .3, .25, c2, sd*.07, -.82, .1, a).rotation.x = .4; box(.1, .3, .25, c2, -sd*.07, -.82, .1, a).rotation.x = -.2; }
       else if(s.am === 3){ for(let k=0;k<4;k++){ const m = box(.2 - k*.03, .28, .2 - k*.03, k % 2 ? c2 : c1, sd*k*.06, -.15 - k*.25, k*.04, a); m.rotation.z = sd*k*.15; } }
       else if(s.am === 4){ box(.2, .55, .2, c1, 0, -.28, 0, a); sph(.25, c2, 0, -.7, 0, a); }
@@ -38490,7 +38635,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     else if(s.ac === 4 && P.bc){ const [by, bw, bh, bd] = P.bc; box(bw*1.04, .14, bd*1.04, 0x3a2a1a, 0, by - bh*.2, 0); box(.24, .18, .06, 0xffd030, 0, by - bh*.2, bd*.52 + .02); }
     else if(s.ac === 5){ const t = new THREE.Mesh(new THREE.TorusGeometry(h0.r*.85, .09, 6, 16), mat(c2)); t.rotation.x = Math.PI/2; t.position.set(h0.x, h0.y - h0.r*.95, h0.z - h0.r*.8); body.add(t); box(.18, .5, .06, c2, h0.x + .15, h0.y - h0.r*1.4, h0.z); }
     else if(s.ac === 6){ for(let k=0;k<7;k++){ const a = (k - 3)*.35; sph(.06, [0xff4040, 0xffd030, 0x40a0ff][k % 3], h0.x + Math.sin(a)*h0.r*.8, h0.y - h0.r*1.1 - Math.cos(a)*.08 + .08, h0.z - h0.r*.5 + Math.cos(a)*h0.r*.5); } }
-    P.heads.forEach((h, i)=>hatOn(body, i === 0 || s.ht === 1 ? s.ht : 0, h.y + h.r*(h.flat ? 1 : .9) + (s.hn === 4 || s.hn === 2 ? 0 : 0), c2, h.x));
+    P.heads.forEach((h, i)=>hatOn(body, (i === 0 || s.ht === 1) && !pantsHead ? s.ht : 0, h.y + h.r*(h.flat ? 1 : .9) + (s.hn === 4 || s.hn === 2 ? 0 : 0), c2, h.x));
     const sc = SZ[s.sz][1]; body.scale.setScalar(sc);
     const mats = []; g.traverse(m=>{ if(m.isMesh){ m.castShadow = true; mats.push(m.material); } });
     g.userData.arms = arms; g.userData.mats = mats; g.userData.body = body; g.userData.wings = wings; g.userData.segs = segs; g.userData.float = P.float || 0;
@@ -38794,7 +38939,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }
   function makeLair(spec, r0, r1){
     if(!onEarth()) return null;
-    const TH = {Toaster:'toaster', Teapot:'toaster', Sandwich:'toaster', Robot:'fortress', 'Four Legs':'fortress', 'Floating Head':'tower', Winged:'tower', Noodle:'tower', Octopus:'dome', Blob:'dome', 'Party Cone':'dome', Spider:'haunted', Worm:'haunted', 'Two Heads':'haunted', Snowman:'castle', Duck:'castle', Biped:'castle'};
+    const TH = {Toaster:'toaster', Teapot:'toaster', Sandwich:'toaster', Robot:'fortress', 'Four Legs':'fortress', 'Floating Head':'tower', Winged:'tower', Noodle:'tower', Octopus:'dome', Blob:'dome', 'Party Cone':'dome', Spider:'haunted', Worm:'haunted', 'Two Heads':'haunted', Snowman:'castle', Duck:'castle', Biped:'castle', Bob:'castle'};
     const st = TH[SH[spec.sh]] || STK[spec.seed % STK.length], R = STY[st].R;
     for(let t=0;t<60;t++){
       const a = Math.random()*6.283, d = r0 + Math.random()*(r1 - r0), x = Math.floor(P.x + Math.cos(a)*d), z = Math.floor(P.z + Math.sin(a)*d);
@@ -38998,7 +39143,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
   // ===================================================================== 5. THE CUSTOM BOSS PANEL (, key)
   let panelEl = null, pTab = 'summon', nextSeed = newSeed(), made = null;
-  const PARTK = ['sh', 'co', 'c2', 'sz', 'ht', 'ey', 'mo', 'hn', 'am', 'tl', 'ac', 'pt'];
+  const PARTK = ['sh', 'co', 'c2', 'sz', 'ht', 'ey', 'mo', 'hn', 'am', 'tl', 'ac', 'pt', 'pn'];
   function madeDefault(){ const s = specOf(newSeed()), m = {n:s.n, at:s.at.slice(0, 2)}; PARTK.forEach(k=>{ m[k] = s[k]; }); m.sz = 1; return m; }
   const sel = (id, opts, v)=>'<select data-mk="' + id + '" style="padding:5px;border-radius:6px;background:#2a2018;color:#fff;border:1px solid #8a6a4a;font:14px system-ui">' + opts.map((o, i)=>'<option value="' + i + '"' + (i === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
   function renderPanel(){
@@ -39011,7 +39156,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(pTab === 'summon'){
       const s = specOf(nextSeed);
       h += '<div style="background:rgba(255,255,255,.06);padding:10px;border-radius:8px"><div style="opacity:.7;font-size:12px">The next boss is:</div><div style="font:900 20px system-ui;color:#ffe080;margin:4px 0">' + esc(s.n) + '</div>' +
-        '<div style="font-size:13px;opacity:.85">' + SZ[s.sz][0] + ' ' + CO[s.co][0].toLowerCase() + ' ' + SH[s.sh].toLowerCase() + (s.ht ? ' with a ' + HT[s.ht].toLowerCase() : '') + ', ' + EY[s.ey].toLowerCase() + ', ' + MO[s.mo].toLowerCase() + (s.hn ? ', ' + HN[s.hn].toLowerCase() : '') + (s.am ? ', ' + AM[s.am].toLowerCase() : '') + (s.tl ? ', ' + TL[s.tl].toLowerCase() : '') + (s.ac ? ', ' + AC[s.ac].toLowerCase() : '') + (s.pt ? ', ' + PT[s.pt].toLowerCase() : '') + '. Attacks: ' + s.at.map(a=>AT.find(q=>q[0] === a)[1].toLowerCase()).join(', ') + '.</div>' +
+        '<div style="font-size:13px;opacity:.85">' + SZ[s.sz][0] + ' ' + CO[s.co][0].toLowerCase() + ' ' + SH[s.sh].toLowerCase() + (s.ht ? ' with a ' + HT[s.ht].toLowerCase() : '') + ', ' + EY[s.ey].toLowerCase() + ', ' + MO[s.mo].toLowerCase() + (s.hn ? ', ' + HN[s.hn].toLowerCase() : '') + (s.am ? ', ' + AM[s.am].toLowerCase() : '') + (s.tl ? ', ' + TL[s.tl].toLowerCase() : '') + (s.ac ? ', ' + AC[s.ac].toLowerCase() : '') + (s.pt ? ', ' + PT[s.pt].toLowerCase() : '') + pantsTxt(s) + '. Attacks: ' + s.at.map(a=>AT.find(q=>q[0] === a)[1].toLowerCase()).join(', ') + '.</div>' +
         btn('sum', 'Summon it now') + btn('lair', 'Let it build a lair nearby', '#7a4ab0') + btn('reroll', 'A different boss', '#4a6a3a') + '</div>' +
         '<div style="opacity:.75;font-size:12px;margin-top:8px">Bosses get a bit stronger every time you beat one. Hit them with your pickaxe or weapon (one swing per click), shoot them, or throw bombs. Bosses also build their own lairs out of real blocks, and sometimes walk about at night.</div>';
     } else if(pTab === 'make'){
@@ -39021,7 +39166,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         '<b>Body plan</b><div>' + sel('sh', SH, m.sh) + '</div><b>Colour</b><div>' + sel('co', CO.map(c=>c[0]), m.co) + ' and ' + sel('c2', CO.map(c=>c[0]), m.c2) + '</div>' +
         '<b>Size</b><div>' + sel('sz', SZ.map(z=>z[0]), m.sz) + '</div><b>Hat</b><div>' + sel('ht', HT, m.ht) + '</div>' +
         '<b>Face</b><div>' + sel('ey', EY, m.ey) + ' ' + sel('mo', MO, m.mo) + '</div><b>Head</b><div>' + sel('hn', HN, m.hn) + '</div>' +
-        '<b>Arms, tail</b><div>' + sel('am', AM, m.am) + ' ' + sel('tl', TL, m.tl) + '</div><b>Extras</b><div>' + sel('ac', AC, m.ac) + ' ' + sel('pt', PT, m.pt) + '</div>' +
+        '<b>Arms, tail</b><div>' + sel('am', AM, m.am) + ' ' + sel('tl', TL, m.tl) + '</div><b>Extras</b><div>' + sel('ac', AC, m.ac) + ' ' + sel('pt', PT, m.pt) + '</div><b>Pants</b><div>' + sel('pn', PANTS, m.pn == null ? 0 : m.pn) + '</div>' +
         '<b>Attacks</b><div>' + AT.map(a=>'<label style="display:inline-block;margin:2px 10px 2px 0;font-size:13px"><input type="checkbox" data-mka="' + a[0] + '"' + (m.at.indexOf(a[0]) >= 0 ? ' checked' : '') + '> ' + a[1] + '</label>').join('') + '</div></div>' +
         btn('msum', 'Summon my boss!') + btn('mlair', 'Build my boss a lair', '#7a4ab0') + btn('mrand', 'Surprise me', '#4a6a3a');
     } else if(pTab === 'hall'){
@@ -39057,7 +39202,7 @@ window.__nameBad = window.__nameBad || (function(){
   })();
   /* LN-namefilter: boss names can't be real hateful people or bad words (Irfan 2026-11-09) */
   const cleanName = (nm, seed)=>{ if(nm && window.__nameBad(nm)){ try{ toast('That name is not allowed for a boss. It got a silly name instead!'); }catch(e){} return genName(seed || newSeed()); } return nm; };
-  const madeSpec = m=>{ const s = specOf(newSeed()); PARTK.forEach(k=>{ s[k] = m[k]; }); s.n = cleanName(m.n) || genName(newSeed()); s.at = m.at.slice(); s.made = 1; return s; };
+  const madeSpec = m=>{ const s = specOf(newSeed()); PARTK.forEach(k=>{ if(m[k] != null) s[k] = m[k]; }); s.n = cleanName(m.n) || genName(newSeed()); s.at = m.at.slice(); s.made = 1; return s; };
   function openPanel(){
     if(!panelEl){
       panelEl = document.createElement('div');
