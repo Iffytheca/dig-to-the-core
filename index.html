@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 216 (Oct 31)';
+  window.__BUILD = 'Build 217 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -38393,6 +38393,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const BOSSES = [];
   const lvl = ()=>Math.min(80, save.cbBeat || 0);
   function spawnBoss(s, x, y, z, how, lair){
+    try{ if(s && s.n && window.__nameBad && window.__nameBad(s.n)){ s.n = genName(s.seed || 1); if(lair) lair.n = s.n; } }catch(e){}   /* LN-namefilter */
     const M = buildBoss(s), L = lvl() + (how === 'srvb' ? (save.srvbWave || 1) - 1 : 0);
     const max = Math.round((380 + 110*Math.min(L, 60))*SZ[s.sz][2]);
     const b = {s, name:s.n, g:M.g, h:M.h, sc:M.sc, bsc:M.sc, r:.75*M.sc + .35, pos:new THREE.Vector3(x, y, z), vy:0, hp:max, max, how, lair:lair || null,
@@ -38932,7 +38933,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const at = [...panelEl.querySelectorAll('[data-mka]')].filter(e=>e.checked).map(e=>e.dataset.mka); m.at = at.length ? at.slice(0, 3) : ['shots'];
     return m;
   }
-  const madeSpec = m=>{ const s = specOf(newSeed()); PARTK.forEach(k=>{ s[k] = m[k]; }); s.n = m.n || genName(newSeed()); s.at = m.at.slice(); s.made = 1; return s; };
+window.__nameBad = window.__nameBad || (function(){
+    const SUB = /hitler|adolf|nazi|swastika|stalin|mussolini|polpot|binladen|osama|isis|kkk|holocaust|genocide|terroris|gestapo|fuck|fuk|fck|shit|bitch|biatch|cunt|dick|pussy|penis|vagina|boob|bastard|whore|slut|nigg|niga|fag|retard|wank|twat|bollock|piss|crap|dumbass|jackass|asshole|arsehole|douche|porn|sexy|nude|naked|horny|motherf|killyourself/;
+    const WORD = /^(ass|arse|asses|cum|tit|tits|sex|hoe|hoes|cock|cocks|damn|sht|stfu|wtf|kys|fu|fk)$/;
+    return function(nm){
+      const t = String(nm || '').toLowerCase().replace(/0/g,'o').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[4@]/g,'a').replace(/[5$]/g,'s').replace(/7/g,'t');
+      const words = t.split(/[^a-z]+/).filter(Boolean);
+      const groups = words.slice();
+      for(let i = 0; i < words.length; i++){ if(words[i].length === 1){ let j = i, g = ''; while(j < words.length && words[j].length <= 2){ g += words[j]; j++; } if(g.length > 2) groups.push(g); i = j - 1; } }
+      for(let i = 0; i + 1 < words.length; i++) groups.push(words[i] + words[i+1]);
+      return words.some(w=>WORD.test(w) || SUB.test(w)) || groups.some(g=>SUB.test(g) && !/^(stinky|cranky|sticky|madam|ticklish)/.test(g));
+    };
+  })();
+  /* LN-namefilter: boss names can't be real hateful people or bad words (Irfan 2026-11-09) */
+  const cleanName = (nm, seed)=>{ if(nm && window.__nameBad(nm)){ try{ toast('That name is not allowed for a boss. It got a silly name instead!'); }catch(e){} return genName(seed || newSeed()); } return nm; };
+  const madeSpec = m=>{ const s = specOf(newSeed()); PARTK.forEach(k=>{ s[k] = m[k]; }); s.n = cleanName(m.n) || genName(newSeed()); s.at = m.at.slice(); s.made = 1; return s; };
   function openPanel(){
     if(!panelEl){
       panelEl = document.createElement('div');
