@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 217 (Oct 31)';
+  window.__BUILD = 'Build 218 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -20510,19 +20510,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const g = new THREE.Group(); g.visible = false; scene.add(g);
   const FUR = 0x4a3826, FUR2 = 0x2e2216, BELLY = 0x7a6646, FACE = 0xb02a3c, eyeM = new THREE.MeshBasicMaterial({color:0xffe040});
   const b = (w,h,d,c,x,y,z,p)=>sbox(w,h,d,c,x,y,z,p||g);
-  b(1,1.1,.75,FUR,0,1.35,0); b(.7,.8,.1,BELLY,0,1.3,.38); b(1.1,.45,.8,FUR2,0,1.95,-.05);          // body, belly, shoulder mane
-  const head = new THREE.Group(); head.position.set(0,2.15,.3); g.add(head);
-  b(.7,.62,.6,FUR,0,.05,0,head); b(.8,.3,.5,FUR2,0,.32,-.05,head);                                   // head and mane
-  b(.42,.36,.55,FACE,0,-.04,.5,head); b(.3,.1,.08,0x40141c,0,-.14,.78,head);                         // long pink muzzle, mouth
-  b(.07,.07,.04,0x30101a,-.08,.06,.78,head); b(.07,.07,.04,0x30101a,.08,.06,.78,head);              // nostrils
-  [-.17,.17].forEach(x=>{ const e = new THREE.Mesh(new THREE.BoxGeometry(.13,.1,.04), eyeM); e.position.set(x,.16,.31); head.add(e); b(.2,.06,.06,FUR2,x,.25,.31,head); });
+  // LN-babafix: a straight, upright baboon. Legs under the hips, the body on the hips, the head on the shoulders, arms hanging at the sides (Irfan 2026-11-09 "look at his terrible posture")
+  b(.9,.35,.66,FUR2,0,1.05,0); b(.95,.95,.7,FUR,0,1.66,0); b(.62,.68,.06,BELLY,0,1.6,.36); b(1.06,.3,.78,FUR2,0,2.08,0);   // hips, body, belly, shoulder mane
+  const head = new THREE.Group(); head.position.set(0,2.23,.04); g.add(head);
+  b(.68,.6,.6,FUR,0,.3,0,head); b(.76,.18,.64,FUR2,0,.66,-.02,head); b(.16,.3,.4,FUR2,-.42,.32,-.05,head); b(.16,.3,.4,FUR2,.42,.32,-.05,head);   // head, mane, side whiskers
+  b(.4,.32,.45,FACE,0,.18,.45,head); b(.28,.08,.06,0x40141c,0,.06,.68,head);                         // long pink muzzle, mouth
+  b(.07,.07,.04,0x30101a,-.08,.27,.68,head); b(.07,.07,.04,0x30101a,.08,.27,.68,head);              // nostrils
+  [-.17,.17].forEach(x=>{ const e = new THREE.Mesh(new THREE.BoxGeometry(.13,.1,.04), eyeM); e.position.set(x,.43,.31); head.add(e); b(.2,.06,.06,FUR2,x,.52,.31,head); });
   const arms = [], legs = [];
   [-1,1].forEach(s=>{
-    const a = new THREE.Group(); a.position.set(s*.62,1.85,0); g.add(a); b(.28,1.3,.28,FUR,0,-.6,0,a); b(.32,.18,.4,FUR2,0,-1.28,.05,a); arms.push(a);
-    const l = new THREE.Group(); l.position.set(s*.28,.85,0); g.add(l); b(.32,.85,.34,FUR,0,-.42,0,l); b(.36,.14,.5,FUR2,0,-.82,.08,l); legs.push(l);
+    const a = new THREE.Group(); a.position.set(s*.6,2.02,0); g.add(a); b(.26,1.15,.26,FUR,0,-.55,0,a); b(.3,.16,.34,FUR2,0,-1.17,.04,a); arms.push(a);
+    const l = new THREE.Group(); l.position.set(s*.26,.9,0); g.add(l); b(.34,.9,.36,FUR,0,-.45,0,l); b(.38,.12,.5,FUR2,0,-.84,.08,l); legs.push(l);
   });
-  b(.6,.32,.12,0xe03050,0,.95,-.4);                                                                     // the famous red bottom
-  const tail = new THREE.Group(); tail.position.set(0,1.05,-.42); tail.rotation.x = -.9; g.add(tail); b(.14,.14,.9,FUR2,0,0,-.45,tail);
+  b(.6,.3,.1,0xe03050,0,1.0,-.37);                                                                      // the famous red bottom
+  const tail = new THREE.Group(); tail.position.set(0,1.1,-.37); tail.rotation.x = -.9; g.add(tail); b(.14,.14,.9,FUR2,0,0,-.45,tail);
   g.scale.setScalar(1.15);
   (function(){                                                                                          // name tag
     const cv = document.createElement('canvas'); cv.width = 512; cv.height = 96; const x = cv.getContext('2d');
@@ -20530,7 +20531,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     x.font = 'bold 40px system-ui,sans-serif'; x.strokeText('BABA CAKA', 256, 32); x.fillStyle = '#ff6a6a'; x.fillText('BABA CAKA', 256, 32);
     x.font = 'bold 24px system-ui,sans-serif'; x.strokeText('IMMORTAL', 256, 74); x.fillStyle = '#ffe040'; x.fillText('IMMORTAL', 256, 74);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false}));
-    sp.scale.set(3.4, .64, 1); sp.position.y = 3.1; g.add(sp);
+    sp.scale.set(3.4, .64, 1); sp.position.y = 3.4; g.add(sp);
   })();
   const LAUGH = ['OOH OOH AAH AAH!','HEE HEE HOO HOO!','Baba Caka sees you...','You cannot hurt Baba Caka!','OOH OOH! Run, little miner!','Baba Caka is hungry for snacks!'];
   const HIT = ['Baba Caka is IMMORTAL. Your hit just made him dizzy.','Bonk! Baba Caka laughs it off. He can not be killed.','Baba Caka rubs his head and laughs. He is IMMORTAL.'];
@@ -20615,7 +20616,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       }
       // animation
       g.position.copy(B.pos); g.rotation.y = ang;
-      const sw = sp ? Math.sin(B.t*10)*.7 : 0;
+      const sw = sp ? Math.sin(B.t*10)*.45 : 0;
       arms[0].rotation.x = sw; arms[1].rotation.x = -sw; legs[0].rotation.x = -sw; legs[1].rotation.x = sw;
       head.rotation.z = B.stun > 0 ? Math.sin(B.t*14)*.3 : 0; tail.rotation.y = Math.sin(B.t*3)*.4;
       eyeM.color.setHex((now % 1400) < 1300 ? 0xffe040 : 0x332200);
@@ -28880,7 +28881,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(on && !madSign){
       const cv = document.createElement('canvas'); cv.width = 512; cv.height = 80; const x = cv.getContext('2d');
       x.fillStyle = 'rgba(200,0,0,.9)'; x.fillRect(6, 6, 500, 68); x.font = 'bold 36px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('MAD: NO HOMEWORK!', 256, 41);
-      madSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); madSign.scale.set(3.4, .53, 1); madSign.position.y = 3.85; BB.g.add(madSign);
+      madSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); madSign.scale.set(3.4, .53, 1); madSign.position.y = 4.1; BB.g.add(madSign);
     }
     if(madSign) madSign.visible = !!on;
   }
@@ -28891,7 +28892,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(on && !proudSign){
       const cv = document.createElement('canvas'); cv.width = 512; cv.height = 80; const x = cv.getContext('2d');
       x.fillStyle = 'rgba(20,150,50,.92)'; x.fillRect(6, 6, 500, 68); x.font = 'bold 34px system-ui,sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillStyle = '#fff'; x.fillText('PROUD: HOMEWORK DONE!', 256, 41);
-      proudSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); proudSign.scale.set(3.4, .53, 1); proudSign.position.y = 3.85; BB.g.add(proudSign);
+      proudSign = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); proudSign.scale.set(3.4, .53, 1); proudSign.position.y = 4.1; BB.g.add(proudSign);
     }
     if(proudSign) proudSign.visible = !!on;
   }
@@ -37852,6 +37853,113 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__picklimit = {LIM};
 })();
 /* LN-picklimit end */
+/* LN-bossdrops start: every custom boss drops its OWN named things when beaten: a discovery, a loot item, a material and a placeable block (Irfan 2026-11-09 "bosses drop their unique discovery loot material block stuff") */
+(function(){
+  const CO3 = [[224,58,58], [255,138,32], [255,208,48], [138,226,58], [48,160,64], [48,200,208], [58,90,224], [138,58,198], [255,128,192], [138,90,48], [240,240,240], [42,42,48]];   // the same 12 colours the bosses use
+  const hs = (seed, tag)=>{ let h = 2166136261; const s = seed + '|' + tag; for(let i=0;i<s.length;i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); h ^= h >>> 13; h = Math.imul(h, 1274126177); h ^= h >>> 16; return (h >>> 0)/4294967296; };
+  const pk = (seed, tag, a)=>a[Math.floor(hs(seed, tag)*a.length)];
+  const DISC = ["#'s Lost Sock", "Secret Recipe of #", "#'s Old Diary Page", "#'s Missing Homework", "Map to #'s Snack Stash", "#'s Embarrassing Photo", "#'s Old Report Card", "#'s Birthday Invitation"];
+  const LOOTS = ["#'s Lucky Button", "#'s Tiny Crown", "#'s Favourite Spoon", "#'s Pocket Watch", "#'s Left Slipper", "#'s Squeaky Whistle", "#'s Cape Clip", "#'s Bouncy Tooth"];
+  const MATS = ['Essence', 'Dust', 'Goo', 'Sparkles', 'Fluff', 'Crumbs', 'Gravy', 'Glitter'];
+  const PATS = ['brick', 'tile', 'checker', 'stripes', 'weave', 'planks', 'emblem', 'ore'];
+  const MAXB = 40;
+  const bad = n=>{ try{ return window.__nameBad && window.__nameBad(n); }catch(e){ return false; } };
+
+  // "Captain Fartleby, Who Ate the Last Cookie" -> "Captain Fartleby"
+  function shortName(full, seed){
+    let n = String(full || '').split(/[,(:;–—]|\s-\s/)[0].trim().replace(/\s+/g, ' ');
+    let w = n.split(' ').filter(Boolean);
+    if(w.length > 3) w = w.slice(0, 3);
+    while(w.length > 1 && /^(the|of|a|an|and|who|von|de|in|on)$/i.test(w[w.length - 1])) w.pop();
+    n = '';
+    for(let k = w.length; k >= 1; k--){ const t = w.slice(0, k).join(' ').slice(0, 24).trim(); if(t && !bad(t)){ n = t; break; } }   // a flagged name is shortened further before giving up
+    if(!n) n = 'Boss ' + (Math.floor(hs(seed, 'sn')*900) + 100);
+    return n;
+  }
+  const initials = n=>{ const w = n.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean); return ((w.length > 1 ? w[0][0] + w[1][0] : (w[0] || 'BO').slice(0, 2)) || 'BO').toUpperCase(); };
+  const ROM = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
+
+  save.bossDrops = save.bossDrops || {};
+  save.bossBlocks = save.bossBlocks || [];
+
+  // work out (once per boss seed, then remember) what this boss drops
+  function infoOf(b){
+    const seed = String(b.s.seed), M = save.bossDrops;
+    if(M[seed]) return M[seed];
+    let sn = shortName(b.name || b.s.n, b.s.seed), tries = 0;
+    const taken = q=>Object.keys(M).some(k=>M[k].sn === q);
+    const base = sn; while(taken(sn) && tries < 9){ tries++; sn = base + ROM[tries]; }
+    const L = Math.max(0, +b.L || 0), co = b.s.co | 0, c2 = b.s.c2 | 0;
+    const d = {sn, L, seed:+b.s.seed};
+    d.disc = pk(seed, 'disc', DISC).replace('#', sn);
+    d.discT = Math.min(5, 2 + Math.floor(L/10));
+    d.loot = pk(seed, 'loot', LOOTS).replace('#', sn);
+    d.ab = initials(sn);
+    d.lootRare = L >= 12 ? 1 : 0;
+    d.mat = sn + ' ' + pk(seed, 'mat', MATS);
+    d.matT = Math.min(4, 1 + Math.floor(L/10));
+    d.c1 = CO3[co % 12].slice(); d.c2 = CO3[c2 % 12].slice();
+    d.pat = PATS[Math.floor(hs(seed, 'pat')*PATS.length)];
+    d.glyph = Math.floor(hs(seed, 'gl')*64);
+    d.qty = 4 + Math.floor(hs(seed, 'qty')*5);                    // 4 to 8 blocks
+    d.blk = sn + ' Block';
+    if(bad(d.disc) || bad(d.loot) || bad(d.mat) || bad(d.blk)){ d.sn = 'Boss ' + (Math.floor(hs(seed, 'sn')*900) + 100); d.disc = d.disc.replace(sn, d.sn); d.loot = d.loot.replace(sn, d.sn); d.mat = d.sn + ' Essence'; d.blk = d.sn + ' Block'; d.ab = 'BO'; }
+    // too many boss blocks: re-use the most similar one that is already registered
+    if(!blockIdOf(d.blk) && save.bossBlocks.indexOf(d.blk) < 0 && save.bossBlocks.length >= MAXB){
+      let best = null, bd = 1e9;
+      save.bossBlocks.forEach(n=>{ const s = save.blkSnap && save.blkSnap[n]; if(!s) return; const q = (s.c1 || [0,0,0]).concat(s.c2 || [0,0,0]), r = d.c1.concat(d.c2); let e = 0; for(let i=0;i<6;i++) e += (q[i] - r[i])*(q[i] - r[i]); if(e < bd){ bd = e; best = n; } });
+      if(best){ d.blk = best; d.reuse = 1; }
+    }
+    M[seed] = d;
+    return d;
+  }
+
+  // names, colours and little text icons (no emoji) for the items; also brings them back after a reload
+  function look(d){
+    try{
+      ITEM_COL[d.loot] = [Math.min(255, d.c1[0] + 30), Math.min(255, d.c1[1] + 30), Math.min(255, d.c1[2] + 30)];
+      ITEM_COL[d.blk] = d.c1.slice();
+      if(d.lootRare) RARE[d.loot] = d.ab; else LOOT[d.loot] = d.ab;
+    }catch(e){}
+  }
+  Object.keys(save.bossDrops).forEach(k=>look(save.bossDrops[k]));
+
+  // the block is only registered the first time it drops (never at page load), through LN-blockfix's saved list so block ids never shift
+  function ensureBlock(d){
+    let id = blockIdOf(d.blk); if(id) return id;
+    const spec = {name:d.blk, c1:d.c1.slice(), c2:d.c2.slice(), pattern:d.pat === 'emblem' && !window.MF_GLYPHS ? 'checker' : d.pat, glyph:d.glyph, glow:0, h:8, v:300 + d.L*40, power:Math.min(8, 3 + Math.floor(d.L/12))};
+    const o = specToBlock(spec);
+    save.blkSnap = save.blkSnap || {}; save.extraBlocks = save.extraBlocks || [];
+    save.blkSnap[d.blk] = JSON.parse(JSON.stringify(o));
+    id = blockIdOf(d.blk);
+    if(!id && window.__blockfix){ id = window.__blockfix.regBlock(save.blkSnap[d.blk]); if(save.extraBlocks.indexOf(d.blk) < 0) save.extraBlocks.push(d.blk); }
+    if(save.bossBlocks.indexOf(d.blk) < 0) save.bossBlocks.push(d.blk);
+    try{ _blockIds = null; }catch(e){}
+    return id;
+  }
+  function giveMat(t, name){
+    save.mats = save.mats || {};
+    const key = t + '|' + name;
+    if(!(key in save.mats)) save.matKinds = (save.matKinds || 0) + 1;
+    save.mats[key] = (save.mats[key] || 0) + 1;
+  }
+  function drops(b){
+    if(!b || !b.s || b.mini) return null;
+    const d = infoOf(b); look(d);
+    giveMat(d.discT, d.disc);
+    giveMat(d.matT, d.mat);
+    addItem(d.loot, 1, true);
+    ensureBlock(d);
+    addItem(d.blk, d.qty, true);
+    save.bossDropN = (save.bossDropN || 0) + 1;
+    try{ persist(); }catch(e){}
+    setTimeout(()=>{ try{ toast(d.sn + ' dropped its own things: ' + d.disc + ' (discovery), ' + d.loot + ' (loot), ' + d.mat + ' (material) and ' + d.qty + ' x ' + d.blk + '!'); }catch(e){} }, 2500);
+    return d;
+  }
+  window.__bossDrops = drops;
+  drops.infoOf = infoOf; drops.shortName = shortName; drops.ensureBlock = ensureBlock; drops.MAXB = MAXB;
+})();
+/* LN-bossdrops end */
 /* LN-bombboss start: BOMBS in 12 variants (throw with X or right-click, buy them in the shop, craft some), CUSTOM BOSSES with hilarious names (endless random ones, or make your own) that build their own LAIRS out of real blocks, a BOSS HALL of every boss you beat, SERVER LORE for Server T and the new SERVER B (boss battles one after another) (Irfan 2026-11-09 "add bomb in deep chaos digger and add custom bosses they have hilarious names and there can be infinite of them and add server lore which show the special lore of the server and also bomb has variant" + "and they have their building") */
 (function(){
   const pick = q=>q[Math.floor(Math.random()*q.length)];
@@ -38473,6 +38581,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(b.s.made) save.cbMadeBeat = (save.cbMadeBeat || 0) + 1;
     const coins = Math.round(1500 + 350*Math.min(60, b.L) + (b.how === 'srvb' ? 1000 : 0)), tr = TROPHY[b.s.seed % TROPHY.length];
     save.coins += coins; addItem(tr, 1);
+    try{ window.__bossDrops && window.__bossDrops(b); }catch(e){ console.warn('LN-bossdrops', e); }   /* LN-bossdrops */
     if(b.lair){ b.lair.b = 1; b.lair.c = 1; refreshTag(b.lair); }
     if(b.how === 'srvb'){ save.srvbWave = (save.srvbWave || 1) + 1; save.srvbBest = Math.max(save.srvbBest || 0, save.srvbWave - 1); srvbCD = 6; }
     persist(); try{ refreshShopIfOpen(); }catch(e){}
@@ -38942,7 +39051,8 @@ window.__nameBad = window.__nameBad || (function(){
       const groups = words.slice();
       for(let i = 0; i < words.length; i++){ if(words[i].length === 1){ let j = i, g = ''; while(j < words.length && words[j].length <= 2){ g += words[j]; j++; } if(g.length > 2) groups.push(g); i = j - 1; } }
       for(let i = 0; i + 1 < words.length; i++) groups.push(words[i] + words[i+1]);
-      return words.some(w=>WORD.test(w) || SUB.test(w)) || groups.some(g=>SUB.test(g) && !/^(stinky|cranky|sticky|madam|ticklish)/.test(g));
+      const PAIR = /hitler|nazi|fuck|shit|bitch|cunt|nigg|fag|porn/;   /* joined words: only the strong ones, so Pocket Watch is fine */
+      return words.some(w=>WORD.test(w) || SUB.test(w)) || groups.some(g=>PAIR.test(g));
     };
   })();
   /* LN-namefilter: boss names can't be real hateful people or bad words (Irfan 2026-11-09) */
