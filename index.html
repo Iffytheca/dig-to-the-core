@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 221 (Oct 31)';
+  window.__BUILD = 'Build 222 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -6674,7 +6674,7 @@ function chaosBossDown(){
   else setTimeout(()=>toast('Another Chaos boss will come soon...'), 2500);
 }
 function updateEnemies(dt, li){
-  if(!HILARIOUS && !CHAOS) return;
+  if(!HILARIOUS && !CHAOS && !window.__sbxOn) return;   /* LN-sandbox */
   if(realm !== 0 || won){ if(enemies.length){ enemies.slice().forEach(removeEnemy); bossActive = false; } return; }
   const surface = P.y > -2, now = performance.now()*.001;
   if(locked){
@@ -38653,6 +38653,154 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     resOffer:(who, n, mine, theirs)=>{ pRes = {who, n, mine, theirs}; openPan('res', n); }, resSwap, get near(){ return near; }};
 })();
 /* LN-foodtrade end */
+/* LN-sandbox start: Sandbox Mode (Irfan 2026-11-10): creative-like mode, badges locked forever once used */
+(function(){
+  const TK = 'digcore_sandbox_used';
+  const ON = modeFlag('digcore_sandbox');
+  const usedBefore = ()=>{ try{ return localStorage.getItem(TK) === '1'; }catch(e){ return false; } };
+  if(ON){ try{ localStorage.setItem(TK, '1'); }catch(e){} try{ save.sandboxUsed = 1; }catch(e){} }
+  registerMode('sandbox', 'Sandbox Mode', 'digcore_sandbox', ON, '#1f8a6a');
+  // badges: once Sandbox has been on, no badge can be earned, even after turning it off
+  const _aw = award;
+  award = function(id){ if(ON || usedBefore() || (save && save.sandboxUsed)) return; return _aw(id); };
+  const _rb = refreshBadges;
+  refreshBadges = function(){
+    _rb();
+    if(!(usedBefore() || (save && save.sandboxUsed))) return;
+    ['menubadges','shopbadges'].forEach(id=>{ const el = document.getElementById(id); if(el && !el.querySelector('.sbxnote')) el.insertAdjacentHTML('beforeend', '<div class="sbxnote" style="flex-basis:100%;width:100%;opacity:.8;font-size:12px;margin-top:4px">Badges are locked because Sandbox Mode was used.</div>'); });
+  };
+  try{ refreshBadges(); }catch(e){}
+  window.__sbxOn = ON;
+  window.__sbxT = {award:id=>award(id)};
+  if(!ON) return;
+
+  /* ---------- free blocks and furniture ---------- */
+  const isFree = nm=>!!(blockIdOf(nm) || (save.furnItems && save.furnItems[nm]));
+  const _cr = consumeRef;
+  consumeRef = function(ref, n){
+    if(ref && ref[0] === 'i'){ const nm = ref.slice(2); if(isFree(nm) && refInfo(ref)) return true; }
+    return _cr(ref, n);
+  };
+  // loot, discoveries and materials cannot be placed in Sandbox, they can only be dropped
+  const _hp = hotPlace;
+  hotPlace = function(){
+    const r = hotArr()[save.hotSel], hi = hotInfo(r);
+    if(hi && (hi.kind === 'mat' || (hi.kind === 'item' && !isFree(hi.name) && !isFoodItem(hi.name)))){
+      toast('Loot and discoveries cannot be placed. Open SANDBOX (;) and press Drop.'); return;
+    }
+    return _hp();
+  };
+
+  /* ---------- dropped items (loot lying on the ground, walk over to pick up) ---------- */
+  const piles = [];
+  function dropAt(label, give){
+    const yaw = P.yaw || 0, x = P.x - Math.sin(yaw)*2.2, z = P.z - Math.cos(yaw)*2.2, y = groundTop(Math.floor(x), 3, Math.floor(z));
+    const col = (ITEM_COL && ITEM_COL[label]) ? (ITEM_COL[label][0]<<16 | ITEM_COL[label][1]<<8 | ITEM_COL[label][2]) : 0xffd24a;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(.4,.4,.4), new THREE.MeshLambertMaterial({color:col}));
+    m.position.set(x, y + .5, z); scene.add(m);
+    piles.push({m, label, give, t:0, y: y + .5});
+    if(piles.length > 40){ const o = piles.shift(); scene.remove(o.m); }
+    toast('Dropped ' + label + '. Walk over it to pick it up.');
+  }
+  (function loop(){
+    requestAnimationFrame(loop);
+    for(let i = piles.length - 1; i >= 0; i--){
+      const p = piles[i]; p.t += .016; p.m.rotation.y += .03; p.m.position.y = p.y + Math.sin(p.t*3)*.12;
+      if(Math.hypot(P.x - p.m.position.x, P.z - p.m.position.z) < 1.6 && Math.abs(P.y - p.m.position.y) < 4 && p.t > 1.2){
+        try{ p.give(); }catch(e){}
+        scene.remove(p.m); piles.splice(i, 1); toast('Picked up ' + p.label + '.');
+      }
+    }
+  })();
+
+  /* ---------- the panel ---------- */
+  const TABS = [['blocks','Blocks'],['furn','Furniture'],['mobs','Mobs'],['bobs','Bobs'],['bosses','Bosses'],['loot','Discovered']];
+  let tab = 'blocks', q = '', el = null;
+  const COLS = [['Red',0xc03030],['Blue',0x3060c0],['Green',0x30a050],['Yellow',0xe0c030],['Purple',0x8040c0],['Pink',0xf070b0],['White',0xeeeeee],['Black',0x303030],['Orange',0xe08030],['Wood',0x9a6a3a]];
+  const cap = s=>s.charAt(0).toUpperCase() + s.slice(1);
+  function spot(d){ const a = (P.yaw || 0) + Math.PI + (Math.random() - .5)*1.2, x = P.x + Math.sin(a - Math.PI)*0 + Math.cos(a)*0 - Math.sin(P.yaw || 0)*d, z = P.z - Math.cos(P.yaw || 0)*d; return {x, z, y: groundTop(Math.floor(x), 3, Math.floor(z))}; }
+  function giveBlock(nm){ save.inv = save.inv || {}; if((save.inv[nm]||0) < 999) save.inv[nm] = 999; addItem(nm, 0, true); hotAuto('i:' + nm); updateHotbar(); toast(nm + ' is in your bag, unlimited.'); }
+  function giveFurn(nm, kind, col){ save.furnItems = save.furnItems || {}; save.furnItems[nm] = {kind, col}; giveBlock(nm); }
+  const list = {
+    blocks(){ const seen = {}, out = []; BLOCKS.forEach(b=>{ if(b && b.name && !seen[b.name]){ seen[b.name] = 1; out.push(b.name); } }); return out.map(n=>[n, 'Unlimited', ()=>giveBlock(n)]); },
+    furn(){
+      const out = [];
+      FURN_KINDS.forEach(k=>COLS.forEach(c=>{ const n = c[0] + ' ' + cap(k); out.push([n, 'Unlimited', ()=>giveFurn(n, k, c[1])]); }));
+      Object.keys(save.furnItems || {}).forEach(n=>{ if(!out.some(o=>o[0] === n)) out.push([n, 'Unlimited', ()=>giveBlock(n)]); });
+      return out;
+    },
+    mobs(){ return Object.keys(AD).filter(k=>AD[k] && AD[k].name).map(k=>[AD[k].name + ' (' + k + ')', 'Spawn', ()=>{ const s = spot(6); spawnAnimal(k, s.x, s.z); toast(AD[k].name + ' spawned.'); }]); },
+    bobs(){
+      const B = window.__bobs; if(!B) return [];
+      return Object.keys(B.VARS).filter(k=>k !== 'king').map(k=>[B.VARS[k].name + ' (' + k + ')', 'Spawn', ()=>{ const s = spot(7), b = B.mk(B.VARS[k], s.x, s.z); b.life = 1e9; b.keep = 1; toast(B.VARS[k].name + ' spawned.'); }]);
+    },
+    bosses(){
+      const out = [], BB = window.__bombboss, B = window.__bobs;
+      const near = ()=>{ const s = spot(14); return s; };
+      Object.keys(ED).filter(k=>ED[k].boss).forEach(k=>out.push([ED[k].name, 'Boss', ()=>{ const s = near(); const e = spawnEnemy(k, s.x, s.y, s.z); bossActive = true; toast(e.d.name + ' has been summoned!'); }]));
+      if(BB){
+        const PL = ['Blob','Robot','Toaster','Snowman','Noodle','Party Cone','Octopus','Duck','Sandwich','Biped','Four Legs','Worm','Floating Head','Teapot','Giant Sock','Two Heads','Spider','Winged','Bob'];
+        out.push(['Random custom boss (funny name)', 'Custom', ()=>{ const s = near(), sp = BB.specOf(BB.newSeed()); BB.spawnBoss(sp, s.x, s.y + 1, s.z, 'sum'); toast(sp.n + ' appears!'); }]);
+        PL.forEach((nm, i)=>out.push(['Custom boss: ' + nm + ' body', 'Custom', ()=>{ const s = near(), sp = BB.specOf(BB.newSeed(), {sh:i}); BB.spawnBoss(sp, s.x, s.y + 1, s.z, 'sum'); toast(sp.n + ' appears!'); }]));
+      }
+      if(B) out.push(['The Bob King', 'Boss', ()=>{ const k = B.spawnKing(); if(k) k.life = 1e9; }]);
+      if(window.__baba) out.push(['Baba Caka', 'Boss', ()=>{ try{ window.__baba.arrive(); }catch(e){ toast('Baba Caka is busy.'); } }]);
+      return out;
+    },
+    loot(){
+      const out = [], inv = save.inv || {}, seen = {};
+      Object.keys(save.found || {}).forEach(n=>{ if(!seen[n]){ seen[n] = 1; out.push([n + '  (discovery)', 'Give / Drop', ()=>{ addItem(n, 10); }, ()=>dropAt(n, ()=>addItem(n, 1, true))]); } });
+      Object.keys(inv).forEach(n=>{ if(!seen[n] && !isFree(n)){ seen[n] = 1; out.push([n + '  (loot, you have ' + inv[n] + ')', 'Give / Drop', ()=>{ addItem(n, 10); }, ()=>dropAt(n, ()=>addItem(n, 1, true))]); } });
+      Object.keys(save.mats || {}).forEach(k=>{ const nm = k.slice(k.indexOf('|') + 1); out.push([nm + '  (material)', 'Give / Drop', ()=>{ save.mats[k] = (save.mats[k]||0) + 10; toast('+10 ' + nm); }, ()=>dropAt(nm, ()=>{ save.mats[k] = (save.mats[k]||0) + 1; })]); });
+      return out;
+    }
+  };
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+  function render(){
+    const box = el.firstChild, rows = (list[tab]() || []).filter(r=>!q || r[0].toLowerCase().indexOf(q.toLowerCase()) >= 0);
+    const shown = rows.slice(0, 120);
+    box.innerHTML = '<button data-x="1" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
+      '<div style="font:900 22px system-ui;color:#7ff0c0">Sandbox</div>' +
+      '<div style="opacity:.8;font-size:12px;margin:2px 0 8px">Blocks, furniture, mobs and Bobs are free. Loot, discoveries and materials cannot be placed, only dropped. Badges stay locked forever.</div>' +
+      '<div>' + TABS.map(t=>'<button data-t="' + t[0] + '" style="margin:2px;padding:6px 12px;border:0;border-radius:8px;font:700 13px system-ui;cursor:pointer;color:#fff;background:' + (t[0] === tab ? '#1f8a6a' : '#3a4a44') + '">' + t[1] + '</button>').join('') + '</div>' +
+      '<input id="sbxq" placeholder="Search..." value="' + esc(q) + '" style="width:100%;box-sizing:border-box;margin:8px 0;padding:7px 10px;border-radius:8px;border:1px solid #5a7a6a;background:#10201a;color:#fff;font:14px system-ui">' +
+      '<div style="font-size:12px;opacity:.7;margin-bottom:4px">' + rows.length + ' found' + (rows.length > 120 ? ' (showing 120, type to search)' : '') + '</div>' +
+      (shown.length ? shown.map((r, i)=>'<div style="display:flex;gap:6px;align-items:center;margin:3px 0"><button data-i="' + i + '" style="flex:1;text-align:left;padding:7px 10px;border:0;border-radius:8px;background:#2a4a3e;color:#fff;font:13px system-ui;cursor:pointer">' + esc(r[0]) + ' <span style="opacity:.6">- ' + esc(r[1]) + '</span></button>' + (r[3] ? '<button data-d="' + i + '" style="padding:7px 10px;border:0;border-radius:8px;background:#6a4a1a;color:#fff;font:13px system-ui;cursor:pointer">Drop</button>' : '') + '</div>').join('') : '<div style="opacity:.7;padding:10px">Nothing here yet.' + (tab === 'loot' ? ' Dig and defeat bosses to discover things.' : '') + '</div>');
+    box._rows = shown;
+    const inp = box.querySelector('#sbxq'); inp.oninput = ()=>{ q = inp.value; const pos = inp.selectionStart; render(); const n = el.querySelector('#sbxq'); n.focus(); n.setSelectionRange(pos, pos); };
+  }
+  function open(){
+    if(!el){
+      el = document.createElement('div'); el.style.cssText = 'position:fixed;inset:0;z-index:73;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center';
+      el.innerHTML = '<div style="position:relative;width:min(640px,94vw);max-height:86vh;overflow:auto;background:#10261e;border:3px solid #3ad0a0;border-radius:14px;padding:14px 16px;color:#fff;font:14px system-ui,sans-serif;box-sizing:border-box"></div>';
+      el.addEventListener('keydown', e=>e.stopPropagation()); el.addEventListener('keyup', e=>e.stopPropagation());
+      el.addEventListener('click', e=>{
+        e.stopPropagation(); const t = e.target.closest('button'), box = el.firstChild;
+        if(e.target === el || (t && t.dataset.x)){ close(); return; }
+        if(!t) return;
+        if(t.dataset.t){ tab = t.dataset.t; q = ''; render(); return; }
+        const rows = box._rows || [];
+        if(t.dataset.i != null){ const r = rows[+t.dataset.i]; if(r) r[2](); }
+        if(t.dataset.d != null){ const r = rows[+t.dataset.d]; if(r && r[3]) r[3](); }
+      });
+      document.body.appendChild(el);
+    }
+    try{ if(document.pointerLockElement) document.exitPointerLock(); }catch(e){}
+    el.style.display = 'flex'; render();
+  }
+  function close(){ if(el) el.style.display = 'none'; }
+  const btn = document.createElement('button');
+  btn.textContent = 'SANDBOX (;)'; btn.style.cssText = 'position:fixed;left:10px;bottom:34px;z-index:60;padding:8px 12px;border:0;border-radius:10px;background:#1f8a6a;color:#fff;font:800 13px system-ui;cursor:pointer;opacity:.92';
+  btn.onclick = e=>{ e.stopPropagation(); open(); }; document.body.appendChild(btn);
+  document.addEventListener('keydown', e=>{
+    if(e.code !== 'Semicolon' || e.repeat) return;
+    if(el && el.style.display === 'flex') close(); else open();
+  });
+  window.__sandbox = {open, close, giveBlock, giveFurn, dropAt, list, piles, isFree, T:{award:id=>award(id), consume:(r,n)=>consumeRef(r,n), place:()=>hotPlace()}};
+  setTimeout(()=>{ try{ toast('SANDBOX MODE: everything is free. Press ; to open the Sandbox. Badges are locked.'); }catch(e){} }, 1500);
+})();
+/* LN-sandbox end */
+
 /* LN-bossdrops start: every custom boss drops its OWN named things when beaten: a discovery, a loot item, a material and a placeable block (Irfan 2026-11-09 "bosses drop their unique discovery loot material block stuff") */
 (function(){
   const CO3 = [[224,58,58], [255,138,32], [255,208,48], [138,226,58], [48,160,64], [48,200,208], [58,90,224], [138,58,198], [255,128,192], [138,90,48], [240,240,240], [42,42,48]];   // the same 12 colours the bosses use
