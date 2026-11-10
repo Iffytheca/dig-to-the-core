@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 222 (Oct 31)';
+  window.__BUILD = 'Build 223 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -38713,6 +38713,29 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
   })();
 
+  /* ---------- flying: double-tap Space to start or stop, Space up, Shift down ---------- */
+  let flying = false, lastSp = 0;
+  const _step = step;
+  step = function(dt){
+    if(!flying) return _step(dt);
+    let fx = (keys.KeyW?1:0) - (keys.KeyS?1:0), sx = (keys.KeyD?1:0) - (keys.KeyA?1:0);
+    const len = Math.hypot(fx, sx) || 1; fx /= len; sx /= len;
+    const sp = 12 * (1 + gear.speed*.5), sin = Math.sin(P.yaw), cos = Math.cos(P.yaw);
+    const k = Math.min(1, dt*8);
+    P.vx += ((-sin*fx + cos*sx)*sp - P.vx)*k; P.vz += ((-cos*fx - sin*sx)*sp - P.vz)*k;
+    const up = (keys.Space ? 1 : 0) - ((keys.ShiftLeft || keys.ShiftRight) ? 1 : 0);
+    P.vy += (up*9 - P.vy)*k;
+    const nx = P.x + P.vx*dt; if(collides(nx, P.y, P.z)) P.vx = 0; else P.x = nx;
+    const nz = P.z + P.vz*dt; if(collides(P.x, P.y, nz)) P.vz = 0; else P.z = nz;
+    const ny = P.y + P.vy*dt; if(collides(P.x, ny, P.z)) P.vy = 0; else P.y = ny;
+    P.ground = false;
+  };
+  function setFly(on){ flying = on; P.vy = 0; try{ toast(on ? 'Flying ON. Space = up, Shift = down, double-tap Space to land.' : 'Flying OFF.'); }catch(e){} try{ if(el && el.style.display === 'flex') render(); }catch(e){} }
+  document.addEventListener('keydown', e=>{
+    if(e.code !== 'Space' || e.repeat || !locked) return;
+    const now = performance.now(); if(now - lastSp < 320){ setFly(!flying); lastSp = 0; } else lastSp = now;
+  });
+
   /* ---------- the panel ---------- */
   const TABS = [['blocks','Blocks'],['furn','Furniture'],['mobs','Mobs'],['bobs','Bobs'],['bosses','Bosses'],['loot','Discovered']];
   let tab = 'blocks', q = '', el = null;
@@ -38761,6 +38784,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const shown = rows.slice(0, 120);
     box.innerHTML = '<button data-x="1" style="position:absolute;top:8px;right:8px;width:34px;height:34px;border:0;border-radius:8px;background:#8a2a2a;color:#fff;font:900 18px system-ui;cursor:pointer">X</button>' +
       '<div style="font:900 22px system-ui;color:#7ff0c0">Sandbox</div>' +
+      '<button data-fly="1" style="margin:0 0 6px;padding:6px 12px;border:0;border-radius:8px;font:700 13px system-ui;cursor:pointer;color:#fff;background:' + (flying ? '#c07a1a' : '#3a4a44') + '">Fly: ' + (flying ? 'ON' : 'OFF') + ' (double-tap Space)</button>' +
       '<div style="opacity:.8;font-size:12px;margin:2px 0 8px">Blocks, furniture, mobs and Bobs are free. Loot, discoveries and materials cannot be placed, only dropped. Badges stay locked forever.</div>' +
       '<div>' + TABS.map(t=>'<button data-t="' + t[0] + '" style="margin:2px;padding:6px 12px;border:0;border-radius:8px;font:700 13px system-ui;cursor:pointer;color:#fff;background:' + (t[0] === tab ? '#1f8a6a' : '#3a4a44') + '">' + t[1] + '</button>').join('') + '</div>' +
       '<input id="sbxq" placeholder="Search..." value="' + esc(q) + '" style="width:100%;box-sizing:border-box;margin:8px 0;padding:7px 10px;border-radius:8px;border:1px solid #5a7a6a;background:#10201a;color:#fff;font:14px system-ui">' +
@@ -38778,6 +38802,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         e.stopPropagation(); const t = e.target.closest('button'), box = el.firstChild;
         if(e.target === el || (t && t.dataset.x)){ close(); return; }
         if(!t) return;
+        if(t.dataset.fly){ setFly(!flying); return; }
         if(t.dataset.t){ tab = t.dataset.t; q = ''; render(); return; }
         const rows = box._rows || [];
         if(t.dataset.i != null){ const r = rows[+t.dataset.i]; if(r) r[2](); }
@@ -38796,8 +38821,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     if(e.code !== 'Semicolon' || e.repeat) return;
     if(el && el.style.display === 'flex') close(); else open();
   });
-  window.__sandbox = {open, close, giveBlock, giveFurn, dropAt, list, piles, isFree, T:{award:id=>award(id), consume:(r,n)=>consumeRef(r,n), place:()=>hotPlace()}};
-  setTimeout(()=>{ try{ toast('SANDBOX MODE: everything is free. Press ; to open the Sandbox. Badges are locked.'); }catch(e){} }, 1500);
+  window.__sandbox = {open, close, giveBlock, giveFurn, dropAt, list, piles, isFree, T:{fly:setFly, isFly:()=>flying, award:id=>award(id), consume:(r,n)=>consumeRef(r,n), place:()=>hotPlace()}};
+  setTimeout(()=>{ try{ toast('SANDBOX MODE: everything is free. Press ; to open the Sandbox. Double-tap Space to fly. Badges are locked.'); }catch(e){} }, 1500);
 })();
 /* LN-sandbox end */
 
