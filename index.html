@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 232 (Oct 31)';
+  window.__BUILD = 'Build 233 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -38801,7 +38801,24 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   try{ refreshBadges(); }catch(e){}
   window.__sbxOn = ON;
   window.__sbxT = {award:id=>award(id)};
+  /* ---------- no keeping Sandbox items: when Sandbox is off, everything it gave is removed ---------- */
+  if(!ON){
+    try{
+      const G = save.sbxG;
+      if(G){
+        const inv = save.inv || {};
+        Object.keys(G.free || {}).forEach(n=>{ const keep = G.free[n] || 0; if(keep > 0) inv[n] = Math.min(inv[n] || 0, keep); else delete inv[n]; if(save.furnItems && save.furnItems[n]) delete save.furnItems[n]; });
+        Object.keys(G.inv || {}).forEach(n=>{ const v = (inv[n] || 0) - G.inv[n]; if(v > 0) inv[n] = v; else delete inv[n]; });
+        Object.keys(G.mats || {}).forEach(k=>{ if(save.mats){ const v = (save.mats[k] || 0) - G.mats[k]; if(v > 0) save.mats[k] = v; else delete save.mats[k]; } });
+        delete save.sbxG;
+        try{ updateHotbar(); }catch(e){} try{ persist(); }catch(e){}
+      }
+    }catch(e){ console.warn('LN-sandbox purge', e); }
+  }
   if(!ON) return;
+  const SG = ()=>(save.sbxG = save.sbxG || {free:{}, inv:{}, mats:{}});
+  const grant = (n, k, silent)=>{ const g = SG(); g.inv[n] = (g.inv[n] || 0) + k; addItem(n, k, silent); };
+  const grantMat = (key, k)=>{ const g = SG(); g.mats[key] = (g.mats[key] || 0) + k; save.mats[key] = (save.mats[key] || 0) + k; };
 
   /* ---------- free blocks and furniture ---------- */
   const isFree = nm=>!!(blockIdOf(nm) || (save.furnItems && save.furnItems[nm]));
@@ -38894,7 +38911,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const COLS = [['Red',0xc03030],['Blue',0x3060c0],['Green',0x30a050],['Yellow',0xe0c030],['Purple',0x8040c0],['Pink',0xf070b0],['White',0xeeeeee],['Black',0x303030],['Orange',0xe08030],['Wood',0x9a6a3a]];
   const cap = s=>s.charAt(0).toUpperCase() + s.slice(1);
   function spot(d){ const a = (P.yaw || 0) + Math.PI + (Math.random() - .5)*1.2, x = P.x + Math.sin(a - Math.PI)*0 + Math.cos(a)*0 - Math.sin(P.yaw || 0)*d, z = P.z - Math.cos(P.yaw || 0)*d; return {x, z, y: groundTop(Math.floor(x), 3, Math.floor(z))}; }
-  function giveBlock(nm){ save.inv = save.inv || {}; if((save.inv[nm]||0) < 999) save.inv[nm] = 999; addItem(nm, 0, true); hotAuto('i:' + nm); updateHotbar(); toast(nm + ' is in your bag, unlimited.'); }
+  function giveBlock(nm){ save.inv = save.inv || {}; { const g = SG(); if(!(nm in g.free)) g.free[nm] = save.inv[nm] || 0; } if((save.inv[nm]||0) < 999) save.inv[nm] = 999; addItem(nm, 0, true); hotAuto('i:' + nm); updateHotbar(); toast(nm + ' is in your bag, unlimited.'); }
   function giveFurn(nm, kind, col){ save.furnItems = save.furnItems || {}; save.furnItems[nm] = {kind, col}; giveBlock(nm); }
   const list = {
     blocks(){ const seen = {}, out = []; BLOCKS.forEach(b=>{ if(b && b.name && !seen[b.name]){ seen[b.name] = 1; out.push(b.name); } }); return out.map(n=>[n, 'Unlimited', ()=>giveBlock(n)]); },
@@ -38924,9 +38941,9 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     },
     loot(){
       const out = [], inv = save.inv || {}, seen = {};
-      Object.keys(save.found || {}).forEach(n=>{ if(!seen[n]){ seen[n] = 1; out.push([n + '  (discovery)', 'Give / Drop', ()=>{ addItem(n, 10); }, ()=>dropAt(n, ()=>addItem(n, 1, true))]); } });
-      Object.keys(inv).forEach(n=>{ if(!seen[n] && !isFree(n)){ seen[n] = 1; out.push([n + '  (loot, you have ' + inv[n] + ')', 'Give / Drop', ()=>{ addItem(n, 10); }, ()=>dropAt(n, ()=>addItem(n, 1, true))]); } });
-      Object.keys(save.mats || {}).forEach(k=>{ const nm = k.slice(k.indexOf('|') + 1); out.push([nm + '  (material)', 'Give / Drop', ()=>{ save.mats[k] = (save.mats[k]||0) + 10; toast('+10 ' + nm); }, ()=>dropAt(nm, ()=>{ save.mats[k] = (save.mats[k]||0) + 1; })]); });
+      Object.keys(save.found || {}).forEach(n=>{ if(!seen[n]){ seen[n] = 1; out.push([n + '  (discovery)', 'Give / Drop', ()=>{ grant(n, 10); }, ()=>dropAt(n, ()=>grant(n, 1, true))]); } });
+      Object.keys(inv).forEach(n=>{ if(!seen[n] && !isFree(n)){ seen[n] = 1; out.push([n + '  (loot, you have ' + inv[n] + ')', 'Give / Drop', ()=>{ grant(n, 10); }, ()=>dropAt(n, ()=>grant(n, 1, true))]); } });
+      Object.keys(save.mats || {}).forEach(k=>{ const nm = k.slice(k.indexOf('|') + 1); out.push([nm + '  (material)', 'Give / Drop', ()=>{ grantMat(k, 10); toast('+10 ' + nm); }, ()=>dropAt(nm, ()=>{ grantMat(k, 1); })]); });
       return out;
     }
   };
