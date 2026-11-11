@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 227 (Oct 31)';
+  window.__BUILD = 'Build 228 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28937,6 +28937,53 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__babaHW = {H, newHW, tick, done};
 })();
 /* LN-babahw end */
+/* LN-babasleep start: on a night you did ALL the homework, Baba Caka sits at his desk, stamps it and falls asleep. Press F next to him to tuck him in and "catch" him (Irfan 2026-11-11, canon) */
+(function(){
+  const BB = window.__baba; if(!BB) return;
+  let desk = null, zz = null, tucked = false, said = 0;
+  const M = c=>new THREE.MeshLambertMaterial({color:c});
+  function bx(g, w, h, d, c, x, y, z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(c)); m.position.set(x, y, z); g.add(m); return m; }
+  function zzSprite(){
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const x = cv.getContext('2d');
+    x.font = '900 60px system-ui,sans-serif'; x.fillStyle = '#bfe0ff'; x.strokeStyle = '#123'; x.lineWidth = 6; x.textAlign = 'center'; x.strokeText('Zzz...', 128, 66); x.fillText('Zzz...', 128, 66);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthWrite:false})); s.scale.set(2.2, .82, 1); return s;
+  }
+  function build(){
+    const yaw = P.yaw || 0, x = P.x - Math.sin(yaw)*7, z = P.z - Math.cos(yaw)*7, y = groundTop(Math.floor(x), 3, Math.floor(z));
+    desk = new THREE.Group(); desk.position.set(x, y, z); scene.add(desk);
+    bx(desk, 2.0, .12, 1.0, 0x8a5a2a, 0, .85, 0);                                   // desk top
+    [[-.9,-.4],[.9,-.4],[-.9,.4],[.9,.4]].forEach(p=>bx(desk, .12, .85, .12, 0x6a4020, p[0], .42, p[1]));
+    bx(desk, .7, .06, .5, 0xf4f0e0, -.4, .94, 0); bx(desk, .7, .06, .5, 0xf8f4e8, -.35, 1.0, .05); bx(desk, .12, .12, .12, 0xd02020, .1, 1.04, .05);   // homework and a red stamp
+    bx(desk, .8, .08, .8, 0x6a4020, 0, .5, 1.1); bx(desk, .8, .8, .08, 0x6a4020, 0, .9, 1.5);                      // chair
+    BB.B.pos.set(x, y, z + 1.1); BB.B.vy = 0;
+    zz = zzSprite(); zz.position.set(0, 3.6, 1.1); desk.add(zz);
+    BB.B.stun = 99; BB.B.flee = 0; BB.B.prey = null; tucked = false;
+    toast('Baba Caka sat down at his desk to check your homework... stamp, stamp, stamp... and fell asleep! Walk up to him and press F to tuck him in.');
+  }
+  function remove(){ if(desk){ scene.remove(desk); desk = null; zz = null; } }
+  setInterval(()=>{
+    try{
+      const proud = !!window.__babaProud && BB.B.on;
+      if(proud){
+        if(!desk) build();
+        BB.B.stun = 99; BB.B.flee = 0; BB.B.prey = null;
+        if(zz) zz.position.y = 3.6 + Math.sin(performance.now()*.002)*.15;
+      } else if(desk) remove();
+    }catch(e){}
+  }, 250);
+  document.addEventListener('keydown', e=>{
+    if(e.code !== 'KeyF' || e.repeat || !desk || tucked) return;
+    if(Math.hypot(P.x - BB.B.pos.x, P.z - BB.B.pos.z) > 4.5) return;
+    tucked = true; save.babaCaught = (save.babaCaught || 0) + 1; save.coins += 5000; addItem("Baba Caka's Gold Star", 1);
+    toast('YOU CAUGHT BABA CAKA! You tucked him in. He sleeps until sunrise. +$5,000 and a Gold Star.');
+    try{ (window.__newsQ = window.__newsQ || []).push('BREAKING: Baba Caka fell asleep over a stack of finished homework. A miner tucked him in. History was made.'); }catch(err){}
+    persist();
+  });
+  try{ ITEM_COL["Baba Caka's Gold Star"] = [255, 215, 60]; }catch(e){}
+  window.__babasleep = {build, remove, get desk(){ return desk; }};
+})();
+/* LN-babasleep end */
+
 /* LN-national start: every country gets its own random currency, national animal and national food (Irfan 2026-10-29) */
 (function(){
   const pick = a=>a[Math.floor(Math.random()*a.length)];
