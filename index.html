@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 229 (Oct 31)';
+  window.__BUILD = 'Build 230 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28942,6 +28942,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 (function(){
   const BB = window.__baba; if(!BB) return;
   let desk = null, zz = null, tucked = false, said = 0;
+  const RANGE = 7;
+  const hint = document.createElement('div');
+  hint.style.cssText = 'position:fixed;left:50%;bottom:140px;transform:translateX(-50%);z-index:62;padding:10px 18px;border-radius:12px;background:rgba(20,60,30,.92);border:2px solid #7aff9a;color:#fff;font:800 18px system-ui,sans-serif;display:none;pointer-events:none';
+  hint.textContent = 'Baba Caka is asleep! Press F (or click) to tuck him in and CATCH him';
+  document.body.appendChild(hint);
   const M = c=>new THREE.MeshLambertMaterial({color:c});
   function bx(g, w, h, d, c, x, y, z){ const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), M(c)); m.position.set(x, y, z); g.add(m); return m; }
   function zzSprite(){
@@ -28959,7 +28964,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     BB.B.pos.set(x, y, z + 1.1); BB.B.vy = 0;
     zz = zzSprite(); zz.position.set(0, 3.6, 1.1); desk.add(zz);
     BB.B.stun = 99; BB.B.flee = 0; BB.B.prey = null; tucked = false;
-    toast('Baba Caka sat down at his desk to check your homework... stamp, stamp, stamp... and fell asleep! Walk up to him and press F to tuck him in.');
+    toast('Baba Caka sat down at his desk to check your homework... stamp, stamp, stamp... and fell asleep! Walk up to him and press F (or click) to tuck him in.');
   }
   function remove(){ if(desk){ scene.remove(desk); desk = null; zz = null; } }
   setInterval(()=>{
@@ -28969,19 +28974,22 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         if(!desk) build();
         BB.B.stun = 99; BB.B.flee = 0; BB.B.prey = null;
         if(zz) zz.position.y = 3.6 + Math.sin(performance.now()*.002)*.15;
-      } else if(desk) remove();
+        hint.style.display = (!tucked && Math.hypot(P.x - BB.B.pos.x, P.z - BB.B.pos.z) < RANGE + 6) ? 'block' : 'none';
+      } else { hint.style.display = 'none'; if(desk) remove(); }
     }catch(e){}
   }, 250);
-  document.addEventListener('keydown', e=>{
-    if(e.code !== 'KeyF' || e.repeat || !desk || tucked) return;
-    if(Math.hypot(P.x - BB.B.pos.x, P.z - BB.B.pos.z) > 4.5) return;
-    tucked = true; save.babaCaught = (save.babaCaught || 0) + 1; save.coins += 5000; addItem("Baba Caka's Gold Star", 1);
+  function tuckIn(){
+    if(!desk || tucked) return false;
+    if(Math.hypot(P.x - BB.B.pos.x, P.z - BB.B.pos.z) > RANGE) return false;
+    tucked = true; hint.style.display = 'none'; save.babaCaught = (save.babaCaught || 0) + 1; save.coins += 5000; addItem("Baba Caka's Gold Star", 1);
     toast('YOU CAUGHT BABA CAKA! You tucked him in. He sleeps until sunrise. +$5,000 and a Gold Star.');
     try{ (window.__newsQ = window.__newsQ || []).push('BREAKING: Baba Caka fell asleep over a stack of finished homework. A miner tucked him in. History was made.'); }catch(err){}
-    persist();
-  });
+    persist(); return true;
+  }
+  document.addEventListener('keydown', e=>{ if(e.code === 'KeyF' && !e.repeat) tuckIn(); });
+  document.addEventListener('mousedown', e=>{ if(e.button === 0) tuckIn(); }, true);
   try{ ITEM_COL["Baba Caka's Gold Star"] = [255, 215, 60]; }catch(e){}
-  window.__babasleep = {build, remove, get desk(){ return desk; }};
+  window.__babasleep = {build, remove, tuckIn, get desk(){ return desk; }};
 })();
 /* LN-babasleep end */
 
