@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 235 (Oct 31)';
+  window.__BUILD = 'Build 236 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29069,6 +29069,68 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__socrates = {dress, spec, state:()=>({pending, boss}), arm:()=>{ pending = true; }};
 })();
 /* LN-socrates end */
+/* LN-touchtidy: phone screen decluttered (Irfan 2026-11-11): the many HUD pills fold into one MORE panel */
+(function(){
+  let pref = null; try{ pref = localStorage.getItem('digcore_touch'); }catch(e){}
+  const coarse = (window.matchMedia && matchMedia('(pointer: coarse)').matches) && (navigator.maxTouchPoints || 0) > 0;
+  if(!(pref === '1' || (pref !== '0' && coarse))) return;
+  const st = document.createElement('style');
+  st.textContent = `
+    body.touchplay #matag{display:none!important}
+    body.touchplay #feed{top:150px!important}
+    #tcmoreBtn{position:fixed;left:8px;top:112px;z-index:55;padding:6px 14px;border-radius:14px;background:rgba(20,16,12,.6);border:2px solid rgba(255,255,255,.6);color:#fff;font:800 13px system-ui,sans-serif;display:none;touch-action:manipulation}
+    #tcmore{position:fixed;inset:0;z-index:300;background:rgba(10,8,6,.92);display:none;padding:12px;overflow:auto;-webkit-overflow-scrolling:touch}
+    #tcmore h3{margin:0 0 10px;color:#ffd24a;font:800 16px system-ui,sans-serif}
+    #tcmoreX{position:fixed;right:12px;top:10px;width:44px;height:44px;border-radius:50%;background:#a02020;color:#fff;border:2px solid #fff;font:800 20px system-ui,sans-serif;z-index:301}
+    #tcgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;padding-right:54px}
+    #tcgrid>*{position:static!important;left:auto!important;top:auto!important;right:auto!important;bottom:auto!important;transform:none!important;margin:0!important;width:auto!important;max-width:none!important;font-size:15px!important;padding:12px 8px!important;display:block!important;text-align:center!important;z-index:auto!important;box-sizing:border-box!important}
+    #tcgrid .tcAct{background:#3d5a80;color:#fff;border:2px solid #9bb;border-radius:12px;font:800 15px system-ui,sans-serif}`;
+  document.head.appendChild(st);
+  const more = document.createElement('div'); more.id = 'tcmore';
+  more.innerHTML = '<h3>MENU</h3><button id="tcmoreX">X</button><div id="tcgrid"></div>';
+  document.body.appendChild(more);
+  const grid = more.querySelector('#tcgrid'), mbtn = document.createElement('button'); mbtn.id = 'tcmoreBtn'; mbtn.textContent = 'MORE'; document.body.appendChild(mbtn);
+  const open = ()=>{ more.style.display = 'block'; try{ document.exitPointerLock && document.exitPointerLock(); }catch(e){} };
+  const close = ()=>{ more.style.display = 'none'; try{ document.getElementById('tcw') && 0; renderer.domElement.requestPointerLock(); }catch(e){} };
+  mbtn.addEventListener('click', open); mbtn.addEventListener('touchend', e=>{ if(e.cancelable) e.preventDefault(); open(); }, {passive:false});
+  more.querySelector('#tcmoreX').addEventListener('click', close);
+  more.querySelector('#tcmoreX').addEventListener('touchend', e=>{ if(e.cancelable) e.preventDefault(); close(); }, {passive:false});
+  grid.addEventListener('click', e=>{ if(e.target.closest('.tcAct') || e.target.closest('[data-tcpill]')) setTimeout(()=>{ more.style.display = 'none'; }, 120); });
+  // actions that used to be tiny buttons at the top right now live here
+  const key = (code, down)=>dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', {code, key:code.replace(/^Key/, '').toLowerCase(), bubbles:true}));
+  [['EAT','KeyE'],['RELOAD','KeyT'],['UPGRADE','KeyR'],['PAUSE','KeyP'],['THROW','KeyX'],['RAGDOLL','KeyZ'],['PLANETS','KeyO'],['LORE','KeyY'],['MAIN MENU','KeyQ']].forEach(q=>{
+    const b = document.createElement('button'); b.className = 'tcAct'; b.textContent = q[0];
+    b.addEventListener('click', ()=>{ close(); setTimeout(()=>{ key(q[1], true); setTimeout(()=>key(q[1], false), 60); }, 150); });
+    grid.appendChild(b);
+  });
+  const RX = /^(PLANETS|LORE|NEWS|BOSSES|SERVER LORE|HOMEWORK|LAYERS|LOG|KEYS|MAP|MINE ANY|SANDBOX|MENU)\b/;
+  const KEEP = {BAG:1, TALK:1, GUN:1};
+  setInterval(()=>{
+    try{
+      const playing = document.body.classList.contains('touchplay');
+      mbtn.style.display = (playing && typeof locked !== 'undefined' && locked) ? 'block' : 'none';
+      // fold the HUD pills into the panel
+      document.querySelectorAll('body *').forEach(d=>{
+        if(d.dataset.tcpill || d.dataset.tcdone || d.closest('#tcw,#tcmore,#start,.overlay,.panel')) return;
+        const t = (d.textContent || '').trim();
+        if(t.length > 22 || !RX.test(t) || d.children.length > 3) return;
+        const cs = getComputedStyle(d), r = d.getBoundingClientRect();
+        if(r.width < 20 || r.width > 220 || r.height > 60) return;
+        if(d.tagName !== 'BUTTON' && cs.cursor !== 'pointer' && !d.onclick) return;
+        d.dataset.tcpill = 1; grid.appendChild(d);
+      });
+      // top right: only BAG, TALK and GUN stay
+      let i = 0;
+      document.querySelectorAll('#tcw .sm').forEach(b=>{
+        const n = (b.textContent || '').trim();
+        if(KEEP[n]){ b.style.display = 'flex'; b.style.top = '8px'; b.style.right = (10 + i*48) + 'px'; i++; } else b.style.display = 'none';
+      });
+    }catch(e){}
+  }, 700);
+  window.__touchtidy = {open, close, grid};
+})();
+/* LN-touchtidy end */
+
 
 
 /* LN-national start: every country gets its own random currency, national animal and national food (Irfan 2026-10-29) */
