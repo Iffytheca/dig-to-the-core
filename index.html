@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 228 (Oct 31)';
+  window.__BUILD = 'Build 229 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28920,6 +28920,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     }
     if(!nt && wasNight){ setMad(false); setProud(false); H.mad = false; happyNight = false; window.__babaProud = false; newHW(); }
     wasNight = nt;
+    if(!nt && !H.active){ try{ newHW(); }catch(e){} }   /* LN-hwfirst: homework from the very first day, and whenever a sunrise was missed (Irfan 2026-11-11) */
     window.__babaProud = !!(nt && happyNight);
     if(nt && happyNight){
       if(!BB.B.on && proudTries < 20){ proudTries++; try{ BB.arrive(); }catch(e){} }
