@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 236 (Oct 31)';
+  window.__BUILD = 'Build 237 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -38912,7 +38912,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const grantMat = (key, k)=>{ const g = SG(); g.mats[key] = (g.mats[key] || 0) + k; save.mats[key] = (save.mats[key] || 0) + k; };
 
   /* ---------- free blocks and furniture ---------- */
-  const isFree = nm=>!!(blockIdOf(nm) || (save.furnItems && save.furnItems[nm]));
+  const EXTRA = ()=>{ const o = {'Rail':1, 'Minecart':1}; try{ const L = window.__liqItems || {}; for(const k in L) o[L[k]] = 1; }catch(e){} return o; };
+  const isFree = nm=>!!(blockIdOf(nm) || (save.furnItems && save.furnItems[nm]) || EXTRA()[nm]);
   const _cr = consumeRef;
   consumeRef = function(ref, n){
     if(ref && ref[0] === 'i'){ const nm = ref.slice(2); if(isFree(nm) && refInfo(ref)) return true; }
@@ -39005,7 +39006,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function giveBlock(nm){ save.inv = save.inv || {}; { const g = SG(); if(!(nm in g.free)) g.free[nm] = save.inv[nm] || 0; } if((save.inv[nm]||0) < 999) save.inv[nm] = 999; addItem(nm, 0, true); hotAuto('i:' + nm); updateHotbar(); toast(nm + ' is in your bag, unlimited.'); }
   function giveFurn(nm, kind, col){ save.furnItems = save.furnItems || {}; save.furnItems[nm] = {kind, col}; giveBlock(nm); }
   const list = {
-    blocks(){ const seen = {}, out = []; BLOCKS.forEach(b=>{ if(b && b.name && !seen[b.name]){ seen[b.name] = 1; out.push(b.name); } }); return out.map(n=>[n, 'Unlimited', ()=>giveBlock(n)]); },
+    blocks(){ const seen = {}, out = []; BLOCKS.forEach(b=>{ if(b && b.name && !seen[b.name]){ seen[b.name] = 1; out.push(b.name); } }); Object.keys(EXTRA()).forEach(n=>{ if(!seen[n]){ seen[n] = 1; out.push(n); } }); return out.map(n=>[n, 'Unlimited', ()=>giveBlock(n)]); },
     furn(){
       const out = [];
       FURN_KINDS.forEach(k=>COLS.forEach(c=>{ const n = c[0] + ' ' + cap(k); out.push([n, 'Unlimited', ()=>giveFurn(n, k, c[1])]); }));
