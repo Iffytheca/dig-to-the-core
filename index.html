@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 231 (Oct 31)';
+  window.__BUILD = 'Build 232 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29008,6 +29008,39 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const B = window.__bombboss;
     return B.specOf(4040404, {n:'Socrates', sh:9, co:10, c2:9, sz:1, ht:0, ey:1, mo:3, hn:0, am:1, tl:0, ac:2, pt:0, pn:0, at:['summon','tele','spin']});
   }
+  function dress(b){
+    const body = b.g.userData.body;
+    while(body.children.length) body.remove(body.children[0]);
+    const M = (c)=>new THREE.MeshLambertMaterial({color:c});
+    const add = (geo, c, x, y, z, sx, sy, sz, par)=>{ const m = new THREE.Mesh(geo, M(c)); m.position.set(x, y, z); if(sx) m.scale.set(sx, sy, sz); (par || body).add(m); return m; };
+    const SP = (r)=>new THREE.SphereGeometry(r, 14, 10);
+    const BX = (w, h, d)=>new THREE.BoxGeometry(w, h, d);
+    const CY = (a, c, h)=>new THREE.CylinderGeometry(a, c, h, 14);
+    const robe = 0xeee6d0, drape = 0xd6cbab, skin = 0xd9a77a, grey = 0xc9c9c9, rope = 0x8a6a3a;
+    [-1, 1].forEach(k=>{ add(BX(.3, .12, .5), 0x6b4a2a, k*.2, .06, .12); add(BX(.34, .03, .1), 0x6b4a2a, k*.2, .13, .2); });
+    add(CY(.58, .44, 1.45), robe, 0, .85, 0);
+    add(CY(.47, .43, .2), drape, 0, 1.45, 0, 1.05, 1, 1.05);
+    const sash = add(BX(1.15, .3, .5), drape, 0, 1.4, .02); sash.rotation.z = -.5;
+    add(CY(.455, .455, .08), rope, 0, 1.12, 0);
+    // right arm raised, one finger up, as if making a point; left arm holds a scroll
+    const ra = new THREE.Group(); ra.position.set(.5, 1.7, 0); ra.rotation.z = -.9; body.add(ra);
+    add(BX(.2, .75, .2), skin, 0, -.3, 0, 0, 0, 0, ra); add(BX(.14, .14, .14), skin, 0, -.72, 0, 0, 0, 0, ra); add(BX(.04, .2, .04), skin, 0, -.86, 0, 0, 0, 0, ra);
+    const la = new THREE.Group(); la.position.set(-.5, 1.7, 0); la.rotation.z = .25; body.add(la);
+    add(BX(.24, .8, .24), robe, 0, -.35, 0, 0, 0, 0, la); add(BX(.15, .15, .15), skin, 0, -.82, .05, 0, 0, 0, la);
+    const sc = add(CY(.07, .07, .5), 0xf2e2b0, -.62, 1.0, .12); sc.rotation.x = Math.PI/2; sc.rotation.z = .3;
+    add(CY(.09, .09, .06), 0x8a5a2a, -.62, 1.0, .38); 
+    // head: big bald dome, wide flat nose, thick beard, bushy brows
+    add(CY(.13, .16, .2), skin, 0, 1.95, 0);
+    add(SP(.4), skin, 0, 2.28, 0, 1, 1.12, .95);
+    [-1, 1].forEach(k=>{ add(SP(.07), skin, k*.4, 2.22, 0, .6, 1.1, .8); add(SP(.13), grey, k*.34, 2.18, -.05, .7, 1.2, 1); });
+    add(SP(.17), 0xcf9a72, 0, 2.18, .38, 1.35, 1, 1.1); add(SP(.1), 0xcf9a72, 0, 2.13, .46, 1.5, .8, 1);
+    [-1, 1].forEach(k=>{ add(SP(.05), 0x222222, k*.15, 2.3, .35); add(BX(.2, .06, .08), grey, k*.15, 2.4, .36).rotation.z = k*-.25; });
+    add(SP(.37), grey, 0, 1.9, .17, 1.1, 1.05, .85);
+    [-.22, 0, .22].forEach((x, i)=>add(SP(.16), grey, x, 1.62 - (i === 1 ? .08 : 0), .22, 1, 1.1, .9));
+    add(BX(.34, .09, .08), grey, 0, 2.03, .38);
+    const mats = []; b.g.traverse(m=>{ if(m.isMesh){ m.castShadow = true; mats.push(m.material); } });
+    b.g.userData.arms = []; b.g.userData.mats = mats; b.g.userData.wings = []; b.g.userData.segs = [];
+  }
   try{ ITEM_COL["Socrates' Wisdom"] = [240, 235, 215]; }catch(e){}
   setInterval(function(){
     try{
@@ -29015,7 +29048,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       if(pending && B && document.pointerLockElement){
         const b = B.summon(spec(), 'sum');
         if(b){
-          pending = false; boss = b; paid = false;
+          pending = false; boss = b; paid = false; try{ dress(b); }catch(err){ console.warn('LN-socrates', err); }
           setTimeout(function(){ toast('BOSS: Socrates appears! "I know that I know nothing. Let us see what you know."'); }, 120);
         }
       }
@@ -29028,7 +29061,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       }
     }catch(err){}
   }, 500);
-  window.__socrates = {spec, state:()=>({pending, boss}), arm:()=>{ pending = true; }};
+  window.__socrates = {dress, spec, state:()=>({pending, boss}), arm:()=>{ pending = true; }};
 })();
 /* LN-socrates end */
 
