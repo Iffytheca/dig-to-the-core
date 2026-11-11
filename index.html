@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 234 (Oct 31)';
+  window.__BUILD = 'Build 235 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -5626,6 +5626,11 @@ const GUNS = [
 ];
 GUNS.push({key:'udder', name:'Udder Gun', fn:'Moo Blaster', price:20000, ammoPack:400, dmg:40, rate:6, auto:true, mag:40, rel:1.6, spread:.03, range:55, kick:.8, snd:[330,.06,.12], kind:'hit', noShop:true, milk:true,
    mz:[0,-.03,-.46], p:[[.1,.1,.3,0,.03,-.12,0xf4f4f4],[.05,.05,.07,.035,.07,-.16,0x1a1a1a],[.04,.04,.05,-.04,.07,-.05,0x1a1a1a],[.13,.09,.13,0,-.03,-.31,0xff9ab8],[.028,.028,.09,-.035,-.03,-.41,0xff7aa0],[.028,.028,.09,.035,-.03,-.41,0xff7aa0],[.045,.12,.06,0,-.07,-.01,0x5a3a22]]});
+/* LN-mgsmg: SMG and Machine Gun (Irfan 2026-11-11) */
+GUNS.push({key:'smg', name:'SMG', fn:'Sprinkle-MG', price:18000, ammoPack:500, dmg:17, rate:14, auto:true, mag:35, rel:1.4, spread:.035, range:70, kick:.6, snd:[260,.05,.12], kind:'hit',
+   mz:[0,.04,-.4], p:[[.06,.09,.3,0,.03,-.08,0x2a2c30],[.03,.03,.2,0,.045,-.3,0x555a60],[.04,.2,.05,0,-.12,-.02,0x1f1f22],[.045,.1,.05,0,-.07,.07,0x2a2c30],[.05,.05,.12,0,.08,.1,0x555a60]]},
+{key:'mg', name:'Machine Gun', fn:'Mega Spud Spitter', price:70000, ammoPack:1200, dmg:36, rate:11, auto:true, mag:100, rel:3.2, spread:.03, range:110, kick:1.1, snd:[110,.07,.22], kind:'hit',
+   mz:[0,.05,-.82], p:[[.08,.1,.5,0,.04,-.05,0x3a3d42],[.035,.035,.5,0,.06,-.55,0x2a2c30],[.06,.06,.12,0,.06,-.8,0x555a60],[.12,.1,.14,0,-.07,-.05,0x4b5a35],[.05,.12,.06,0,-.1,.12,0x2a2c30],[.06,.09,.28,0,0,.32,0x3a3d42],[.02,.1,.02,.04,.14,-.4,0x2a2c30],[.02,.1,.02,-.04,.14,-.4,0x2a2c30]]});
 const gunName = g=>HILARIOUS ? g.fn : g.name;
 function gunDesc(g){
   if(g.kind === 'flame') return 'Burns '+g.dmg+'/s &middot; range '+g.range+' &middot; tank '+g.mag+' &middot; hold to spray';
