@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 230 (Oct 31)';
+  window.__BUILD = 'Build 231 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -28992,6 +28992,46 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__babasleep = {build, remove, tuckIn, get desk(){ return desk; }};
 })();
 /* LN-babasleep end */
+/* LN-socrates: a hidden boss. Nothing on screen says how it starts. */
+(function(){
+  let n = 0, last = 0, pending = false, boss = null, paid = false;
+  document.addEventListener('click', function(e){
+    try{
+      const t = e.target && e.target.closest ? e.target.closest('#gameTitle') : null;
+      if(!t) return;
+      const now = Date.now();
+      n = (now - last > 2500) ? 1 : n + 1; last = now;
+      if(n >= 10){ n = 0; pending = true; }
+    }catch(err){}
+  }, true);
+  function spec(){
+    const B = window.__bombboss;
+    return B.specOf(4040404, {n:'Socrates', sh:9, co:10, c2:9, sz:1, ht:0, ey:1, mo:3, hn:0, am:1, tl:0, ac:2, pt:0, pn:0, at:['summon','tele','spin']});
+  }
+  try{ ITEM_COL["Socrates' Wisdom"] = [240, 235, 215]; }catch(e){}
+  setInterval(function(){
+    try{
+      const B = window.__bombboss;
+      if(pending && B && document.pointerLockElement){
+        const b = B.summon(spec(), 'sum');
+        if(b){
+          pending = false; boss = b; paid = false;
+          setTimeout(function(){ toast('BOSS: Socrates appears! "I know that I know nothing. Let us see what you know."'); }, 120);
+        }
+      }
+      if(boss && !paid && boss.hp <= 0){
+        paid = true;
+        save.coins += 5000; addItem("Socrates' Wisdom", 1);
+        toast('Socrates smiles: "The only true wisdom is knowing you know nothing." +$5,000');
+        try{ persist(); }catch(e){}
+        boss = null;
+      }
+    }catch(err){}
+  }, 500);
+  window.__socrates = {spec, state:()=>({pending, boss}), arm:()=>{ pending = true; }};
+})();
+/* LN-socrates end */
+
 
 /* LN-national start: every country gets its own random currency, national animal and national food (Irfan 2026-10-29) */
 (function(){
