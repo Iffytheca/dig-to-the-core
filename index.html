@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 233 (Oct 31)';
+  window.__BUILD = 'Build 234 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -38800,7 +38800,31 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   };
   try{ refreshBadges(); }catch(e){}
   window.__sbxOn = ON;
-  window.__sbxT = {award:id=>award(id)};
+  window.__sbxT = {award:id=>award(id), add:(n,k)=>addItem(n,k,true)};
+  /* ---------- stop dupes: sandbox-placed blocks and sandbox furniture give nothing back ---------- */
+  let _noGive = false;
+  const _ai0 = addItem;
+  addItem = function(name, n, silent){
+    if(_noGive) return;
+    if(ON){ try{ if(n !== 0 && (blockIdOf(name) || (save.furnItems && save.furnItems[name])) && !window.__sbxGrantNow) return; }catch(e){} }
+    else { try{ if(save.sbxN && save.sbxN[name]) return; }catch(e){} }
+    return _ai0(name, n, silent);
+  };
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    let hit = false;
+    try{ const k = h.i + ',' + h.d + ',' + h.k; if(save.sbxP && save.sbxP[k]){ delete save.sbxP[k]; hit = true; } }catch(e){}
+    if(!hit && !ON) return _bb(h);
+    _noGive = hit;
+    try{ return _bb(h); } finally { _noGive = false; }
+  };
+  if(ON){
+    const _pd = putDown;
+    putDown = function(ref, name, kind, t, rot){
+      try{ if(kind === 'block'){ save.sbxP = save.sbxP || {}; if(Object.keys(save.sbxP).length < 30000) save.sbxP[t.x + ',' + t.d + ',' + t.z] = 1; } else if(kind === 'furn'){ save.sbxN = save.sbxN || {}; save.sbxN[name] = 1; } }catch(e){}
+      return _pd(ref, name, kind, t, rot);
+    };
+  }
   /* ---------- no keeping Sandbox items: when Sandbox is off, everything it gave is removed ---------- */
   if(!ON){
     try{
