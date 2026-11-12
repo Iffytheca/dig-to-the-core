@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 243 (Oct 31)';
+  window.__BUILD = 'Build 244 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29651,6 +29651,175 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   }, 5000);
 })();
 /* LN-cityfurn end */
+
+/* LN-funmix: combos, random events, mystery crates, goals and a daily streak so the game does not get boring (Irfan 2026-11-12) */
+(function(){
+  const F = save.fun = save.fun || {};
+  F.crates = F.crates || 0; F.done = F.done || 0; F.bestCombo = F.bestCombo || 0;
+  const now = ()=>performance.now();
+  const money = n=>'$' + Math.round(n).toLocaleString();
+  const news = t=>{ const Q = window.__newsQ = window.__newsQ || []; Q.push(t); if(Q.length > 6) Q.shift(); };
+  const el = (tag, css, parent)=>{ const e = document.createElement(tag); e.style.cssText = css; (parent || document.body).appendChild(e); return e; };
+
+  // ---------- on-screen pills
+  const hud = el('div', 'position:fixed;top:140px;left:50%;transform:translateX(-50%);z-index:60;display:flex;gap:8px;flex-direction:column;align-items:center;pointer-events:none;font:bold 14px system-ui,sans-serif');
+  const pill = bg=>el('div', 'display:none;padding:5px 14px;border-radius:14px;color:#fff;background:' + bg + ';box-shadow:0 2px 8px #0008;text-shadow:0 1px 2px #000a', hud);
+  const comboP = pill('#c2410c'), evP = pill('#7c3aed'), crateP = pill('#0f766e');
+
+  // ---------- combo + event multipliers on every block you mine
+  let combo = 0, lastMine = 0, goldUntil = 0, lucky = 0;
+  const _bb = breakBlock;
+  breakBlock = function(h){
+    const before = save.coins;
+    const r = _bb.apply(this, arguments);
+    try{
+      const gained = save.coins - before;
+      const t = now(); combo = (t - lastMine < 3000) ? combo + 1 : 1; lastMine = t;
+      if(combo > F.bestCombo) F.bestCombo = combo;
+      if(gained > 0){
+        let extra = 0;
+        if(combo >= 5) extra += gained * Math.min(2, combo / 25);
+        if(t < goldUntil) extra += gained;
+        if(lucky > 0){ extra += gained * 4; lucky--; if(lucky === 0) toast('Lucky Strike is over!'); }
+        if(extra > 0){ save.coins += Math.round(extra); }
+      }
+      if([10, 25, 50, 100, 200].includes(combo)){ toast('COMBO x' + combo + '! Keep mining!'); blip(660 + combo, .15, .1, 'triangle'); }
+    }catch(e){}
+    return r;
+  };
+
+  // ---------- goals
+  const POOL = [
+    {k:'mine', t:'Mine {n} blocks', n:[40, 120, 300]},
+    {k:'earn', t:'Earn {n}', n:[5000, 25000, 100000], m:true},
+    {k:'kills', t:'Defeat {n} enemies', n:[3, 8, 20]},
+    {k:'combo', t:'Reach a x{n} combo', n:[10, 25, 50]},
+    {k:'depth', t:'Dig down to {n} m', n:[30, 80, 200]},
+    {k:'crate', t:'Find {n} Mystery Crate', n:[1, 2, 3]},
+  ];
+  let lastCoins = save.coins, lastMined = save.mined || 0, lastKills = save.kills || 0;
+  const mk = ()=>{
+    const have = (F.ch || []).map(c=>c.k), opts = POOL.filter(p=>!have.includes(p.k)), p = opts[Math.floor(Math.random()*opts.length)] || POOL[0];
+    const tier = Math.min(2, Math.floor(F.done / 4) + (Math.random() < .35 ? 1 : 0));
+    return {k:p.k, n:p.n[tier], p:0, tier, rew:Math.round((1500 + Math.min(save.coins * .02, 250000)) * (1 + tier * .8))};
+  };
+  if(!F.ch || F.ch.length !== 3){ F.ch = []; while(F.ch.length < 3) F.ch.push(mk()); }
+  const label = c=>{ const p = POOL.find(q=>q.k === c.k); return p.t.replace('{n}', p.m ? money(c.n) : c.n); };
+  function addProg(k, v, set){
+    F.ch.forEach((c, i)=>{
+      if(c.k !== k) return;
+      c.p = set ? Math.max(c.p, v) : c.p + v;
+      if(c.p >= c.n){
+        save.coins += c.rew; F.done++;
+        toast('GOAL DONE: ' + label(c) + '  +' + money(c.rew)); news('NEWS: A miner finished the goal "' + label(c) + '" and got paid ' + money(c.rew) + '.');
+        blip(880, .15, .12, 'triangle'); setTimeout(()=>blip(1180, .2, .1, 'triangle'), 120);
+        F.ch[i] = mk();
+        try{ persist(); }catch(e){}
+        if(panel.style.display !== 'none') draw();
+      }
+    });
+  }
+  setInterval(()=>{
+    try{
+      if(save.coins > lastCoins) addProg('earn', save.coins - lastCoins); lastCoins = save.coins;
+      const m = save.mined || 0; if(m > lastMined) addProg('mine', m - lastMined); lastMined = m;
+      const k = save.kills || 0; if(k > lastKills) addProg('kills', k - lastKills); lastKills = k;
+      if(now() - lastMine < 3000) addProg('combo', combo, true);
+      if(P.y < 0) addProg('depth', -P.y, true);
+    }catch(e){}
+  }, 1000);
+
+  const btn = el('button', 'position:fixed;top:140px;right:14px;z-index:61;padding:6px 14px;border-radius:12px;border:2px solid #fbbf24;background:#92400e;color:#fff;font:bold 13px system-ui,sans-serif;cursor:pointer', document.body);
+  btn.textContent = 'GOALS (J)';
+  const panel = el('div', 'display:none;position:fixed;top:180px;right:14px;z-index:62;width:300px;padding:12px;border-radius:14px;background:#1f1a14f2;color:#fff;font:14px system-ui,sans-serif;border:2px solid #fbbf24');
+  function draw(){
+    panel.innerHTML = '';
+    const top = el('div', 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px', panel);
+    el('b', 'font-size:16px;color:#fbbf24', top).textContent = 'GOALS  (done: ' + F.done + ')';
+    const x = el('button', 'background:#7f1d1d;color:#fff;border:0;border-radius:8px;padding:2px 10px;font-weight:bold;cursor:pointer', top); x.textContent = 'X'; x.onclick = ()=>{ panel.style.display = 'none'; };
+    F.ch.forEach(c=>{
+      const row = el('div', 'margin:8px 0', panel);
+      el('div', '', row).textContent = label(c) + '  (reward ' + money(c.rew) + ')';
+      const bar = el('div', 'height:10px;background:#444;border-radius:6px;overflow:hidden;margin-top:3px', row);
+      el('div', 'height:100%;background:#22c55e;width:' + Math.min(100, c.p / c.n * 100) + '%', bar);
+      el('div', 'font-size:12px;color:#ccc', row).textContent = Math.floor(Math.min(c.p, c.n)).toLocaleString() + ' / ' + c.n.toLocaleString();
+    });
+    el('div', 'font-size:12px;color:#aaa;margin-top:6px', panel).textContent = 'Best combo: x' + F.bestCombo + '   Crates found: ' + F.crates + '. Mine fast to build a combo for bonus coins. Random events pop up every few minutes!';
+  }
+  const toggle = ()=>{ if(panel.style.display === 'none'){ draw(); panel.style.display = 'block'; } else panel.style.display = 'none'; };
+  btn.onclick = toggle;
+  addEventListener('keydown', e=>{ if(e.code === 'KeyJ' && !e.repeat && !(e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) && locked) toggle(); });
+
+  // ---------- mystery crate
+  let crate = null;
+  function spawnCrate(){
+    if(crate || P.y < -3 || realm !== 0) return false;
+    const a = Math.random() * 6.283, r = 25 + Math.random() * 25, x = Math.floor(P.x + Math.cos(a) * r), z = Math.floor(P.z + Math.sin(a) * r);
+    const y = groundTop(x, P.y + 40, z);
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1, .8, 1), new THREE.MeshLambertMaterial({color:0xffc83a, emissive:0x7a5200})); box.position.y = .5; g.add(box);
+    const lid = new THREE.Mesh(new THREE.BoxGeometry(1.1, .2, 1.1), new THREE.MeshLambertMaterial({color:0xe03030, emissive:0x400000})); lid.position.y = 1; g.add(lid);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(.25, .25, 60, 8, 1, true), new THREE.MeshBasicMaterial({color:0xffe066, transparent:true, opacity:.35, side:THREE.DoubleSide})); beam.position.y = 30; g.add(beam);
+    g.position.set(x + .5, y, z + .5); scene.add(g);
+    crate = {g, x:x + .5, z:z + .5, y, t:now(), box};
+    toast('A MYSTERY CRATE landed nearby! Follow the golden beam!'); news('NEWS: A mystery crate fell from the sky. Finders keepers.');
+    blip(500, .2, .1, 'triangle'); setTimeout(()=>blip(750, .2, .1, 'triangle'), 150);
+    return true;
+  }
+  function openCrate(){
+    const roll = Math.random(), base = 3000 + Math.min(save.coins * .03, 400000);
+    let msg;
+    if(roll < .15){ const v = Math.round(base * 4); save.coins += v; msg = 'JACKPOT! +' + money(v); goldUntil = now() + 90000; msg += ' and 90s Gold Rush!'; }
+    else if(roll < .45){ lucky += 25; msg = 'Lucky Strike: your next 25 blocks pay x5!'; }
+    else { const v = Math.round(base * (1 + Math.random() * 1.5)); save.coins += v; msg = 'Coins! +' + money(v); }
+    toast('CRATE: ' + msg); blip(880, .15, .12, 'triangle'); setTimeout(()=>blip(1320, .25, .1, 'triangle'), 130);
+    scene.remove(crate.g); crate = null; F.crates++; addProg('crate', 1);
+    try{ persist(); }catch(e){}
+  }
+
+  // ---------- random events
+  const EV = {
+    gold(){ goldUntil = now() + 60000; toast('GOLD RUSH! All coins from mining are doubled for 60 seconds!'); news('NEWS: Gold rush! Everyone is mining like crazy.'); },
+    lucky(){ lucky += 20; toast('LUCKY STRIKE! Your next 20 blocks pay x5!'); },
+    dip(){ const v = Math.round(800 + Math.random() * 1200 + Math.min(save.coins * .02, 150000)); save.coins += v; toast('A lucky pigeon dropped ' + money(v) + ' on your head. Free money!'); news('NEWS: A pigeon is giving away money. Nobody knows why.'); },
+    crate(){ if(!spawnCrate()) EV.gold(); },
+  };
+  let nextEv = now() + 120000 + Math.random() * 120000, lastT = now();
+  setInterval(()=>{
+    const t = now(), dt = t - lastT; lastT = t;
+    if(!locked || (window.__pause && window.__pause.on)){ nextEv += dt; return; }
+    if(t > nextEv){ nextEv = t + 150000 + Math.random() * 150000; const keys = Object.keys(EV); try{ EV[keys[Math.floor(Math.random() * keys.length)]](); }catch(e){} }
+    // pills
+    if(combo >= 3 && t - lastMine < 3000){ comboP.style.display = 'block'; comboP.textContent = 'COMBO x' + combo + (combo >= 5 ? '  (+' + Math.round(Math.min(2, combo / 25) * 100) + '% coins)' : ''); } else comboP.style.display = 'none';
+    const bits = []; if(t < goldUntil) bits.push('GOLD RUSH x2  ' + Math.ceil((goldUntil - t) / 1000) + 's'); if(lucky > 0) bits.push('LUCKY STRIKE x5  ' + lucky + ' blocks');
+    if(bits.length){ evP.style.display = 'block'; evP.textContent = bits.join('   |   '); } else evP.style.display = 'none';
+    if(crate){
+      const dx = crate.x - P.x, dz = crate.z - P.z, dist = Math.hypot(dx, dz);
+      crate.g.rotation.y += dt / 700; crate.box.position.y = .5 + Math.sin(t / 300) * .15;
+      if(dist < 2.4 && Math.abs(P.y - crate.y) < 4) openCrate();
+      else if(t - crate.t > 300000){ scene.remove(crate.g); crate = null; toast('The mystery crate disappeared...'); }
+      else { const ang = Math.atan2(dx, -dz) - P.yaw; crateP.style.display = 'block'; crateP.textContent = 'CRATE ' + Math.round(dist) + ' m away'; }
+    } else crateP.style.display = 'none';
+  }, 250);
+
+  // ---------- daily streak
+  setTimeout(function chk(){
+    if(!locked){ setTimeout(chk, 4000); return; }
+    try{
+      const day = new Date().toISOString().slice(0, 10), raw = (localStorage.getItem('digcore_fun_day') || '').split(':');
+      if(raw[0] !== day){
+        const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10), streak = raw[0] === y ? (+raw[1] || 0) + 1 : 1;
+        localStorage.setItem('digcore_fun_day', day + ':' + streak);
+        const v = 1000 * Math.min(streak, 10); save.coins += v; persist();
+        toast('DAILY STREAK day ' + streak + '!  +' + money(v) + (streak < 10 ? '  Come back tomorrow for more!' : ''));
+      }
+    }catch(e){}
+  }, 6000);
+
+  window.__fun2 = {F, EV, spawnCrate, openCrate, get crate(){ return crate; }, get combo(){ return combo; }, addProg, panel, draw, state:()=>({goldUntil, lucky})};
+})();
+/* LN-funmix end */
+
 
 
 
