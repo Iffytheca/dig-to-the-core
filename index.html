@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 240 (Oct 31)';
+  window.__BUILD = 'Build 241 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -16243,7 +16243,7 @@ if(window.__dig) Object.assign(window.__dig, {blockStats, hardLvl, powLvl, goMai
   setInterval(()=>{
     const a = locked ? nearAct() : null;
     if(a){ hint.textContent = a.txt; hint.style.display = 'block'; } else hint.style.display = 'none';
-    if(P.y > 100 && !inBase() && !(window.__maze && window.__maze.inMaze()) && !(window.__doorroom && window.__doorroom.inRoom())){ fallT += .25; if(fallT > 1){ fallT = 0; goUp(); } } else fallT = 0;   // never get stuck up there
+    if(P.y > 5000 && !inBase() && !(window.__maze && window.__maze.inMaze()) && !(window.__doorroom && window.__doorroom.inRoom())){ fallT += .25; if(fallT > 1){ fallT = 0; goUp(); } } else fallT = 0;   // never get stuck up there
   }, 250);
   // ---------- mining the trapdoor: you get in, but the shopkeeper sees you
   const hatchLid = hatchG.children.slice();
