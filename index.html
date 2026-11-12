@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 238 (Oct 31)';
+  window.__BUILD = 'Build 239 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29303,7 +29303,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 /* LN-cozyhome: a free cozy house you can live in, and you can use everything inside it (Irfan 2026-11-11) */
 (function(){
   save.furnItems = save.furnItems || {};
-  [['Statue', 'statue', 0xb8b8c0], ['Carpet', 'rug', 0xb03a3a]].forEach(([n, k, c])=>{ save.furnItems[n] = {kind:k, col:c}; try{ ITEM_COL[n] = [(c>>16)&255, (c>>8)&255, c&255]; }catch(e){} });
+  [['Statue', 'statue', 0xb8b8c0], ['Carpet', 'rug', 0xb03a3a], ['Arcade Machine', 'arcade', 0x6a2a9a]].forEach(([n, k, c])=>{ save.furnItems[n] = {kind:k, col:c}; try{ ITEM_COL[n] = [(c>>16)&255, (c>>8)&255, c&255]; }catch(e){} });
   try{ ITEM_COL['Cozy House'] = [200, 150, 90]; }catch(e){}
   const planks = ()=>{ for(let i = 0; i < BLOCKS.length; i++) if(BLOCKS[i] && /plank/i.test(BLOCKS[i].name) && !/mine|old/i.test(BLOCKS[i].name)) return i + 1; return blockIdOf('Dirt') || 1; };
   const glassId = ()=>{ for(let i = 0; i < BLOCKS.length; i++) if(BLOCKS[i] && /glass|pane/i.test(BLOCKS[i].name) && !/volcano|sea /i.test(BLOCKS[i].name)) return i + 1; return planks(); };
@@ -29320,18 +29320,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const W = (u, v)=>[cx + U[0]*u + V[0]*v, cz + U[1]*u + V[1]*v];
     const wood = planks(), glass = glassId(), brick = brickId();
     const put = (u, v, h, id)=>{ const [x, z] = W(u, v), d = gd - h; if(d < -48 || d >= D) return; if(id === 0){ if(get(x, d, z)) setBlock(x, d, z, 0); } else setBlock(x, d, z, id); };
-    for(let u = -5; u <= 5; u++) for(let v = -4; v <= 4; v++){
+    for(let u = -7; u <= 7; u++) for(let v = -4; v <= 4; v++){
       for(let k = 1; k <= 6; k++){ const [x, z] = W(u, v); if(!get(x, gd + k, z)) put(u, v, -k, wood); else break; }   // fill any hole under the floor
       put(u, v, 0, wood);                                                                                 // wood floor
-      const edge = Math.abs(u) === 5 || Math.abs(v) === 4;
-      for(let h = 1; h <= 4; h++) put(u, v, h, edge ? ((h === 1 && (Math.abs(u) === 5 && Math.abs(v) === 4)) ? brick : wood) : 0);
+      const edge = Math.abs(u) === 7 || Math.abs(v) === 4;
+      for(let h = 1; h <= 4; h++) put(u, v, h, edge ? ((h === 1 && (Math.abs(u) === 7 && Math.abs(v) === 4)) ? brick : wood) : 0);
       put(u, v, 5, wood);                                                                                 // roof
       if(edge) put(u, v, 6, (u + v) % 2 ? brick : wood);                                                   // little roof wall
     }
     // corner posts in brick
-    [[-5, -4], [5, -4], [-5, 4], [5, 4]].forEach(([u, v])=>{ for(let h = 1; h <= 5; h++) put(u, v, h, brick); });
+    [[-7, -4], [7, -4], [-7, 4], [7, 4]].forEach(([u, v])=>{ for(let h = 1; h <= 5; h++) put(u, v, h, brick); });
     // windows
-    [[-3, 4], [3, 4], [-2, -4], [2, -4], [5, -2], [5, 2], [-5, -2], [-5, 2]].forEach(([u, v])=>{ put(u, v, 2, glass); put(u, v, 3, glass); });
+    [[-5, 4], [-3, 4], [3, 4], [5, 4], [-5, -4], [-2, -4], [2, -4], [5, -4], [7, -2], [7, 2], [-7, -2], [-7, 2]].forEach(([u, v])=>{ put(u, v, 2, glass); put(u, v, 3, glass); });
     // the doorway
     [1, 2, 3].forEach(h=>put(0, 4, h, 0)); put(0, 4, 4, wood);
     // chimney over the fireplace
@@ -29341,7 +29341,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const place = (name, u, v, a, b)=>{ const fi = save.furnItems[name]; if(!fi) return; const [x, z] = W(u, v); spawnPlaced(name, fi.kind, fi.col, null, {t:'i', key:name}, x, gd - 1, z, fac(a, b)); };
     const doorRot = U[0] ? 0 : Math.PI/2;
     { const [x, z] = W(0, 4), fi = save.furnItems['Wooden Door']; if(fi) spawnPlaced('Wooden Door', fi.kind, fi.col, null, {t:'i', key:'Wooden Door'}, x, gd - 1, z, doorRot); }
-    place('Carpet', 0, -1, 0, 1);
+    place('Carpet', 0, -1, 0, 1); place('Carpet', -5, 0, 0, 1);
     place('Fireplace', 0, -3, 0, 1); place('Bookcase', -2, -3, 0, 1); place('TV', 2, -3, 0, 1);
     place('Sofa', 0, 0, 0, -1);
     place('Floor Lamp', -2, 0, 0, 1); place('Floor Lamp', 2, 0, 0, 1); place('Chandelier', 0, 1, 0, 1);
@@ -29350,8 +29350,11 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     place('Dining Table', -1, 2, 0, 1); place('Armchair Seat', -1, 3, 0, -1); place('Armchair Seat', -2, 2, 1, 0);
     place('Statue', -4, 3, 1, 0); place('Plant Pot', 4, 3, -1, 0); place('Plant Pot', -3, -3, 0, 1); place('Wall Mirror', 2, 3, 0, -1);
     place('Grand Piano', 3, 1, -1, 0);
+    place('Bunk Bed', -6, -2, 1, 0); place('Desk', -6, 1, 1, 0); place('Beanbag', -6, 3, 1, 0); place('Beanbag', -3, 1, 1, 0);
+    place('Bathtub', 6, -2, -1, 0); place('Toilet', 6, 0, -1, 0); place('Aquarium', 6, 2, -1, 0); place('Arcade Machine', 6, 3, -1, 0);
+    place('Wall Clock', 3, 3, 0, -1); place('Dining Table', -5, 3, 0, 1);
     // a little path of planks to the door
-    for(let v = 5; v <= 7; v++) for(let u = -1; u <= 1; u++){ const [x, z] = W(u, v); if(!get(x, gd - 1, z)) setBlock(x, gd, z, wood); }
+    for(let v = 5; v <= 8; v++) for(let u = -1; u <= 1; u++){ const [x, z] = W(u, v); if(!get(x, gd - 1, z)) setBlock(x, gd, z, wood); }
     persist();
     toast('Your cozy house is ready! Walk in through the door. Press F next to anything inside to use it: sit, sleep, watch TV, eat, play the piano and more.');
     blip(500, .15, .1, 'triangle'); setTimeout(()=>blip(700, .15, .1, 'triangle'), 150);
@@ -29364,19 +29367,18 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{
       const r = hotArr()[save.hotSel], hi = hotInfo(r);
       if(hi && hi.kind === 'item' && hi.name === 'Cozy House'){
-        const t = placeTarget();
-        if(!t){ blip(90, .1, .1, 'sawtooth'); toast('Aim at flat ground, then right-click to build the house.'); return; }
         if(!consumeRef(r, 1)) return;
-        buildHouse(t); updateHotbar(); return;
+        buildHouse(null); updateHotbar(); return;
       }
     }catch(e){ console.warn('LN-cozyhome place', e); }
     return _hp.apply(this, arguments);
   };
   // free: everyone gets one kit once, and you can always take another from the HOME STORE for $0
   try{
-    if(!localStorage.getItem('digcore_gift_cozy')){ localStorage.setItem('digcore_gift_cozy', '1'); addItem('Cozy House', 1, true); hotAuto('i:Cozy House'); persist(); setTimeout(()=>toast('NEW: you got a free Cozy House! Put it in a carry slot and right-click on flat ground.'), 3500); }
+    if(!localStorage.getItem('digcore_gift_cozy2')){ localStorage.setItem('digcore_gift_cozy2', '1'); addItem('Cozy House', 1, true); hotAuto('i:Cozy House'); persist(); setTimeout(()=>toast('NEW: you got a free Cozy House! Put it in a carry slot and right-click on flat ground.'), 3500); }
   }catch(e){}
   const HS = window.__homestuff; if(HS && HS.HOME) HS.HOME.unshift(['Cozy House', null, 0xc89660, 0, 'FREE. A whole furnished house: door, sofa, bed, carpet, lamps, table, TV, kitchen, piano, statue and more. Right-click flat ground to build it.']);
+  if(HS && HS.HOME){ HS.HOME.push(['Statue', 'statue', 0xb8b8c0, 600, 'A stone statue. Press F next to it to read the plaque.'], ['Carpet', 'rug', 0xb03a3a, 150, 'A soft carpet.'], ['Arcade Machine', 'arcade', 0x6a2a9a, 1500, 'An arcade game. Press F next to it to play.']); }
 
   /* ---------- use anything: press F next to furniture ---------- */
   const foods = ['Apple', 'Bread Roll', 'Berry Pie', 'Cheese Sandwich', 'Juice Box', 'Cookies', 'Cheese Wedge'];
@@ -39217,7 +39219,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const grantMat = (key, k)=>{ const g = SG(); g.mats[key] = (g.mats[key] || 0) + k; save.mats[key] = (save.mats[key] || 0) + k; };
 
   /* ---------- free blocks and furniture ---------- */
-  const EXTRA = ()=>{ const o = {'Rail':1, 'Minecart':1, 'Wooden Stairs':1}; try{ const L = window.__liqItems || {}; for(const k in L) o[L[k]] = 1; }catch(e){} return o; };
+  const EXTRA = ()=>{ const o = {'Rail':1, 'Minecart':1, 'Wooden Stairs':1, 'Cozy House':1}; try{ const L = window.__liqItems || {}; for(const k in L) o[L[k]] = 1; }catch(e){} return o; };
   const isFree = nm=>!!(blockIdOf(nm) || (save.furnItems && save.furnItems[nm]) || EXTRA()[nm]);
   const _cr = consumeRef;
   consumeRef = function(ref, n){
