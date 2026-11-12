@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 241 (Oct 31)';
+  window.__BUILD = 'Build 242 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29607,7 +29607,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
 
 /* LN-cityfurn: the animal-kingdom houses get more furniture and a staircase up to the roof ledge (Irfan 2026-11-12) */
 (function(){
-  const EXTRA = [['fridge', -1, 1, Math.PI, 0xe8e8e8], ['tv', 0, -1, 0, 0x303038], ['plantpot', 1, 0, 0, 0x30a050]];
+  const EXTRA = [];   // the extra pieces made the small houses look crowded, so there are none now
   const plank = ()=>{ for(let i = 0; i < BLOCKS.length; i++) if(BLOCKS[i] && /plank/i.test(BLOCKS[i].name) && !/mine|old/i.test(BLOCKS[i].name)) return i + 1; return blockIdOf('Dirt') || 1; };
   const title = s=>s.charAt(0).toUpperCase() + s.slice(1);
   save.stairsK = save.stairsK || [];
@@ -29618,12 +29618,21 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -48 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, id); if(k === H - 1) save.stairsK.push(x + '|' + d + '|' + z); }
     }
   }
+  function unstairs(b){
+    const id = plank();
+    for(let m = 0; m < 4; m++) for(let w = 0; w < 2; w++){
+      const H = 4 - m, x = Math.floor(b.x) + 3 + m, z = Math.floor(b.z) + w;
+      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -48 || d >= D) continue; if(get(x, d, z) === id) setBlock(x, d, z, 0); }
+    }
+  }
   setInterval(()=>{
     try{
       if(realm !== 0 || !save.nbuilds) return;
+      (save.furn || []).filter(f=>f && /^Animal (Fridge|Tv|Plantpot|Fireplace)$/.test(f.name)).forEach(f=>{ try{ removeFurniture(f); }catch(e){} });
       for(const b of save.nbuilds){
         if(!b.city || !b.done || Math.hypot(b.x - P.x, b.z - P.z) > 60) continue;
-        if(!b.stairsDone){ b.stairsDone = 1; stairs(b); }
+        if(b.stairsDone && !b.stairsGone){ b.stairsGone = 1; unstairs(b); }   // Irfan 2026-11-12: the stairs covered the houses, so they are taken away again
+        b.stairsDone = 1;
         if(!b.extraQ){ b.extraQ = EXTRA.map(q=>q.slice()); }
         if(b.extraQ.length && (b.fam || b.nation)){
           const [k, dx, dz, rot, col] = b.extraQ.shift(), x = Math.floor(b.x) + dx, z = Math.floor(b.z) + dz, d = -(b.G + 1);
