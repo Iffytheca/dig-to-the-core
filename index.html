@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 244 (Oct 31)';
+  window.__BUILD = 'Build 245 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29819,6 +29819,70 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__fun2 = {F, EV, spawnCrate, openCrate, get crate(){ return crate; }, get combo(){ return combo; }, addProg, panel, draw, state:()=>({goldUntil, lucky})};
 })();
 /* LN-funmix end */
+
+/* LN-newmodes: five rule modes that combine with every other mode (Irfan 2026-11-12) */
+(function(){
+  const HARD = modeFlag('digcore_hardcore'), MOON = modeFlag('digcore_moonjump'), TURBO = modeFlag('digcore_turbo'), PEACE = modeFlag('digcore_peaceful'), RUN = modeFlag('digcore_speedrun');
+  registerMode('hardcore', 'Hardcore Mode', 'digcore_hardcore', HARD, '#7f1d1d');
+  registerMode('moonjump', 'Moon Jump Mode', 'digcore_moonjump', MOON, '#475569');
+  registerMode('turbo', 'Turbo Mode', 'digcore_turbo', TURBO, '#b45309');
+  registerMode('peaceful', 'Peaceful Mode', 'digcore_peaceful', PEACE, '#15803d');
+  registerMode('speedrun', 'Speedrun Mode', 'digcore_speedrun', RUN, '#1d4ed8');
+  const el = (tag, css)=>{ const e = document.createElement(tag); e.style.cssText = css; document.body.appendChild(e); return e; };
+  const tag = txt=>{ const t = el('div', 'position:fixed;left:14px;bottom:44px;z-index:55;padding:3px 10px;border-radius:10px;background:#000a;color:#fff;font:bold 12px system-ui,sans-serif;pointer-events:none'); t.textContent = txt; return t; };
+  const on = [];
+  // HARDCORE: you take double damage, but all coins from mining and enemies are doubled
+  if(HARD){
+    on.push('HARDCORE');
+    const _h = hurtPlayer; hurtPlayer = function(n){ return _h.call(this, n * 2); };
+    const _b = breakBlock; breakBlock = function(h){ const c = save.coins, r = _b.apply(this, arguments); if(save.coins > c) save.coins += save.coins - c; return r; };
+    const _k = killEnemy; killEnemy = function(e){ const c = save.coins, r = _k.apply(this, arguments); if(save.coins > c) save.coins += save.coins - c; return r; };
+  }
+  // MOON JUMP: low gravity, jump very high and float down
+  if(MOON){
+    on.push('MOON JUMP');
+    setInterval(()=>{ try{ if(GRAV.scale > .6) GRAV.scale = .3; }catch(e){} }, 400);
+  }
+  // TURBO: everything is dug three times as fast
+  if(TURBO){
+    on.push('TURBO');
+    const _d = digTime; digTime = function(li){ return _d(li) / 3; };
+  }
+  // PEACEFUL: no regular enemies, hunger never drops; bosses still exist
+  if(PEACE){
+    on.push('PEACEFUL');
+    setInterval(()=>{ try{
+      for(let i = enemies.length - 1; i >= 0; i--){ const e = enemies[i]; if(!e.boss) removeEnemy(e); }
+      if(save.hunger != null && save.hunger < 100) save.hunger = Math.min(100, save.hunger + 1);
+    }catch(e){} }, 500);
+  }
+  // SPEEDRUN: a clock that starts when you play; reach the Core as fast as you can, best time is saved
+  if(RUN){
+    on.push('SPEEDRUN');
+    const key = 'digcore_speedrun_best_' + (typeof SAVE_KEY !== 'undefined' ? SAVE_KEY : '');
+    const clock = el('div', 'position:fixed;top:140px;left:50%;transform:translateX(-50%);z-index:60;padding:5px 16px;border-radius:14px;background:#1d4ed8;color:#fff;font:bold 18px monospace;box-shadow:0 2px 8px #0008;pointer-events:none');
+    let t0 = 0, done = false, acc = 0, last = performance.now();
+    const fmt = s=>{ const m = Math.floor(s / 60), r = s - m * 60; return m + ':' + (r < 10 ? '0' : '') + r.toFixed(1); };
+    const best = ()=>{ try{ return +localStorage.getItem(key) || 0; }catch(e){ return 0; } };
+    setInterval(()=>{
+      const n = performance.now(), dt = (n - last) / 1000; last = n;
+      if(!locked || (window.__pause && window.__pause.on)) { clock.textContent = 'SPEEDRUN ' + fmt(acc) + (best() ? '   best ' + fmt(best()) : ''); return; }
+      if(!done) acc += dt;
+      clock.textContent = 'SPEEDRUN ' + fmt(acc) + (best() ? '   best ' + fmt(best()) : '');
+      if(!done && -P.y >= D - 3){
+        done = true; const b = best(); const nb = !b || acc < b;
+        if(nb){ try{ localStorage.setItem(key, String(acc)); }catch(e){} }
+        toast('CORE REACHED in ' + fmt(acc) + (nb ? '  NEW BEST TIME!' : '  (best ' + fmt(b) + ')')); blip(880, .2, .12, 'triangle'); setTimeout(()=>blip(1320, .3, .1, 'triangle'), 150);
+        save.coins += 5000; try{ persist(); }catch(e){}
+      }
+    }, 100);
+    window.__speedrun = {get acc(){ return acc; }, reset:()=>{ acc = 0; done = false; }};
+  }
+  if(on.length) tag('MODES: ' + on.join(' + '));
+  window.__newmodes = {HARD, MOON, TURBO, PEACE, RUN};
+})();
+/* LN-newmodes end */
+
 
 
 
