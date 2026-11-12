@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 245 (Oct 31)';
+  window.__BUILD = 'Build 246 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -29882,6 +29882,93 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__newmodes = {HARD, MOON, TURBO, PEACE, RUN};
 })();
 /* LN-newmodes end */
+
+/* LN-skulltown: Pink Skull Block is a real permanent block, and every save starts with one civilization built from it (Irfan 2026-11-12) */
+(function(){
+  // ---- the block (kept in save.customBlocks so its id never moves)
+  const NAME = 'Pink Skull Block';
+  function ensureBlock(){
+    let j = BLOCKS.findIndex(b=>b.name === NAME);
+    if(j < 0){
+      const spec = {name:NAME, h:8, v:420, c1:[255,128,192], c2:[224,58,58], glow:0, pattern:'emblem', glyph:3};
+      save.customBlocks = save.customBlocks || []; save.customBlocks.push(spec);
+      const Bk = specToBlock(spec); BLOCKS.push(Bk); meshes.push(createBlockMesh(Bk, BLOCKS.length - 1)); j = BLOCKS.length - 1;
+      try{ _blockIds = null; }catch(e){}
+    }
+    return j + 1;
+  }
+  const ID = ensureBlock();
+  try{ ITEM_COL[NAME] = [255, 128, 192]; }catch(e){}
+
+  // ---- the town: Skullville, six houses and a statue, built near spawn on levelled ground
+  const surf = (x, z)=>BIOME.surfH(x, z), liq = (x, z)=>{ const c = BIOME.col(x, z); return !!(c && c.liq); };
+  function findSite(){
+    const out = [];
+    for(let r = 48; r <= 150; r += 14) for(let k = 0; k < 24; k++){
+      const a = k / 24 * 6.283 + r * .1, cx = Math.round(Math.cos(a) * r), cz = Math.round(Math.sin(a) * r);
+      if(cx > UPPER_EDGE - 600 || Math.hypot(cx - SHOP.x, cz - SHOP.z) < 40) continue;
+      let lo = 1e9, hi = -1e9, bad = false;
+      for(let x = -17; x <= 17 && !bad; x += 4) for(let z = -12; z <= 12; z += 4){ if(liq(cx + x, cz + z)){ bad = true; break; } const g = surf(cx + x, cz + z); lo = Math.min(lo, g); hi = Math.max(hi, g); }
+      if(!bad) out.push({cx, cz, spread:hi - lo, r});
+    }
+    out.sort((p, q)=>(p.spread - q.spread) || (p.r - q.r));
+    return out[0] || null;
+  }
+  function build(){
+    const S = findSite(); if(!S) return false;
+    const gs = []; for(let x = -17; x <= 17; x += 2) for(let z = -12; z <= 12; z += 2) gs.push(surf(S.cx + x, S.cz + z)); gs.sort((a, b)=>a - b);
+    const G = gs[gs.length >> 1];
+    const put = (x, k, z, id)=>{ const d = -(G + 1 + k); if(d < -60) return; if(id === 0){ if(get(x, d, z)) setBlock(x, d, z, 0); } else setBlock(x, d, z, id); };
+    // level the ground: shave hills, fill dips with skull blocks, clear trees
+    for(let x = -17; x <= 17; x++) for(let z = -12; z <= 12; z++){
+      const wx = S.cx + x, wz = S.cz + z, g = surf(wx, wz);
+      for(let k = Math.max(0, g - G); k >= 0; k--) put(wx, k, wz, 0);
+      for(let k = 1; k <= 7; k++) put(wx, k, wz, 0);
+      for(let y = g + 1; y <= G; y++){ const d = -y; if(!get(wx, d, wz)) setBlock(wx, d, wz, ID); }
+    }
+    // plaza floor strip down the middle street
+    for(let x = -15; x <= 15; x++) for(let z = -2; z <= 2; z++){ const d = -G; setBlock(S.cx + x, d, S.cz + z, ID); }
+    // six houses, 7x7, walls 3 high, flat roof, door and windows
+    const houses = [];
+    for(let i = -1; i <= 1; i++) for(const side of [-1, 1]){
+      const hx = S.cx + i * 10, hz = S.cz + side * 7; houses.push({x:hx, z:hz});
+      for(let u = -3; u <= 3; u++) for(let v = -3; v <= 3; v++){
+        const edge = Math.abs(u) === 3 || Math.abs(v) === 3, x = hx + u, z = hz + v;
+        for(let k = 0; k < 3; k++){
+          let id = edge ? ID : 0;
+          if(edge && ((u === 0 && v === -side * 3 && k < 2) || (k === 1 && ((u === 0 && Math.abs(v) === 3 && v === side * 3) || (v === 0 && Math.abs(u) === 3))))) id = 0;   // door facing the street, windows on the other sides
+          put(x, k, z, id);
+        }
+        put(x, 3, z, ID);
+      }
+    }
+    // statue in the plaza: a tall skull pillar
+    for(let k = 0; k < 5; k++) put(S.cx, k, S.cz, ID);
+    for(const dx of [-1, 1]) put(S.cx + dx, 4, S.cz, ID);
+    put(S.cx, 5, S.cz, ID);
+    // the civilization itself
+    const type = ['pig', 'cat', 'dog', 'sheep', 'cow'].find(t=>AD[t]) || Object.keys(AD)[0];
+    const n = {id:'nskull', name:'The Republic of Skullville', type, animal:AD[type].name, x:S.cx, z:S.cz, G, law:'Every building must be pink. No exceptions.', cloth:'red', crime:0, born:Date.now(), fx:S.cx + 17, fz:S.cz, skull:1};
+    save.nations = save.nations || []; if(!save.nations.some(q=>q.id === n.id)) save.nations.push(n);
+    save.skullTown = {x:S.cx, z:S.cz, G};
+    try{ persist(); }catch(e){}
+    return S;
+  }
+  window.__skulltown = {ID, build, findSite, NAME};
+  let tries = 0;
+  setTimeout(function chk(){
+    if(save.skullTown){ return; }
+    if(!locked || realm !== 0 || P.y < -3){ if(tries++ < 120) setTimeout(chk, 3000); return; }
+    let S = null; try{ S = build(); }catch(e){ console.warn('skulltown', e); }
+    if(S){
+      const dx = S.cx - P.x, dz = S.cz - P.z, dir = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'east' : 'west') : (dz > 0 ? 'south' : 'north');
+      toast('A new country appeared: SKULLVILLE, built from Pink Skull Blocks, about ' + Math.round(Math.hypot(dx, dz)) + ' blocks ' + dir + ' of you.');
+      const Q = window.__newsQ = window.__newsQ || []; Q.push('NEWS: A brand new country called Skullville has appeared. Everything is pink. Nobody asked.'); if(Q.length > 6) Q.shift();
+    }
+  }, 6000);
+})();
+/* LN-skulltown end */
+
 
 
 
