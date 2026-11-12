@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 239 (Oct 31)';
+  window.__BUILD = 'Build 240 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -21640,7 +21640,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{ fallTick(dt); }catch(err){ console.warn(err); }
     try{
       const d = locked && !shopOpen ? nearFurn() : null;
-      if(d && !act){ hint.textContent = 'F: '+(VERB[d.kind] || (isFoodItem(d.name) ? 'eat the '+d.name : 'spin the '+d.name))+'   |   Shift+F: pick it up'; hint.style.display = 'block'; }
+      if(d && !act){ hint.textContent = 'F: '+(VERB[d.kind] || (isFoodItem(d.name) ? 'eat the '+d.name : 'use the '+d.name))+'   |   Shift+F: pick it up'; hint.style.display = 'block'; }
       else hint.style.display = 'none';
     }catch(err){ console.warn(err); }
   })(performance.now());
@@ -29355,8 +29355,20 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     place('Wall Clock', 3, 3, 0, -1); place('Dining Table', -5, 3, 0, 1);
     // a little path of planks to the door
     for(let v = 5; v <= 8; v++) for(let u = -1; u <= 1; u++){ const [x, z] = W(u, v); if(!get(x, gd - 1, z)) setBlock(x, gd, z, wood); }
+    // stairs up to the roof, on the east side: 6 steps, two wide
+    save.stairsK = save.stairsK || [];
+    for(let m = 0; m < 6; m++) for(let w = 0; w < 2; w++){
+      const Hs = m + 1, u = 13 - m;
+      for(let k = 0; k < Hs; k++){ const [x, z] = W(u, w), d = gd - k; if(d < -48 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, wood); if(k === Hs - 1) save.stairsK.push(x + '|' + d + '|' + z); }
+    }
+    // the animals that live here
+    try{
+      const pool = ['wingdonkey', 'fatclown', 'diaperpig', 'burgercow', 'sausagepig', 'baconpig'].filter(t=>AD[t]); const nm = ['Mimi', 'Bo', 'Coco', 'Pip', 'Dot', 'Rex'], rec = {cx, cz, gd, U, V, pets:[]};
+      for(let i = 0; i < 3; i++) rec.pets.push({type:pool[Math.floor(Math.random()*pool.length)] || 'diaperpig', name:nm.splice(Math.floor(Math.random()*nm.length), 1)[0]});
+      save.cozy = save.cozy || []; save.cozy.push(rec); if(save.cozy.length > 6) save.cozy.shift();
+    }catch(e){ console.warn('LN-cozyhome pets', e); }
     persist();
-    toast('Your cozy house is ready! Walk in through the door. Press F next to anything inside to use it: sit, sleep, watch TV, eat, play the piano and more.');
+    toast('Your cozy house is ready! Walk in through the door. Press F next to anything inside to use it. Three animals live here and act like people. The stairs on the east side lead to the roof.');
     blip(500, .15, .1, 'triangle'); setTimeout(()=>blip(700, .15, .1, 'triangle'), 150);
     try{ P.x = cx + V[0]*7.5; P.z = cz + V[1]*7.5; P.y = Math.max(P.y, -gd + 1.2); }catch(e){}
   }
@@ -29436,6 +29448,195 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   window.__cozy = {buildHouse, useFurn, nearFurn};
 })();
 /* LN-cozyhome end */
+
+/* LN-homelife: furniture is solid, a use hint, and animals that live in the cozy house like people (Irfan 2026-11-12) */
+(function(){
+  /* ---------- 1. furniture is solid ---------- */
+  const SZ = {chair:[.8, 1.0, .8], table:[1.8, .95, 1.2], bed:[1.2, .9, 2.2], sofa:[2.0, 1.0, .9], lamp:[.3, 1.7, .3], shelf:[1.4, 2.0, .4], statue:[.9, 2.1, .9], crate:[1, 1, 1], tv:[1.2, 1.2, .7], fridge:[1, 2, 1], toilet:[.6, .8, .8], bathtub:[1.0, .7, 1.8], piano:[1.6, 1.2, .8], clock:[.6, 2, .5], fireplace:[1.8, 1.4, .7], aquarium:[1.2, 1.2, .6], arcade:[.8, 1.8, .8], beanbag:[.9, .6, .9], wardrobe:[1.3, 2.3, .65], bookcase:[1.5, 2.3, .5], desk:[1.7, 1.0, .85], dresser:[1.5, 1.1, .65], stove:[1, 1.0, .8], counter:[1.8, .95, .7], sink:[1.8, .95, .7], mirror:[1.0, 1.9, .2], plantpot:[.5, 1.1, .5], bunkbed:[1.1, 2.3, 2.1]};
+  const SKIP = /^(rug|prop|door|irondoor|chandelier|animalhouse|alarge|aapart|amansion|edgeportal)$/;
+  const FS = new Map();   // furniture record -> {box, wait}
+  const quarter = r=>(((Math.round((r || 0)/(Math.PI/2)))%4) + 4)%4;
+  function boxOf(d){ const s = SZ[d.kind] || [1, 1, 1], q = quarter(d.rot), hx = (q % 2 === 0 ? s[0] : s[2])/2, hz = (q % 2 === 0 ? s[2] : s[0])/2; return [d.x - hx, d.x + hx, d.y, d.y + s[1], d.z - hz, d.z + hz]; }
+  const overlapsPlayer = b=>P.x + .3 > b[0] && P.x - .3 < b[1] && P.y + 1.75 > b[2] && P.y < b[3] && P.z + .3 > b[4] && P.z - .3 < b[5];
+  function addSolid(d){
+    if(!d || SKIP.test(d.kind) || FS.has(d)) return;
+    const box = boxOf(d), rec = {box, on:false};
+    FS.set(d, rec);
+    if(!overlapsPlayer(box)){ solids.push(box); rec.on = true; }
+  }
+  const _afo = addFurnitureObject;
+  addFurnitureObject = function(d){ const r = _afo.apply(this, arguments); try{ addSolid(d); }catch(e){} return r; };
+  const _rf = removeFurniture;
+  removeFurniture = function(d){ try{ const rec = FS.get(d); if(rec){ if(rec.on){ const i = solids.indexOf(rec.box); if(i >= 0) solids.splice(i, 1); } FS.delete(d); } }catch(e){} return _rf.apply(this, arguments); };
+  try{ furnObjs.forEach(f=>addSolid(f.d)); }catch(e){}
+  // a piece that was put down on top of you becomes solid as soon as you step away
+  setInterval(()=>{ try{ FS.forEach(rec=>{ if(!rec.on && !overlapsPlayer(rec.box)){ solids.push(rec.box); rec.on = true; } }); }catch(e){} }, 400);
+
+  /* ---------- 2. how to use it ---------- */
+  const VERBS = {bed:'sleep in the bed', bunkbed:'sleep in the bunk bed', sofa:'sit on the sofa', chair:'sit down', beanbag:'sit on the beanbag', tv:'watch TV', fridge:'open the fridge', stove:'cook a meal', counter:'make a snack', table:'eat at the table', sink:'wash your hands', bathtub:'take a bath', toilet:'use the toilet', piano:'play the piano', lamp:'switch the light', chandelier:'switch the light', fireplace:'warm up by the fire', statue:'read the plaque', bookcase:'read a book', shelf:'read a book', mirror:'look in the mirror', wardrobe:'look inside', dresser:'look inside', desk:'sit at the desk', clock:'check the time', aquarium:'feed the fish', plantpot:'water the plant', arcade:'play the game', door:'open or close the door', irondoor:'open or close the door'};
+  const hint = document.createElement('div'); hint.id = 'fhint';
+  hint.style.cssText = 'position:fixed;left:50%;bottom:150px;transform:translateX(-50%);padding:6px 16px;background:rgba(0,0,0,.65);border:1px solid #e8a33a;border-radius:8px;color:#fff;font:700 14px system-ui,sans-serif;pointer-events:none;display:none;z-index:40;white-space:nowrap';
+  document.body.appendChild(hint);
+  setInterval(()=>{
+    try{
+      let txt = '';
+      if(locked){
+        const H = window.__homestuff, C = window.__cozy;
+        const pu = window.__homelife && window.__homelife.nearPuppet();
+        if(pu) txt = 'F: talk to ' + pu.hname;
+        else { const dr = H && H.nearDoor(), fu = C && C.nearFurn(); const f = dr || fu; if(f && f.d) txt = 'F: ' + (VERBS[f.d.kind] || 'use it') + '   |   Shift+F: pick it up'; }
+      }
+      hint.textContent = txt; hint.style.display = txt ? 'block' : 'none';
+    }catch(e){}
+  }, 250);
+
+  /* ---------- 3. animals that live in the cozy house and act like people ---------- */
+  const puppets = [];   // {a, rec, mode, t, wp, ...}
+  const night = ()=>{ const t = ((tod % 1) + 1) % 1; return t > .58 && t < .92; };
+  const W = (rec, u, v)=>[rec.cx + rec.U[0]*u + rec.V[0]*v, rec.cz + rec.U[1]*u + rec.V[1]*v];
+  const pick = a=>a[Math.floor(Math.random()*a.length)];
+  const sayTex = txt=>textTex(txt, 640, 64, 'rgba(0,0,0,.6)', '#ffffff', 'bold 28px Arial');
+  function say(p, txt){
+    try{
+      if(p.bub){ p.a.g.remove(p.bub); }
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:sayTex(txt), fog:false, depthWrite:false, depthTest:false, transparent:true}));
+      sp.scale.set(4.4, .44, 1); sp.position.y = (p.a.d.r || .8)*2.2 + 1.3; p.a.g.add(sp); p.bub = sp; p.bubT = 3.2;
+      if(Math.hypot(P.x - p.a.pos.x, P.z - p.a.pos.z) < 12) blip(500 + Math.random()*250, .05, .04, 'triangle');
+    }catch(e){}
+  }
+  const LINES = {tv:['What is on TV tonight?', 'This show is so good!'], sofa:['Ahh, a comfy sofa.', 'Time to relax.'], table:['Time for dinner!', 'Pass the pie, please.'], stove:['I am cooking soup.', 'Smells great!'], piano:['La la laaa!', 'I love this song.'], bookcase:['A good book.', 'Shh, I am reading.'], mirror:['Looking good!', 'Nice hair today.'], aquarium:['Hello, little fish.', 'Blub blub.'], statue:['What a fine statue.', 'Very artistic.'], arcade:['High score!', 'One more game.'], fridge:['I am hungry.', 'Is there any cheese?'], bed:['Good night, everyone.', 'Zzz...'], roof:['What a view!', 'I can see my house from here.']};
+  function furnOf(rec, kinds){
+    const out = []; (save.furn || []).forEach(d=>{ if(kinds.indexOf(d.kind) >= 0 && Math.hypot(d.x - rec.cx, d.z - rec.cz) < 12) out.push(d); });
+    return out.length ? pick(out) : null;
+  }
+  function chooseJob(p){
+    const rec = p.rec;
+    if(night()){ const bed = furnOf(rec, ['bed', 'bunkbed']); if(bed){ p.job = {kind:'bed', d:bed, wp:[[bed.x, bed.z]], t:999}; return; } }
+    const opts = ['tv', 'sofa', 'table', 'stove', 'piano', 'bookcase', 'mirror', 'aquarium', 'statue', 'arcade', 'fridge', 'roof'];
+    let tries = 8;
+    while(tries-- > 0){
+      const k = pick(opts);
+      if(k === 'roof'){
+        const wp = [W(rec, 0, 3), W(rec, 0, 5.6), W(rec, 9, 6), W(rec, 13.5, 1.2), W(rec, 8.6, .8), W(rec, 4, 0)];
+        p.job = {kind:'roof', wp, t:14 + Math.random()*8, back:true}; return;
+      }
+      const f = furnOf(rec, k === 'sofa' ? ['sofa', 'beanbag', 'chair'] : k === 'table' ? ['table', 'desk'] : k === 'stove' ? ['stove', 'counter'] : [k]);
+      if(f){ p.job = {kind:k, d:f, wp:[[f.x + (Math.random() - .5)*.4, f.z + 1.2*(Math.random() < .5 ? 1 : -1)]], t:10 + Math.random()*10}; return; }
+    }
+    p.job = {kind:'idle', wp:[W(rec, Math.random()*6 - 3, Math.random()*4 - 2)], t:4};
+  }
+  function spawnPup(rec, info, idx){
+    const [x, z] = W(rec, idx*2 - 2, 0), a = spawnAnimal(info.type, x, z);
+    a.puppet = true; a.hname = info.name; a.pos.y = -rec.gd; a.g.position.y = a.pos.y;
+    const tag = new THREE.Sprite(new THREE.SpriteMaterial({map:textTex(info.name + ' the ' + a.d.name, 512, 64, null, '#ffe080', 'bold 28px Arial'), fog:false, depthWrite:false, transparent:true}));
+    tag.scale.set(3.4, .42, 1); tag.position.y = (a.d.r || .8)*2.2 + .5; a.g.add(tag);
+    const p = {a, rec, info, job:null, t:0, wi:0, bub:null, bubT:0, hname:info.name, sayT:4 + Math.random()*6};
+    chooseJob(p); puppets.push(p);
+  }
+  function removePup(p){ try{ removeAnimal(p.a); }catch(e){} const i = puppets.indexOf(p); if(i >= 0) puppets.splice(i, 1); }
+  // keep housemates alive near the player; put them away when you go far
+  setInterval(()=>{
+    try{
+      if(realm !== 0){ puppets.slice().forEach(removePup); return; }
+      (save.cozy || []).forEach(rec=>{
+        const near = Math.hypot(P.x - rec.cx, P.z - rec.cz) < 60, mine = puppets.filter(p=>p.rec === rec);
+        if(near && mine.length < rec.pets.length){ rec.pets.forEach((info, i)=>{ if(!mine.some(p=>p.info === info)) spawnPup(rec, info, i); }); }
+        else if(!near && mine.length) mine.forEach(removePup);
+      });
+      puppets.slice().forEach(p=>{ if(animals.indexOf(p.a) < 0){ const i = puppets.indexOf(p); if(i >= 0) puppets.splice(i, 1); } });
+    }catch(e){}
+  }, 800);
+  function updPup(p, dt){
+    const a = p.a, job = p.job; if(!job) return chooseJob(p);
+    a.t += dt;
+    if(p.bub){ p.bubT -= dt; if(p.bubT <= 0){ a.g.remove(p.bub); p.bub = null; } }
+    const wp = job.wp[Math.min(p.wi, job.wp.length - 1)];
+    const dx = wp[0] - a.pos.x, dz = wp[1] - a.pos.z, dist = Math.hypot(dx, dz);
+    let moving = false, pose = 'stand';
+    if(p.wi < job.wp.length && dist > .35){
+      moving = true; const sp = 1.7, st = Math.min(dist, sp*dt); a.pos.x += dx/dist*st; a.pos.z += dz/dist*st; a.ang = Math.atan2(dx, dz);
+    } else if(p.wi < job.wp.length - 1){ p.wi++; }
+    else {
+      // arrived: do the activity
+      job.t -= dt;
+      if(p.doing !== job){ p.doing = job; const ln = LINES[job.kind]; if(ln) say(p, pick(ln)); }
+      if(job.d){ a.ang = Math.atan2(job.d.x - a.pos.x, job.d.z - a.pos.z); }
+      if(job.kind === 'bed'){ pose = 'lie'; a.pos.x += (job.d.x - a.pos.x)*Math.min(1, dt*3); a.pos.z += (job.d.z - a.pos.z)*Math.min(1, dt*3); if(!night()) job.t = 0; }
+      else if(job.kind === 'sofa' || job.kind === 'table' || job.kind === 'roof' || job.kind === 'stove' ? job.kind !== 'stove' : false) pose = 'sit';
+      if(job.kind === 'piano' && Math.random() < dt*2 && Math.hypot(P.x - a.pos.x, P.z - a.pos.z) < 14) blip(pick([262, 294, 330, 392, 440]), .2, .05, 'triangle');
+      if(job.t <= 0){
+        p.doing = null;
+        if(job.back && !job.returning){ job.returning = true; job.wp = job.wp.slice().reverse(); p.wi = 0; job.t = 4; }
+        else { p.wi = 0; chooseJob(p); }
+      }
+    }
+    // random chatter while walking, and hello when you come close
+    p.sayT -= dt; if(p.sayT <= 0){ p.sayT = 8 + Math.random()*10; if(Math.hypot(P.x - a.pos.x, P.z - a.pos.z) < 8) say(p, pick(['Hello, neighbour!', 'Lovely day, is it not?', 'Welcome to our home!', 'Nice house, right?', 'Have you eaten?'])); }
+    // follow the ground (stairs and floors), poses
+    const gy = groundTop(Math.floor(a.pos.x), a.pos.y + 1.2, Math.floor(a.pos.z));
+    a.pos.y += (gy - a.pos.y)*Math.min(1, dt*9);
+    let y = a.pos.y, rz = 0;
+    if(pose === 'sit') y -= .12; else if(pose === 'lie'){ y += .55; rz = Math.PI/2; }
+    a.g.position.set(a.pos.x, y, a.pos.z); a.g.rotation.set(0, a.ang, rz);
+    const lg = a.g.userData.legs || []; for(let i = 0; i < lg.length; i++) lg[i].rotation.x = moving ? Math.sin(a.t*9 + i*Math.PI)*.6 : 0;
+    a.moving = moving;
+  }
+  const _ua = updateAnimals;
+  updateAnimals = function(dt){
+    const pu = animals.filter(a=>a.puppet);
+    pu.forEach(a=>{ const i = animals.indexOf(a); if(i >= 0) animals.splice(i, 1); });
+    try{ return _ua.apply(this, arguments); }
+    finally{
+      pu.forEach(a=>animals.push(a));
+      try{ puppets.slice().forEach(p=>updPup(p, dt)); }catch(e){ if(!updateAnimals.w){ updateAnimals.w = 1; console.warn('LN-homelife', e); } }
+    }
+  };
+  const nearPuppet = ()=>{ let best = null, bd = 3.2; puppets.forEach(p=>{ const d = Math.hypot(p.a.pos.x - P.x, p.a.pos.z - P.z); if(d < bd){ bd = d; best = p; } }); return best ? Object.assign(best, {hname:best.info.name}) : null; };
+  addEventListener('keydown', e=>{
+    try{
+      if(e.code !== 'KeyF' || !locked || e.repeat || e.shiftKey) return;
+      const p = nearPuppet(); if(!p) return;
+      say(p, pick(['Hello! Please make yourself at home.', 'Would you like some tea?', 'I live here with my friends.', 'Have you seen the roof? The stairs are on the east side.', 'The fridge is full. Help yourself!']));
+      save.coins += 20; toast(p.info.name + ' the ' + p.a.d.name + ' gives you $20 for visiting.'); try{ persist(); }catch(err){}
+      e.stopImmediatePropagation(); e.preventDefault();
+    }catch(err){}
+  }, true);
+  window.__homelife = {puppets, nearPuppet, FS, chooseJob};
+})();
+/* LN-homelife end */
+
+/* LN-cityfurn: the animal-kingdom houses get more furniture and a staircase up to the roof ledge (Irfan 2026-11-12) */
+(function(){
+  const EXTRA = [['fridge', -1, 1, Math.PI, 0xe8e8e8], ['tv', 0, -1, 0, 0x303038], ['plantpot', 1, 0, 0, 0x30a050]];
+  const plank = ()=>{ for(let i = 0; i < BLOCKS.length; i++) if(BLOCKS[i] && /plank/i.test(BLOCKS[i].name) && !/mine|old/i.test(BLOCKS[i].name)) return i + 1; return blockIdOf('Dirt') || 1; };
+  const title = s=>s.charAt(0).toUpperCase() + s.slice(1);
+  save.stairsK = save.stairsK || [];
+  function stairs(b){
+    const id = plank();
+    for(let m = 0; m < 4; m++) for(let w = 0; w < 2; w++){
+      const H = 4 - m, x = Math.floor(b.x) + 3 + m, z = Math.floor(b.z) + w - 0;
+      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -48 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, id); if(k === H - 1) save.stairsK.push(x + '|' + d + '|' + z); }
+    }
+  }
+  setInterval(()=>{
+    try{
+      if(realm !== 0 || !save.nbuilds) return;
+      for(const b of save.nbuilds){
+        if(!b.city || !b.done || Math.hypot(b.x - P.x, b.z - P.z) > 60) continue;
+        if(!b.stairsDone){ b.stairsDone = 1; stairs(b); }
+        if(!b.extraQ){ b.extraQ = EXTRA.map(q=>q.slice()); }
+        if(b.extraQ.length && (b.fam || b.nation)){
+          const [k, dx, dz, rot, col] = b.extraQ.shift(), x = Math.floor(b.x) + dx, z = Math.floor(b.z) + dz, d = -(b.G + 1);
+          if(get(x, d, z) || (save.furn || []).some(f=>Math.floor(f.x) === x && Math.floor(f.z) === z && Math.abs(f.y - b.G) < .5)) continue;
+          const name = 'Animal ' + title(k); save.furnItems = save.furnItems || {}; save.furnItems[name] = save.furnItems[name] || {kind:k, col};
+          spawnPlaced(name, k, col, null, {t:'i', key:name}, x, d, z, rot);
+          persist(); break;
+        }
+      }
+    }catch(e){ if(!window.__cfW){ window.__cfW = 1; console.warn('LN-cityfurn', e); } }
+  }, 5000);
+})();
+/* LN-cityfurn end */
 
 
 
