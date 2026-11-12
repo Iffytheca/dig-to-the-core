@@ -226,7 +226,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 242 (Oct 31)';
+  window.__BUILD = 'Build 243 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
@@ -3340,9 +3340,11 @@ function saveEdits(){
 }
 addEventListener('beforeunload', saveEdits);
 document.addEventListener('visibilitychange', ()=>{ if(document.hidden) saveEdits(); });
-const ek = (x,d,z)=>((x+200000)*400000 + (z+200000))*256 + (d+64);
+const ek = (x,d,z)=>d >= -64 ? ((x+200000)*400000 + (z+200000))*256 + (d+64) : 2e15 + ((x+200000)*400000 + (z+200000))*8192 + (-d-65);   /* LN-skybuild: any build height */
+const dekey = k=>{ if(k >= 2e15){ const r = k - 2e15, q = Math.floor(r/8192); return {x:Math.floor(q/400000)-200000, d:-((r%8192)+65), z:(q%400000)-200000}; } const q = Math.floor(k/256); return {x:Math.floor(q/400000)-200000, d:(k%256)-64, z:(q%400000)-200000}; };
+    window.__sky = {ek, dekey, setBlock:(a,b,c,d)=>setBlock(a,b,c,d), get:(a,b,c)=>get(a,b,c), edits, get skyEdits(){ return skyEdits; }, saveEdits:()=>saveEdits()};
 const skyEdits = new Map();               // blocks built above the ground (d < 0), indexed for fast lookups
-edits.forEach((v,k)=>{ if(v > 0){ const dd = (k%256)-64; if(dd < 0){ const q = Math.floor(k/256); skyEdits.set(k,{x:Math.floor(q/400000)-200000, d:dd, z:(q%400000)-200000, t:v}); } } });
+edits.forEach((v,k)=>{ if(v > 0){ const o = dekey(k); if(o.d < 0){ o.t = v; skyEdits.set(k,o); } } });
 function getBlock(x,d,z){
   if(d<0) return skyEdits.size ? (skyEdits.get(ek(x,d,z))||{t:0}).t : 0;
   if(d>=D) return 0;
@@ -5029,7 +5031,7 @@ function castRay(){
   for(let t=0, reach = mineAny ? 10 : 5.5; t<=reach; t+=.03){
     const wx=ox+_dir.x*t, wy=oy+_dir.y*t, wz=oz+_dir.z*t;
     const i=Math.floor(wx), k=Math.floor(wz), d=Math.floor(-wy);
-    if(d<-48||d>=D){ continue; }
+    if(d < -8000||d>=D){ continue; }
     if(get(i,d,k)) return {i,d,k,t, pi:ci, pd:cd, pk:ck};
     if(ci !== i || cd !== d || ck !== k){ ci = i; cd = d; ck = k; }
   }
@@ -5697,7 +5699,7 @@ function spreadDir(sp){
 function rayBlockDist(o, dir, max){
   for(let t=.25; t<=max; t+=.25){
     const x = o.x+dir.x*t, y = o.y+dir.y*t, z = o.z+dir.z*t, d = Math.floor(-y);
-    if(d < -48 || d >= D) continue;
+    if(d < -8000 || d >= D) continue;
     if(get(Math.floor(x), d, Math.floor(z))) return t;
   }
   return max + 1;
@@ -5780,7 +5782,7 @@ function explode(x, y, z){
   for(let dd=-r; dd<=r; dd++) for(let dx=-r; dx<=r; dx++) for(let dz=-r; dz<=r; dz++){
     if(dx*dx + dd*dd + dz*dz > 8) continue;
     const i = cx+dx, d = cd+dd, k = cz+dz;
-    if(d < -48 || d >= D) continue;
+    if(d < -8000 || d >= D) continue;
     const id = get(i,d,k); if(!id) continue;
     const B = BLOCKS[id-1]; if(!B || ((!mineAny || B.mars) && B.h/40 > MAXT)) continue;   /* LN-marsrule */
     if(mineAny && B.h/40 > 60) continue;   /* LN-gunlimit: the RPG stops at 1 minute blocks */
@@ -7568,7 +7570,7 @@ function spawnPlaced(name, kind, col, shape, back, x, d, z, rot){
 }
 function placeFurniture(name, hit){
   const info = save.furnItems[name], x = hit.pi, d = hit.pd, z = hit.pk;
-  if(d < -48 || d >= D || get(x,d,z)) return;
+  if(d < -8000 || d >= D || get(x,d,z)) return;
   save.inv[name] -= 1; if(save.inv[name] <= 0) delete save.inv[name];
   spawnPlaced(name, info.kind, info.col, null, {t:'i', key:name}, x, d, z, Math.round(P.yaw/(Math.PI/2))*(Math.PI/2)); updateHotbar();
 }
@@ -7696,7 +7698,7 @@ function bpTarget(){
     const r = mineAny ? 9 : 4.5;
     x = Math.floor(camera.position.x+_dir.x*r); z = Math.floor(camera.position.z+_dir.z*r); d = Math.floor(-(camera.position.y+_dir.y*r));
   } else return null;
-  if(d < -48 || d >= D) return null;
+  if(d < -8000 || d >= D) return null;
   return {x, d, z};
 }
 function bpValid(t){
@@ -11495,7 +11497,7 @@ function planetsSky(s){
     for(let t=0, reach = mineAny ? 10 : 5.5; t<=reach; t+=.03){
       const wx=ox+_dir.x*t, wy=oy+_dir.y*t, wz=oz+_dir.z*t;
       const i=Math.floor(wx), k=Math.floor(wz), d=Math.floor(-wy);
-      if(d<-48||d>=D){ continue; }
+      if(d < -8000||d>=D){ continue; }
       if(get(i,d,k) || (ci !== null && fluidAt(i,d,k))) return {i,d,k,t, pi:ci, pd:cd, pk:ck, fluid:!get(i,d,k)};   // water or lava counts as a surface to build on
       if(ci !== i || cd !== d || ck !== k){ ci = i; cd = d; ck = k; }
     }
@@ -19022,7 +19024,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const o = camera.position; camera.getWorldDirection(_v);
     const inL = liqAt(o.x, o.y, o.z);
     if(inL){                                                   // in the liquid: dig a block if you aim at one, otherwise scoop up the liquid you are in
-      for(let t=.2, reach = mineAny ? 10 : 5.5; t<=reach; t+=.05){ const wy = o.y+_v.y*t, d = Math.floor(-wy); if(d >= -48 && d < D && get(Math.floor(o.x+_v.x*t), d, Math.floor(o.z+_v.z*t))) return null; }
+      for(let t=.2, reach = mineAny ? 10 : 5.5; t<=reach; t+=.05){ const wy = o.y+_v.y*t, d = Math.floor(-wy); if(d >= -8000 && d < D && get(Math.floor(o.x+_v.x*t), d, Math.floor(o.z+_v.z*t))) return null; }
       return WATERY[inL.b.liq] ? {c:inL, x:Math.floor(o.x), z:Math.floor(o.z), dist:1, item:WATERY[inL.b.liq]} : null;
     }
     for(let t=.2, reach = mineAny ? 10 : 7; t<=reach; t+=.05){
@@ -21548,7 +21550,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     return r;
   };
   function tryFall(x, d, z){
-    if(d < -48 || d >= D - 1) return;
+    if(d < -8000 || d >= D - 1) return;
     const id = get(x, d, z); if(!id || !isFall(id) || get(x, d + 1, z)) return;
     let dd = d + 1; while(dd < D && dd - d < 64 && !get(x, dd, z)) dd++;
     const land = dd - 1; if(land <= d) return;
@@ -23452,7 +23454,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const holeMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.04, 1.04, 1.04), new THREE.MeshLambertMaterial({color:0x10141c}), 3000);
   holeMesh.count = 0; holeMesh.frustumCulled = false; holeMesh.userData.noMine = true; scene.add(holeMesh);
   const _hm = new THREE.Matrix4();
-  function drawHoles(){ let i = 0; holes.forEach(k=>{ if(i >= 3000) return; const q = Math.floor(k/256), d = (k%256) - 64, x = Math.floor(q/400000) - 200000, z = (q%400000) - 200000; _hm.makeTranslation(x + .5, -d - .5, z + .5); holeMesh.setMatrixAt(i++, _hm); }); holeMesh.count = i; holeMesh.instanceMatrix.needsUpdate = true; }
+  function drawHoles(){ let i = 0; holes.forEach(k=>{ if(i >= 3000) return; const o_ = dekey(k), d = o_.d, x = o_.x, z = o_.z; _hm.makeTranslation(x + .5, -d - .5, z + .5); holeMesh.setMatrixAt(i++, _hm); }); holeMesh.count = i; holeMesh.instanceMatrix.needsUpdate = true; }
   drawHoles();
   let anyMega = false;
   const _g2 = get;
@@ -24914,6 +24916,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{ if(shopOpen || (typeof invOpen !== 'undefined' && invOpen)) return false; }catch(e){}
     if(!RG.g) buildBody();
     RG.sx = P.x; RG.sy = P.y; RG.sz = P.z;                         // where you get up again if anything goes wrong
+    RG.inB = !!(window.__mf && window.__mf.inBase && window.__mf.inBase());   /* LN-skybuild: basement ragdoll stays inside */
     const th = P.yaw + Math.PI, c = Math.cos(th), sn = Math.sin(th);
     const vx = (P.x - (RG.lx == null ? P.x : RG.lx)), vz = (P.z - (RG.lz == null ? P.z : RG.lz));
     RG.pts = REST.map((r, i)=>{ const x = P.x + r[0]*c + r[2]*sn, z = P.z - r[0]*sn + r[2]*c, y = P.y + r[1];
@@ -24939,6 +24942,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     let gy = y; try{ gy = groundTop(Math.floor(x), y + 1, Math.floor(z)); }catch(e){}
     if(!isFinite(gy) || gy < y - 4) gy = y;  /* LN-ragfix: no snap back */
     P.x = x; P.z = z; P.y = Math.max(gy, Math.ceil(y - .5)) + .02; P.vy = 0;
+    if(RG.inB){ const B_ = window.__mf.BASE; P.x = Math.max(B_.x-6.3, Math.min(B_.x+6.3, P.x)); P.z = Math.max(B_.z-6.3, Math.min(B_.z+6.3, P.z)); P.y = Math.max(B_.y + .05, Math.min(B_.y + 3, P.y)); }
     if(solid(P.x, P.y + .5, P.z) || solid(P.x, P.y + 1.5, P.z)){ P.x = RG.sx; P.y = RG.sy; P.z = RG.sz; }    // never get up inside a wall
     blip(500, .06, .06, 'triangle'); setTimeout(()=>blip(750, .08, .06, 'triangle'), 80);
   }
@@ -24956,7 +24960,8 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
         else { ny = p.y; p.py = p.y + vy*.3; }
       }
       p.x = nx; p.y = ny; p.z = nz;
-      if(p.y < RG.sy - 2){ p.y = RG.sy - 2; p.py = p.y; }          // never tumble down a hole or a shaft (Irfan 14:00: do not fling me into the core)
+      if(p.y < RG.sy - 2){ p.y = RG.sy - 2; p.py = p.y; }
+      if(RG.inB){ const B_ = window.__mf.BASE; p.x = Math.max(B_.x-6.3, Math.min(B_.x+6.3, p.x)); p.z = Math.max(B_.z-6.3, Math.min(B_.z+6.3, p.z)); if(p.y < B_.y + .05){ p.y = B_.y + .05; p.py = p.y; } if(p.y > B_.y + 4.2){ p.y = B_.y + 4.2; p.py = p.y; } }          // never tumble down a hole or a shaft (Irfan 14:00: do not fling me into the core)
     }
     for(let it=0; it<6; it++){
       for(const c of RG.cons){
@@ -29247,13 +29252,13 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
       const r = hotArr()[save.hotSel], hi = hotInfo(r);
       if(hi && hi.kind === 'item' && hi.name === 'Wooden Stairs'){
         const t = placeTarget();
-        if(!t || t.d >= D || t.d < -48){ blip(90, .1, .1, 'sawtooth'); toast('Aim at the ground or a wall to build the stairs.'); return; }
+        if(!t || t.d >= D || t.d < -8000){ blip(90, .1, .1, 'sawtooth'); toast('Aim at the ground or a wall to build the stairs.'); return; }
         const dx = Math.round(-Math.sin(P.yaw)), dz = Math.round(-Math.cos(P.yaw)), fx = (Math.abs(dx) >= Math.abs(dz)) ? Math.sign(dx) || 1 : 0, fz = fx ? 0 : (Math.sign(dz) || -1), sx = fz ? 1 : 0, sz = fx ? 1 : 0, id = stairId();
         if(!consumeRef(r, 1)) return;
         let n = 0, bd = t.d; for(let k = 0; k < 10 && bd < D - 1 && !get(t.x, bd + 1, t.z); k++) bd++;   // come down to the ground
         for(let i = 0; i < 4; i++) for(let w = 0; w < 2; w++) for(let h = 0; h <= i; h++){
           const x = t.x + fx*i + sx*w, z = t.z + fz*i + sz*w, d = bd - h;
-          if(d < -48 || d >= D || get(x, d, z)) continue;
+          if(d < -8000 || d >= D || get(x, d, z)) continue;
           setBlock(x, d, z, id); n++; if(h === i) save.stairsK.push(x + '|' + d + '|' + z);
         }
         if(save.stairsK.length > 4000) save.stairsK.splice(0, save.stairsK.length - 4000);
@@ -29319,7 +29324,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     let gd = Math.floor(-(P.y + .3));                                              // ground level under the player
     const W = (u, v)=>[cx + U[0]*u + V[0]*v, cz + U[1]*u + V[1]*v];
     const wood = planks(), glass = glassId(), brick = brickId();
-    const put = (u, v, h, id)=>{ const [x, z] = W(u, v), d = gd - h; if(d < -48 || d >= D) return; if(id === 0){ if(get(x, d, z)) setBlock(x, d, z, 0); } else setBlock(x, d, z, id); };
+    const put = (u, v, h, id)=>{ const [x, z] = W(u, v), d = gd - h; if(d < -8000 || d >= D) return; if(id === 0){ if(get(x, d, z)) setBlock(x, d, z, 0); } else setBlock(x, d, z, id); };
     for(let u = -7; u <= 7; u++) for(let v = -4; v <= 4; v++){
       for(let k = 1; k <= 6; k++){ const [x, z] = W(u, v); if(!get(x, gd + k, z)) put(u, v, -k, wood); else break; }   // fill any hole under the floor
       put(u, v, 0, wood);                                                                                 // wood floor
@@ -29359,7 +29364,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     save.stairsK = save.stairsK || [];
     for(let m = 0; m < 6; m++) for(let w = 0; w < 2; w++){
       const Hs = m + 1, u = 13 - m;
-      for(let k = 0; k < Hs; k++){ const [x, z] = W(u, w), d = gd - k; if(d < -48 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, wood); if(k === Hs - 1) save.stairsK.push(x + '|' + d + '|' + z); }
+      for(let k = 0; k < Hs; k++){ const [x, z] = W(u, w), d = gd - k; if(d < -8000 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, wood); if(k === Hs - 1) save.stairsK.push(x + '|' + d + '|' + z); }
     }
     // the animals that live here
     try{
@@ -29615,14 +29620,14 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const id = plank();
     for(let m = 0; m < 4; m++) for(let w = 0; w < 2; w++){
       const H = 4 - m, x = Math.floor(b.x) + 3 + m, z = Math.floor(b.z) + w - 0;
-      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -48 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, id); if(k === H - 1) save.stairsK.push(x + '|' + d + '|' + z); }
+      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -8000 || d >= D) continue; if(!get(x, d, z)) setBlock(x, d, z, id); if(k === H - 1) save.stairsK.push(x + '|' + d + '|' + z); }
     }
   }
   function unstairs(b){
     const id = plank();
     for(let m = 0; m < 4; m++) for(let w = 0; w < 2; w++){
       const H = 4 - m, x = Math.floor(b.x) + 3 + m, z = Math.floor(b.z) + w;
-      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -48 || d >= D) continue; if(get(x, d, z) === id) setBlock(x, d, z, 0); }
+      for(let k = 0; k < H; k++){ const d = -(b.G + 1 + k); if(d < -8000 || d >= D) continue; if(get(x, d, z) === id) setBlock(x, d, z, 0); }
     }
   }
   setInterval(()=>{
@@ -33142,6 +33147,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const top = Math.round(S.base), low = top - 6, cells = [];
     edits.forEach((t, k)=>{
       if(t !== 0) return;
+      if(k >= 2e15) return;
       const d = k % 256 - 64, rest = Math.floor(k / 256), z = rest % 400000 - 200000, x = Math.floor(rest / 400000) - 200000;
       if(d < 0 || d >= D) return;
       const y = -d;                                              // top face of the cell
@@ -35621,7 +35627,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     try{
       for(let dy=-Math.ceil(R); dy<=Math.ceil(R); dy++) for(let dx=-Math.ceil(R); dx<=Math.ceil(R); dx++) for(let dz=-Math.ceil(R); dz<=Math.ceil(R); dz++){
         if(dx*dx + dy*dy + dz*dz > R*R + .6) continue;
-        const x = s.x + dx, d = s.d + dy, z = s.z + dz; if(d < -48 || d >= D) continue;
+        const x = s.x + dx, d = s.d + dy, z = s.z + dz; if(d < -8000 || d >= D) continue;
         const t = get(x, d, z); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || NOBOOM.test(B.name)) continue;
         try{ breakBlock({i:x, d, k:z}); n++; }catch(e){}
       }
@@ -35740,7 +35746,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   function scan(){
     if(scanCD > 0){ toast('The Ore Scanner is recharging (' + Math.ceil(scanCD) + ' s).'); return true; }
     const found = [], R = 22, x0 = Math.floor(P.x), d0 = Math.floor(-P.y), z0 = Math.floor(P.z);
-    for(let dy=-R; dy<=R; dy++){ const d = d0 + dy; if(d < -48 || d >= D) continue; for(let dx=-R; dx<=R; dx++) for(let dz=-R; dz<=R; dz++){
+    for(let dy=-R; dy<=R; dy++){ const d = d0 + dy; if(d < -8000 || d >= D) continue; for(let dx=-R; dx<=R; dx++) for(let dz=-R; dz<=R; dz++){
       const t = get(x0 + dx, d, z0 + dz); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || !B.ore) continue;
       found.push({x:x0 + dx, d, z:z0 + dz, n:B.oreName || B.name, L:Math.hypot(dx, dy, dz)}); } }
     found.sort((a, b)=>a.L - b.L);
@@ -35763,7 +35769,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
           for(let a=-1;a<=1;a++) for(let b=-1;b<=1;b++){ if(!a && !b) continue;
             let x = h.i, d = h.d, z = h.k;
             if(ay >= ax && ay >= az){ x += a; z += b; } else if(ax >= az){ d += a; z += b; } else { x += a; d += b; }
-            if(d < -48 || d >= D) continue; const t = get(x, d, z); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || NOBOOM.test(B.name)) continue;
+            if(d < -8000 || d >= D) continue; const t = get(x, d, z); if(!t) continue; const B = BLOCKS[t - 1]; if(!B || NOBOOM.test(B.name)) continue;
             _bb({i:x, d, k:z}); }
         } finally { noDrill = false; }
       }
@@ -39719,7 +39725,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
   const rng = seed=>{ let a = seed >>> 0; return ()=>{ a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0)/4294967296; }; };
   const rp = (r, q)=>q[Math.floor(r()*q.length)];
   const NOBOOM = /core|barrier|bedrock|portal|heart/i;
-  const gt = (x, d, z)=>(d < -48 || d >= D) ? 0 : get(x, d, z);
+  const gt = (x, d, z)=>(d < -8000 || d >= D) ? 0 : get(x, d, z);
   const mat = c=>new THREE.MeshLambertMaterial({color:c});
   function label(txt, w, col, bg){
     const W = Math.min(2048, Math.max(512, Math.ceil(txt.length*19/64)*64));
@@ -39873,7 +39879,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     cap = Math.min(cap || CAPB, CAPB);
     for(let dd=-Rc; dd<=Rc && n < cap; dd++) for(let dx=-Rc; dx<=Rc && n < cap; dx++) for(let dz=-Rc; dz<=Rc && n < cap; dz++){
       if(dx*dx + dd*dd + dz*dz > R*R + .5) continue;
-      const i = cx + dx, d = cd + dd, k = cz + dz; if(d < -48 || d >= D) continue;
+      const i = cx + dx, d = cd + dd, k = cz + dz; if(d < -8000 || d >= D) continue;
       const id = get(i, d, k); if(!id) continue;
       const B = BLOCKS[id - 1]; if(!B || NOBOOM.test(B.name) || (B.mars && B.h/40 > MAXT)) continue;
       const wasPlaced = (edits.get(ek(i, d, k)) || 0) > 0;
@@ -39914,7 +39920,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const cx = Math.floor(x), cd = Math.floor(-y), cz = Math.floor(z), Rc = Math.ceil(R1); let n = 0;
     for(let dd=-Rc; dd<=Rc; dd++) for(let dx=-Rc; dx<=Rc; dx++) for(let dz=-Rc; dz<=Rc; dz++){
       const q = dx*dx + dd*dd + dz*dz; if(q <= R0*R0 || q > R1*R1) continue;
-      const i = cx + dx, d = cd + dd, k = cz + dz; if(d < -48 || d >= D) continue;
+      const i = cx + dx, d = cd + dd, k = cz + dz; if(d < -8000 || d >= D) continue;
       const id = get(i, d, k); if(!id || ids.indexOf(id) >= 0) continue; const B = BLOCKS[id - 1]; if(!B || NOBOOM.test(B.name)) continue;
       setBlock(i, d, k, ids[((dd + Rc)*2 + Math.floor(Math.atan2(dz, dx)*1.3) + 64) % ids.length]); if(++n > 700) return n;
     }
@@ -40686,7 +40692,7 @@ registerMode('bob', cp('bobBtn','Bob Mode'), 'digcore_bob', BOBMODE, '#c0392b');
     const end = Math.min(pl.cells.length, L.i + n);
     for(; L.i < end; L.i++){
       const q = pl.cells[L.i], [dx, dz] = rotXZ(L.r, q[0], q[2]), x = L.x + dx, z = L.z + dz, d = -(L.G + q[1] + 1);
-      if(d < -48) continue;
+      if(d < -8000) continue;
       if(q[1] >= 0 && Math.abs(x + .5 - P.x) < .9 && Math.abs(z + .5 - P.z) < .9 && L.G + q[1] + 1 > P.y && L.G + q[1] < P.y + 1.9) continue;   // never build inside you
       setBlock(x, d, z, matId(L, q[3]));
     }
@@ -41353,7 +41359,7 @@ window.__acid = ACID;
   const fireAt = (x,d,z)=>FIRES.find(f=>f.x === x && f.d === d && f.z === z);
   const flammable = id=>id > 0 && FLAM.test((BLOCKS[id-1] || {}).name || '');
   function addFire(x, d, z, life){
-    if(FIRES.length >= FCAP || fireAt(x,d,z) || get(x,d,z) || d < -48 || d >= D) return null;
+    if(FIRES.length >= FCAP || fireAt(x,d,z) || get(x,d,z) || d < -8000 || d >= D) return null;
     if(FLW.at(x,d,z) >= 0 || (window.__lava && window.__lava.at(x,d,z) >= 0) || (window.__acid && window.__acid.at(x,d,z) >= 0)) return null;
     const g = new THREE.Group(); g.position.set(x+.5, -d-1, z+.5);
     const parts = [[0,0,0,1.1,0],[.18,0,.1,.75,0],[-.16,0,-.12,.8,0],[0,0,0,.7,1],[.08,0,-.06,.5,1],[0,0,0,.35,2]].map(q=>{ const m = new THREE.Mesh(fG, fM[q[4]]); m.position.set(q[0],q[1],q[2]); m.scale.setScalar(q[3]); g.add(m); return m; });
