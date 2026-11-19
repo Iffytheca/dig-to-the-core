@@ -2,6 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+/* LN-lzstore: transparent compression of big saves so localStorage never fills up (Irfan 2026-11-19: Create world failed, quota exceeded) */
+(function(){
+  try{
+    const MARK = '\u0001Z', MAXC = 0xD7FE, ESC = 0xE000;
+    function comp(s){
+      let d = new Map(), nx = 256, w = '', out = [];
+      const code = x=>x.length === 1 ? x.charCodeAt(0) : d.get(x);
+      for(let i = 0; i < s.length; i++){
+        const ch = s[i], c = s.charCodeAt(i);
+        if(c > 255){ if(w){ out.push(code(w)); w = ''; } out.push(ESC, c); continue; }
+        const wc = w + ch;
+        if(wc.length === 1 || d.has(wc)) w = wc;
+        else { out.push(code(w)); if(nx < MAXC) d.set(wc, nx++); else { d = new Map(); nx = 256; } w = ch; }
+      }
+      if(w) out.push(code(w));
+      let r = ''; for(let i = 0; i < out.length; i += 8000) r += String.fromCharCode.apply(null, out.slice(i, i + 8000));
+      return r;
+    }
+    function decomp(s){
+      let d = [], nx = 256, prev = null, out = [];
+      const ent = c=>c < 256 ? String.fromCharCode(c) : d[c];
+      for(let i = 0; i < s.length; i++){
+        const c = s.charCodeAt(i);
+        if(c === ESC){ i++; out.push(s[i]); prev = null; continue; }
+        let e = ent(c);
+        if(e === undefined) e = prev + prev[0];
+        out.push(e);
+        if(prev !== null){ if(nx < MAXC) d[nx++] = prev + e[0]; else { d = []; nx = 256; } }
+        prev = e;
+      }
+      return out.join('');
+    }
+    window.__lz = {comp, decomp};
+    const P = Storage.prototype, gI = P.getItem, sI = P.setItem;
+    P.getItem = function(k){ const v = gI.call(this, k); if(typeof v === 'string' && v.charCodeAt(0) === 1 && v.startsWith(MARK)){ try{ return decomp(v.slice(MARK.length)); }catch(e){ return null; } } return v; };
+    P.setItem = function(k, v){
+      if(this === window.localStorage && typeof v === 'string' && v.length > 6000 && /^digcore/.test(k)){
+        try{ const c = comp(v); if(c.length + 4 < v.length){ const z = MARK + c; if(decomp(c) === v) return sI.call(this, k, z); } }catch(e){}
+      }
+      return sI.call(this, k, v);
+    };
+    // squeeze what is already stored (the oldest saves may already fill the browser)
+    try{ const ls = window.localStorage, ks = []; for(let i = 0; i < ls.length; i++) ks.push(ls.key(i));
+      ks.forEach(k=>{ if(!/^digcore/.test(k)) return; const raw = gI.call(ls, k); if(typeof raw === 'string' && raw.length > 6000 && !(raw.charCodeAt(0) === 1 && raw.startsWith(MARK))){ try{ const c = comp(raw); if(c.length + 4 < raw.length && decomp(c) === raw) sI.call(ls, k, MARK + c); }catch(e){} } });
+    }catch(e){}
+  }catch(e){ console.warn('LN-lzstore', e); }
+})();
+
+</script>
 <title>Deep Chaos Diggers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
@@ -226,7 +276,7 @@
   });
 })();</script>
 <script>/* LN-buildtag */(function(){
-  window.__BUILD = 'Build 325 (Oct 31)';
+  window.__BUILD = 'Build 326 (Oct 31)';
   function box(){ let b = document.getElementById('errBox'); if(b) return b; b = document.createElement('div'); b.id = 'errBox';
     b.style.cssText = 'position:fixed;left:8px;bottom:40px;z-index:99999;max-width:min(520px,92vw);background:#7a1010;color:#fff;font:12px/1.4 system-ui,sans-serif;padding:8px 30px 8px 10px;border-radius:8px;border:2px solid #fff;white-space:pre-wrap';
     const x = document.createElement('button'); x.textContent = 'X'; x.style.cssText = 'position:absolute;top:4px;right:4px;border:0;border-radius:5px;background:#000;color:#fff;cursor:pointer';
