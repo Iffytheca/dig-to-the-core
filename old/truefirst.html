@@ -3705,13 +3705,21 @@ window.__dig = {openShop, gunFx, rockets, GUNS, equipGun, cycleGun, gunSave, gun
     'The door says nothing. It is thinking about it.',
     'There is no handle. There is no keyhole. There is a tiny sign: BACK SOON.',
     'You hear a city. Cars. Footsteps. Someone laughing at a joke you were not told.',
-    'The door is not locked. It is just not time yet.'];
+    'The door is not locked. It is just not time yet.'];   /* press F five times and it opens */
   addEventListener('keydown', function(e){
     if(e.code !== 'KeyF' || !locked) return;
     if(Math.hypot(P.x - (DOORX + 1.5), P.z - (DOORZ + .5)) > 3.6) return;
     e.stopImmediatePropagation(); e.preventDefault();
+    if(knock >= 4){ openDoor(); return; }
     toast(LINES[Math.min(knock++, LINES.length - 1)]); blip(110, .25, .2, 'sine');
   }, true);
+  var opening = false;
+  function openDoor(){
+    if(opening) return; opening = true; toast('The door opens.'); blip(70, 1.2, .3, 'sawtooth');
+    var ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;background:#fff;opacity:0;transition:opacity 2.2s;z-index:99998';
+    document.body.appendChild(ov); requestAnimationFrame(function(){ ov.style.opacity = '1'; });
+    setTimeout(function(){ location.href = (location.protocol === 'file:' ? '../dig-to-the-core.html' : '../') + '#door'; }, 2600);
+  }
   setInterval(function(){ if(Math.hypot(P.x - (DOORX + 1.5), P.z - (DOORZ + .5)) < 5 && !window.__doorHint){ window.__doorHint = 1; toast('A door that was not here before. Press F.'); } }, 600);
   window.__door1 = {doorKeys: doorKeys, X: DOORX, Z: DOORZ};
   /* the only extra keys: B (shop), R (surface), E (main menu); everything else does nothing */
